@@ -1,6 +1,7 @@
 # Marlowe Lang
 
 ![crates.io](https://img.shields.io/crates/v/marlowe_lang.svg)
+[![Documentation](https://docs.rs/marlowe_lang/badge.svg)](https://docs.rs/marlowe_lang)
 
 An experimental Rust implementation of the Marlowe DSL for Cardano smart (financial) contracts. 
 It allows you to create Marlowe contracts from Rust rather than using Marlowe directly.
