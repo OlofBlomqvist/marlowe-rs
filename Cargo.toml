@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["Olof Blomqvist <olof@twnet.se>"]
 repository = "https://github.com/OlofBlomqvist/marlowe_rust"
-
+licence-file = "LICENCE"
 [dependencies]
 pest_derive = "*"
 decurse = "*"
