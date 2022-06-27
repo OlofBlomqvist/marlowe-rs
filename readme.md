@@ -31,7 +31,7 @@ use marlowe_lang::parsing::{
  deserialization::deserialize,
  serialization::serialize,
 };
- 
+
 let my_contract = Contract::When {
     cases: vec![
         Case { 
@@ -43,11 +43,13 @@ let my_contract = Contract::When {
     timeout: Timeout::TimeParam("test".into()),
     timeout_continuation: Contract::Close.boxed(),
 };
- 
+
 let serialized = serialize(my_contract);
-let deserialized : Contract = deserialize(&serialized);
+let deserialized : Contract = deserialize(&serialized).unwrap();
+println!("{serialized}");
 ```
-Where 'serialized' will be:
+
+#### Where 'println!("{serialized}")' would output this:
 ```text
 When [ Case (Notify (TrueObs)) Close ] (TimeParam "test") Close
 ```
