@@ -3,6 +3,8 @@
 An experimental Rust implementation of the Marlowe DSL for Cardano smart (financial) contracts. 
 It allows you to create Marlowe contracts from Rust rather than using Marlowe directly.
 
+It is used by the MarloweLSP VSCode Extention (Syntax highlighting for Marlowe in VSCode).
+
 ### Main Features
 
 - Deserialize Marlowe contracts in to Rust types.
@@ -16,11 +18,12 @@ It allows you to create Marlowe contracts from Rust rather than using Marlowe di
 
 ### Disclaimers
 
-- This crate was created as a learning exercise and should not be trusted anywhere near a production environment.
+- This crate was created as a learning exercise and should not be trusted anywhere near a production environment at this time.
 
 - It is a side-project and might be dropped completely at any time (it may already be dead!)
 
-- The pest.rs grammar file is just an initial attempt to make sense of the language from a high level. It will likely have to be rebuilt from the ground up when Marlowe v3 is official.
+- The pest.rs grammar file is just an initial attempt to make sense of the language from a high level. 
+  It will likely have to be rebuilt from the ground up when Marlowe v3 is official.
 
 
 ### Example usage
