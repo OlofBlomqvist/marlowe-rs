@@ -1,5 +1,7 @@
 [package]
 name = "marlowe_lang"
+description = "experimental parser lib for Cardano Marlowe DSL"
+licence = "MIT"
 version = "0.1.0"
 edition = "2021"
 authors = ["Olof Blomqvist <olof@twnet.se>"]
