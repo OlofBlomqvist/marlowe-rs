@@ -1,0 +1,23 @@
+[package]
+name = "marlowe_lang"
+version = "0.1.0"
+edition = "2021"
+authors = ["Olof Blomqvist <olof@twnet.se>"]
+repository = "https://github.com/olofblomqvist"
+
+[dependencies]
+pest_derive = "*"
+decurse = "*"
+pest = { version = "*", features= ["pretty-print"] }
+serde = "*"
+serde_json ="*"
+clap = { version = "3.1.18", features = ["derive"] }
+
+
+[lib]
+name = "marlowe_lang"
+path = "src/lib/lib.rs"
+
+[[bin]]
+name = "marlowe_lang_cli"
+path = "src/cli_tool_bin/main.rs"

@@ -1,0 +1,113 @@
+WHITESPACE = _{ " " | "\t" | "\r" | "\n" | "\r\n" }
+comma  = _{ "," }
+
+lpar   = _{ "(" }
+rpar   = _{ ")" }
+lbra   = _{ "[" }
+rbra   = _{ "]" }
+ident  = { (ASCII_ALPHA | ASCII_DIGIT)+ }
+string = { "\"" ~ (ASCII_ALPHA | ASCII_DIGIT | "-")* ~ "\""  }
+
+Number = {ASCII_DIGIT+ }
+
+Bound = @{ "Bound" ~ WHITESPACE+ ~ Number ~ WHITESPACE+ ~ Number}
+xBound = _{ lpar ~ Bound ~ rpar }
+
+ChoiceId = { lpar ~ "ChoiceId" ~ string ~ Party ~ rpar}
+ValueId = { string }
+
+TimeConstant = { ASCII_DIGIT+ }
+TimeInterval = { lpar ~ "TimeInterval" ~ Timeout ~ Timeout ~ rpar }
+TimeParam = { lpar ~ "TimeParam" ~ string ~ rpar }
+Timeout = _{ TimeConstant | string | TimeParam}
+
+Party = _{ (lpar ~ "Party" ~ PkRoleOrAccount ~ rpar ) | PkRoleOrAccount }
+
+PkRoleOrAccount = _{ lpar ~ (Role | PK) ~ rpar }
+Role = { "Role" ~ string}
+PK = { "PK" ~ string}
+Account = { "Account" ~ PkRoleOrAccount }
+
+Token = { lpar ~ "Token" ~ string ~ string ~ rpar }
+
+Value = _{ 
+    lpar ~ (
+     ConstantParam
+    | AvailableMoney
+    | Cond
+    | ChoiceValue
+    | MulValue
+    | DivValue
+    | SubValue
+    | AddValue
+    | NegValue
+    | UseValue
+    | Constant
+    ) ~ rpar
+ }
+    Cond = { "Cond" ~ Observation ~ Value ~ Value}
+    ChoiceValue = { "ChoiceValue" ~ ChoiceId}
+    MulValue = { ("MulValue") ~ Value ~ Value }
+    DivValue = { ("DivValue") ~ Value ~ Value }
+    SubValue = { ("SubValue") ~ Value ~ Value }
+    AddValue = { ("AddValue") ~ Value ~ Value }
+    NegValue = { ("NegValue") ~ Value }
+    UseValue = { "UseValue" ~ ValueId }
+    ConstantParam = { "ConstantParam" ~ string }
+    Constant = { "Constant" ~ Number }
+    AvailableMoney = { "AvailableMoney" ~ Party ~ Token }
+
+Observation = _{ TrueObs | FalseObs | ValueEQ | ValueLE | 
+                 ValueLT | ValueGT | ValueGE | OrObs | 
+                 NotObs | AndObs | ChoseSomething }
+    ValueEQ = { lpar ~ ("ValueEQ") ~ Value ~ Value ~ rpar }
+    ValueLE = { lpar ~ ("ValueLE") ~ Value ~ Value ~ rpar }
+    ValueLT = { lpar ~ ("ValueLT") ~ Value ~ Value ~ rpar }
+    ValueGT = { lpar ~ ("ValueGT") ~ Value ~ Value ~ rpar }
+    ValueGE = { lpar ~ ("ValueGE") ~ Value ~ Value ~ rpar }
+    TrueObs = { "TrueObs" }
+    FalseObs = { "FalseObs" }
+    ChoseSomething = { lpar ~ "ChoseSomething" ~ ChoiceId ~ rpar }
+    NotObs = { lpar ~ "NotObs" ~ Observation ~ rpar }
+    OrObs = { lpar ~ "OrObs" ~ Observation ~ Observation ~ rpar }
+    AndObs = { lpar ~ "AndObs" ~ Observation ~ Observation ~ rpar }
+   
+Action = _{ Case | Notify | Choice | Deposit }
+    Deposit = { lpar ~"Deposit" ~ Party ~ Party ~ Token ~ Value ~ rpar }
+    Choice =  { lpar ~"Choice" ~ ChoiceId ~ ArrayOfBounds ~rpar }
+    Notify =  { lpar ~"Notify" ~ Observation ~rpar }
+
+Case = { lpar ~ "Case" ~ Action ~ WrappedContract ~ rpar }
+
+PayeeAccount = { "Account" ~ Party }
+PayeeParty = { "Party"  ~ Party}
+
+Payee = _{ lpar ~ (PayeeAccount|PayeeParty) ~ rpar }
+
+MainContract = { Contract ~ EOI }
+
+Contract = _{ Close | When | If | Let | Assert | Pay }
+    When   = { "When" ~ ArrayOfCases ~ Timeout ~ WrappedContract }
+    Pay    = { "Pay" ~ Party ~ Payee ~ Token ~ Value  ~ WrappedContract }
+    If     = { "If" ~ Observation ~ WrappedContract ~ WrappedContract }
+    Let    = { "Let" ~ string ~ Value ~ WrappedContract }
+    Assert = { "Assert" ~ Observation ~ WrappedContract }
+    Close  = { "Close" }
+
+WrappedContract = _{
+    Close | "(" ~ (Assert|Let|If|Pay|When) ~ ")"
+}
+
+ArrayOfCases = { lbra ~ (Case~(","*))* ~ rbra }
+ArrayOfBounds = { lbra ~ (xBound~(","*))* ~ rbra }
+
+
+// ================== known issues ==================
+
+// - We accept Ident"string" etc since the whitespace is silent
+//   and so you can now do PK"xxxx" or Role"test".
+// - We don't force whitespace before start paranthesis.
+//   In playground, this would not be valid.
+// - Comma separation in arrays is not completely correct..
+//   (We accept arrays without comma separation)
+
