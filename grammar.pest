@@ -21,7 +21,7 @@ ValueId = { string }
 TimeConstant = { ASCII_DIGIT+ }
 TimeInterval = { lpar ~ "TimeInterval" ~ Timeout ~ Timeout ~ rpar }
 TimeParam = { lpar ~ "TimeParam" ~ string ~ rpar }
-Timeout = _{ TimeConstant | string | TimeParam}
+Timeout = _{ TimeConstant | Number | TimeParam }
 
 Party = _{ (lpar ~ PkRoleOrAccount ~ rpar ) | PkRoleOrAccount }
 
