@@ -91,7 +91,10 @@ fn can_parse_playground_samples() {
         let canonical_path = path.unwrap().path().canonicalize().unwrap();
         let path_string = canonical_path.display().to_string();
         let serialized_contract = read_from_file(&path_string);
-        let deserialization_result = deserialize(&serialized_contract).unwrap();
+
+        let deserialization_result = 
+            deserialize(&serialized_contract)
+                .expect(format!("Failed to deserialize {path_string}").as_str());
               
         // we dont care about whitespace etc,
         // and we also want a common format that is 

@@ -28,7 +28,6 @@
 //! slightly different syntax to be used, as listed below.
 //! 
 //! - Active parser bugs:
-//!     - This parser has no requirement to use commas between array items.
 //!     - This parser has no whitespace requirement before start parentheses: '('.
 //!     - This parser has no whitespace requirement between idents and arguments: 'Role"Guy"' vs 'Role "Guy"'
 //! 

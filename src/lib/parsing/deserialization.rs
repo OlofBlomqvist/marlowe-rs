@@ -17,7 +17,6 @@ pub(crate) fn parse(pair:Pair<'static,Rule>) -> AstNode {
         | Rule::rpar  
         | Rule::lbra  
         | Rule::rbra  
-        | Rule::ident 
         | Rule::Account
         | Rule::EOI
         | Rule::WrappedContract
@@ -38,6 +37,10 @@ pub(crate) fn parse(pair:Pair<'static,Rule>) -> AstNode {
                     content[1].parse::<i64>().unwrap(),
                     content[2].parse::<i64>().unwrap()))},
 
+        Rule::PubKey => {
+            let xx = pair.as_str().replace("\"","").to_string();
+            AstNode::StringValue(xx)
+        },
         Rule::ValueId => 
             AstNode::StringValue(pair.into_inner().as_str().to_string()),
 
@@ -61,7 +64,8 @@ pub(crate) fn parse(pair:Pair<'static,Rule>) -> AstNode {
                 Observation::ValueLT(
                     Box::new(parse(inner.next().unwrap()).into()),
                     Box::new(parse(inner.next().unwrap()).into())))},
-
+        Rule::TimeIntervalStart => AstNode::MarloweValue(Value::TimeIntervalStart),
+        Rule::TimeIntervalEnd => AstNode::MarloweValue(Value::TimeIntervalEnd),
         Rule::Cond => {
             let mut inner = pair.into_inner();
             AstNode::MarloweValue(

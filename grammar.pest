@@ -5,13 +5,15 @@ lpar   = _{ "(" }
 rpar   = _{ ")" }
 lbra   = _{ "[" }
 rbra   = _{ "]" }
-ident  = { (ASCII_ALPHA | ASCII_DIGIT)+ }
+
 string = { "\"" ~ (ASCII_ALPHA | ASCII_DIGIT | "-")* ~ "\""  }
 
 Number = {ASCII_DIGIT+ }
 
 Bound = @{ "Bound" ~ WHITESPACE+ ~ Number ~ WHITESPACE+ ~ Number}
-xBound = _{ lpar ~ Bound ~ rpar }
+xBound = _{ 
+    lpar ~ Bound ~ rpar | Bound
+}
 
 ChoiceId = { lpar ~ "ChoiceId" ~ string ~ Party ~ rpar}
 ValueId = { string }
@@ -21,18 +23,24 @@ TimeInterval = { lpar ~ "TimeInterval" ~ Timeout ~ Timeout ~ rpar }
 TimeParam = { lpar ~ "TimeParam" ~ string ~ rpar }
 Timeout = _{ TimeConstant | string | TimeParam}
 
-Party = _{ (lpar ~ "Party" ~ PkRoleOrAccount ~ rpar ) | PkRoleOrAccount }
+Party = _{ (lpar ~ PkRoleOrAccount ~ rpar ) | PkRoleOrAccount }
 
 PkRoleOrAccount = _{ lpar ~ (Role | PK) ~ rpar }
 Role = { "Role" ~ string}
-PK = { "PK" ~ string}
+
+PubKey = { "\"" ~ ("0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"|"A"|"B"|"C"|"D"|"E"|"F"){64,64} ~ "\"" }
+
+PK = { "PK" ~ PubKey }
+
 Account = { "Account" ~ PkRoleOrAccount }
 
 Token = { lpar ~ "Token" ~ string ~ string ~ rpar }
 
 Value = _{ 
     lpar ~ (
-     ConstantParam
+       Value
+    ) ~ rpar
+    |  ConstantParam
     | AvailableMoney
     | Cond
     | ChoiceValue
@@ -43,8 +51,11 @@ Value = _{
     | NegValue
     | UseValue
     | Constant
-    ) ~ rpar
+    | TimeIntervalStart
+    | TimeIntervalEnd
  }
+    TimeIntervalStart = { "TimeIntervalStart" }
+    TimeIntervalEnd = { "TimeIntervalEnd" }
     Cond = { "Cond" ~ Observation ~ Value ~ Value}
     ChoiceValue = { "ChoiceValue" ~ ChoiceId}
     MulValue = { ("MulValue") ~ Value ~ Value }
@@ -77,12 +88,17 @@ Action = _{ Case | Notify | Choice | Deposit }
     Choice =  { lpar ~"Choice" ~ ChoiceId ~ ArrayOfBounds ~rpar }
     Notify =  { lpar ~"Notify" ~ Observation ~rpar }
 
-Case = { lpar ~ "Case" ~ Action ~ WrappedContract ~ rpar }
+Case = { 
+    lpar ~ "Case" ~ Action ~ WrappedContract ~ rpar
+    | "Case" ~ Action ~ WrappedContract
+}
 
 PayeeAccount = { "Account" ~ Party }
 PayeeParty = { "Party"  ~ Party}
 
-Payee = _{ lpar ~ (PayeeAccount|PayeeParty) ~ rpar }
+Payee = _{ 
+    lpar ~ (PayeeAccount|PayeeParty) ~ rpar 
+}
 
 MainContract = { Contract ~ EOI }
 
@@ -98,8 +114,15 @@ WrappedContract = _{
     Close | "(" ~ (Assert|Let|If|Pay|When) ~ ")"
 }
 
-ArrayOfCases = { lbra ~ (Case~(","*))* ~ rbra }
-ArrayOfBounds = { lbra ~ (xBound~(","*))* ~ rbra }
+ArrayOfCases = { 
+     lbra ~ (Case~(","))* ~ Case ~ rbra 
+     | lbra ~ rbra 
+}
+
+ArrayOfBounds = { 
+     lbra ~ (xBound~(","))* ~ xBound ~ rbra 
+     | lbra ~ rbra
+}
 
 
 // ================== known issues ==================
@@ -108,6 +131,3 @@ ArrayOfBounds = { lbra ~ (xBound~(","*))* ~ rbra }
 //   and so you can now do PK"xxxx" or Role"test".
 // - We don't force whitespace before start paranthesis.
 //   In playground, this would not be valid.
-// - Comma separation in arrays is not completely correct..
-//   (We accept arrays without comma separation)
-

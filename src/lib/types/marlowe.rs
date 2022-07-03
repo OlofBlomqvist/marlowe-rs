@@ -65,6 +65,8 @@ pub enum Observation {
 
 #[derive(Debug)]
 pub enum Value {
+    TimeIntervalStart,
+    TimeIntervalEnd,
     AvailableMoney(Party,Token), 
     ConstantValue(i64), 
     ConstantParam(String), 
@@ -237,6 +239,8 @@ impl std::fmt::Display for Observation {
 impl std::fmt::Display for Value {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
+            Value::TimeIntervalEnd => write!(f,"TimeIntervalEnd"),
+            Value::TimeIntervalStart => write!(f,"TimeIntervalStart"),
             Value::AvailableMoney(a, b) => 
                 write!(f, "(AvailableMoney {} {})",a,b),
             Value::ConstantValue(a) => 
