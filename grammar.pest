@@ -8,7 +8,7 @@ rbra   = _{ "]" }
 
 string = { "\"" ~ (ASCII_ALPHA | ASCII_DIGIT | "-")* ~ "\""  }
 
-Number = {ASCII_DIGIT+ }
+Number = { "-"{0,1} ~ ASCII_DIGIT+ }
 
 Bound = @{ "Bound" ~ WHITESPACE+ ~ Number ~ WHITESPACE+ ~ Number}
 xBound = _{ 
