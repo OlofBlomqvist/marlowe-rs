@@ -1,9 +1,11 @@
 use super::*;
 
 #[decurse::decurse]
-pub(crate) fn parse(pair:Pair<'static,Rule>) -> AstNode {
+pub fn parse(pair:Pair<'static,Rule>) -> AstNode {
     match pair.as_rule() {
         Rule::WHITESPACE
+        | Rule::str_inner
+        | Rule::str_char
         | Rule::xBound
         | Rule::Party   
         | Rule::Value 
@@ -236,7 +238,8 @@ pub(crate) fn parse(pair:Pair<'static,Rule>) -> AstNode {
 
         Rule::string => 
             AstNode::StringValue(
-                pair.as_str().replace("\"","")),
+                pair.as_str().trim_end_matches("\"").trim_start_matches("\"").to_string()
+            ),
 
         Rule::TimeParam => 
             AstNode::MarloweTimeout(

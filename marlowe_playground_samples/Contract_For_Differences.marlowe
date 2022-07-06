@@ -1,7 +1,6 @@
 When [
   (Case
-     (Deposit
-        (Role "Party")
+     (Deposit(Role "Party")
         (Role "Party")
         (Token "" "")
         (ConstantParam "Amount paid by party"))
