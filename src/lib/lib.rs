@@ -21,17 +21,6 @@
 //! When the Marlowe v3 specs are finalized, this crate will (hopefully) be
 //! updated to reflect those.
 //! 
-//! ## Known issues: 
-//! 
-//! Currently, this parser is not known to fail at parsing anything that the 
-//! playground implementation can successfully parse, but we allow some
-//! slightly different syntax to be used, as listed below.
-//! 
-//! - Active parser bugs:
-//!     - This parser has no whitespace requirement before start parentheses: '('.
-//!     - This parser has no whitespace requirement between idents and arguments: 'Role"Guy"' vs 'Role "Guy"'
-//! 
-//! 
 //! ## Main entry-points:
 //! 
 //! - [`Serialization`]
