@@ -9,7 +9,6 @@ pub fn parse(pair:Pair<'static,Rule>) -> AstNode {
         | Rule::xBound
         | Rule::Party   
         | Rule::Value 
-        | Rule::Action
         | Rule::Contract
         | Rule::PkRoleOrAccount 
         | Rule::Observation       
@@ -21,10 +20,10 @@ pub fn parse(pair:Pair<'static,Rule>) -> AstNode {
         | Rule::rbra  
         | Rule::Account
         | Rule::EOI
-        | Rule::WrappedContract
         => {unreachable!()},
         // ------------------------------------------------------------------------
-        
+        Rule::WrappedContract => parse(pair.into_inner().next().unwrap()),
+        Rule::Action => parse(pair.into_inner().next().unwrap()),
         Rule::MainContract => parse(pair.into_inner().next().unwrap()),
         
         Rule::Number => 
@@ -217,8 +216,11 @@ pub fn parse(pair:Pair<'static,Rule>) -> AstNode {
             let inner = parse(pair.into_inner().next().unwrap());
             AstNode::MarlowePayee(Payee::Account(Box::new(inner.into())))
         }
-        Rule::PK => 
-            AstNode::MarloweParty(Party::PK(parse(pair.into_inner().next().unwrap()).into())),
+        Rule::PK => {
+            let mut x = pair.into_inner();
+            let a = x.next();
+            AstNode::MarloweParty(Party::PK(parse(a.unwrap()).into()))
+        },
         Rule::Token => {
             let mut inner = pair.into_inner();
             match (inner.next(),inner.next()) {

@@ -244,11 +244,11 @@ impl std::fmt::Display for Value {
             Value::AvailableMoney(a, b) => 
                 write!(f, "(AvailableMoney {} {})",a,b),
             Value::ConstantValue(a) => 
-                write!(f, "(Constant {})",a),// <-- should this be wrapped?
+                write!(f, "(Constant {})",a),
             Value::ConstantParam(a) => 
-                write!(f, "(ConstantParam \"{}\")",a),// <-- should this be wrapped?
+                write!(f, "(ConstantParam \"{}\")",a),
             Value::UseValue(a) => 
-                write!(f, "(UseValue \"{}\")",a), // <-- should this be wrapped?
+                write!(f, "(UseValue \"{}\")",a),
             Value::MulValue(a, b) => 
                 write!(f, "(MulValue {a} {b})"),
             Value::DivValue(a, b) => 
