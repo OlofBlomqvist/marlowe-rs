@@ -92,32 +92,37 @@ fn can_parse_playground_samples() {
         let path_string = canonical_path.display().to_string();
         let serialized_contract = read_from_file(&path_string);
 
-        let deserialization_result = 
-            deserialize(&serialized_contract)
-                .expect(format!("Failed to deserialize {path_string}").as_str());
-              
-        // we dont care about whitespace etc,
-        // and we also want a common format that is 
-        // easy to compare in diff viewer should this test fail.
-        let strep = |x:&str| {
-            x.replace('\n', "")
-                .replace("(","(\n")
-                .replace('\r', "")
-                .replace(" ","")
-                .replace("\t","")
-                
-        };
+        let deserialization_result = deserialize(&serialized_contract);
+        match deserialization_result {
+            Ok(x) => {
+                 // we dont care about whitespace etc,
+                // and we also want a common format that is 
+                // easy to compare in diff viewer should this test fail.
+                let strep = |x:&str| {
+                    x.replace('\n', "")
+                        .replace("(","(\n")
+                        .replace('\r', "")
+                        .replace(" ","")
+                        .replace("\t","")
+                        
+                };
 
-        let compressed_serialized_input = strep(&serialized_contract);
-        let compressed_serialized_output = strep(&serialize(deserialization_result));
+                println!("Successfully deserialized contract: {path_string}");
 
-        if compressed_serialized_output != compressed_serialized_input {
-            _ = std::fs::write("OUT.TEMP", compressed_serialized_output);
-            _ = std::fs::write("IN.TEMP", compressed_serialized_input);
-            panic!("the re-serialized contract {path_string} is different from the original! see in.temp and out.temp")
-        } else {
-            println!("Successfully validated {path_string}");
+                let compressed_serialized_input = strep(&serialized_contract);
+                let compressed_serialized_output = strep(&serialize(x));
+
+                if compressed_serialized_output != compressed_serialized_input {
+                    _ = std::fs::write("OUT.TEMP", compressed_serialized_output);
+                    _ = std::fs::write("IN.TEMP", compressed_serialized_input);
+                    panic!("the re-serialized contract {path_string} is different from the original! see in.temp and out.temp")
+                } else {
+                    println!("Successfully validated {path_string}");
+                }
+            },
+            Err(e) => panic!("{e:#}"),
         }
+       
     }
     if count == 0 {
         panic!("The marlowe_playground_samples directory is empty!!!")
@@ -128,7 +133,10 @@ fn can_parse_playground_samples() {
 #[test]
 fn can_parse_sample() {
     let serialized_contract = read_from_file(&"sample.marlowe");
-    deserialize(&serialized_contract).unwrap();
+    match deserialize(&serialized_contract) {
+        Ok(_) => {},
+        Err(e) => panic!("{e:#}"),
+    }
 }
 
 #[test]

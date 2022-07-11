@@ -23,7 +23,7 @@ xBound = _{
 ChoiceId = ${ lpar ~ WHITESPACE* ~"ChoiceId" ~ WHITESPACE+ ~ string ~ WHITESPACE+ ~ Party ~ WHITESPACE* ~ rpar}
 
 
-ValueId = { string }
+ValueId = @{ string }
 
 TimeConstant = { ASCII_DIGIT+ }
 TimeInterval = ${ lpar ~ WHITESPACE* ~ "TimeInterval" ~ WHITESPACE+ ~ Timeout ~ WHITESPACE+ ~ Timeout ~ WHITESPACE* ~ rpar }
@@ -66,7 +66,7 @@ Value = _{
     DivValue = ${ lpar ~ WHITESPACE* ~ "DivValue" ~ WHITESPACE+ ~ Value ~ WHITESPACE+ ~ Value ~ WHITESPACE* ~ rpar}
     SubValue = ${ lpar ~ WHITESPACE* ~ "SubValue" ~ WHITESPACE+ ~ Value ~ WHITESPACE+ ~ Value ~ WHITESPACE* ~ rpar}
     AddValue = ${ lpar ~ WHITESPACE* ~ "AddValue" ~ WHITESPACE+ ~ Value ~ WHITESPACE+ ~ Value ~ WHITESPACE* ~ rpar}
-    NegValue = ${ lpar ~ WHITESPACE* ~ "NegValue" ~ WHITESPACE+ ~ Value ~ WHITESPACE+ ~ WHITESPACE* ~ rpar}
+    NegValue = ${ lpar ~ WHITESPACE* ~ "NegValue" ~ WHITESPACE+ ~ Value ~ WHITESPACE+ ~ Value ~ rpar}
     UseValue = ${ lpar ~ WHITESPACE* ~ "UseValue" ~ WHITESPACE+ ~ ValueId ~ WHITESPACE* ~ rpar}
     ConstantParam = ${ lpar ~ WHITESPACE* ~ "ConstantParam" ~ WHITESPACE+ ~ string ~ WHITESPACE* ~ rpar }
     Constant = ${ (lpar ~ WHITESPACE*){0,1} ~ "Constant" ~ WHITESPACE+ ~ Number ~ (WHITESPACE* ~ rpar){0,1} }
@@ -75,7 +75,7 @@ Value = _{
 Observation = _{ TrueObs | FalseObs | ValueEQ | ValueLE | 
                  ValueLT | ValueGT | ValueGE | OrObs | 
                  NotObs | AndObs | ChoseSomething }
-    ValueEQ = ${ lpar ~ WHITESPACE* ~ "ValueE"  ~ WHITESPACE+ ~ Value  ~ WHITESPACE+ ~ Value  ~WHITESPACE* ~ rpar }
+    ValueEQ = ${ lpar ~ WHITESPACE* ~ "ValueE"  ~ WHITESPACE+  ~ Value  ~ WHITESPACE+ ~ Value ~WHITESPACE* ~ rpar }
     ValueLE = ${ lpar ~ WHITESPACE* ~ "ValueLE" ~ WHITESPACE+  ~ Value ~ WHITESPACE+  ~ Value ~WHITESPACE*  ~ rpar }
     ValueLT = ${ lpar ~ WHITESPACE* ~ "ValueLT" ~ WHITESPACE+  ~ Value ~ WHITESPACE+  ~ Value ~WHITESPACE*  ~ rpar }
     ValueGT = ${ lpar ~ WHITESPACE* ~ "ValueGT" ~ WHITESPACE+  ~ Value ~ WHITESPACE+  ~ Value ~WHITESPACE*  ~ rpar }
@@ -119,13 +119,11 @@ WrappedContract = ${
 }
 
 ArrayOfCases = ${ 
-     lbra ~ (WHITESPACE*~Case~WHITESPACE*~(","))* ~WHITESPACE*~ Case ~WHITESPACE*~ rbra 
-     | lbra ~ WHITESPACE* ~ Case ~WHITESPACE*~ rbra 
+     lbra ~ WHITESPACE* ~ Case ~ (WHITESPACE* ~ "," ~ WHITESPACE* ~ Case)* ~ WHITESPACE* ~ rbra 
      | lbra ~ WHITESPACE* ~ rbra
 }
 
 ArrayOfBounds = ${ 
-     lbra ~ (WHITESPACE*~xBound~WHITESPACE*~(","))* ~WHITESPACE*~ xBound ~WHITESPACE*~ rbra 
-     | lbra ~ WHITESPACE* ~ xBound ~WHITESPACE*~ rbra 
+     lbra ~ WHITESPACE* ~ xBound ~ (WHITESPACE* ~ "," ~ WHITESPACE* ~ xBound)* ~ WHITESPACE* ~ rbra 
      | lbra ~ WHITESPACE* ~ rbra
 }
