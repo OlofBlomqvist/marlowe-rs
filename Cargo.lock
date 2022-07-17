@@ -98,30 +98,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "decurse"
-version = "0.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82f8140d2e701e8e6602e71fade5d3881680672f098c04038a32e0873a6e1c83"
-dependencies = [
- "decurse_macro",
- "pfn",
- "pinned_vec",
- "scoped-tls",
- "waker-fn",
-]
-
-[[package]]
-name = "decurse_macro"
-version = "0.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "381a25f7d3b075620d8ac891f99dea47993cd801d7ad0b135196ebd62bdcd331"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "digest"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -199,7 +175,6 @@ name = "marlowe_lang"
 version = "0.1.4"
 dependencies = [
  "clap",
- "decurse",
  "pest",
  "pest_derive",
  "serde",
@@ -270,18 +245,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pfn"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa74ea1b349058719dba30bd9e4e39a6151bb02ba1c38ebe0ba2bd97e5a71777"
-
-[[package]]
-name = "pinned_vec"
-version = "0.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "268ad82d92622fb0a049ff14b01089b0f1bcd5c507fab44724394d328417348a"
-
-[[package]]
 name = "proc-macro-error"
 version = "1.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -328,12 +291,6 @@ name = "ryu"
 version = "1.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f3f6f92acf49d1b98f7a81226834412ada05458b7364277387724a237f062695"
-
-[[package]]
-name = "scoped-tls"
-version = "1.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea6a9290e3c9cf0f18145ef7ffa62d68ee0bf5fcd651017e586dc7fd5da448c2"
 
 [[package]]
 name = "serde"
@@ -419,12 +376,6 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
-
-[[package]]
-name = "waker-fn"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d5b2c62b4012a3e1eca5a7e077d13b3bf498c4073e33ccd58626607748ceeca"
 
 [[package]]
 name = "winapi"

@@ -1,7 +1,7 @@
 #![recursion_limit = "100"]
 #![feature(generator_trait)]
 #![feature(generators)]
-
+#![feature(if_let_guard)]
 //! An experimental implementation of the Marlowe language for Cardano smart contracts.
 //!
 //! Its primary use-case is for creating smart contracts in Rust rather 
@@ -50,14 +50,14 @@
 //! 
 //! let my_contract = Contract::When {
 //!     cases: vec![
-//!         Case { 
-//!             action: Action::Notify { 
-//!                 notify_if: Observation::TrueObs 
-//!             }, 
-//!             contract: Contract::Close.boxed() }
+//!         Some(Case { 
+//!             action: Some(Action::Notify { 
+//!                 notify_if: Some(Observation::TrueObs)
+//!             }), 
+//!             contract: Some(Contract::Close.boxed()) })
 //!     ],
-//!     timeout: Timeout::TimeParam("test".into()),
-//!     timeout_continuation: Contract::Close.boxed(),
+//!     timeout: Some(Timeout::TimeParam("test".into())),
+//!     timeout_continuation: Some(Contract::Close.boxed()),
 //! };
 //! 
 //! let serialized = serialize(my_contract);

@@ -1,227 +1,200 @@
 When
     [(Case
         (Deposit
-            (Role "Lender")
-            (Role "Lender")
+            (Role "Seller")
+            (Role "Seller")
             (Token "" "")
-            (ConstantParam "Amount")
+            (ConstantParam "Collateral amount")
         )
-        (Pay
-            (Role "Lender")
-            (Party (Role "Borrower"))
-            (Token "" "")
-            (ConstantParam "Amount")
-            (When
-                [(Case
-                    (Deposit
-                        (Role "Borrower")
-                        (Role "Borrower")
-                        (Token "" "")
-                        (AddValue
-                            (ConstantParam "Interest")
-                            (ConstantParam "Amount")
-                        )
-                    )
-                    (Pay
-                        (Role "Borrower")
-                        (Party (Role "Lender"))
-                        (Token "" "")
-                        (AddValue
-                            (ConstantParam "Interest")
-                            (ConstantParam "Amount")
-                        )
-                        (When
-                            [(Case
-                                (Deposit
-                                    (Role "Lender")
-                                    (Role "Lender")
-                                    (Token "" "")
-                                    (ConstantParam "Amount")
-                                )
-                                (Pay
-                                    (Role "Lender")
-                                    (Party (Role "Borrower"))
-                                    (Token "" "")
-                                    (ConstantParam "Amount")
-                                    (When
-                                        [(Case
-                                            (Deposit
-                                                (Role "Borrower")
-                                                (Role "Borrower")
-                                                (Token "" "")
-                                                (AddValue
-                                                    (ConstantParam "Interest")
-                                                    (ConstantParam "Amount")
-                                                )
-                                            )
-                                            (Pay
-                                                (Role "Borrower")
-                                                (Party (Role "Lender"))
-                                                (Token "" "")
-                                                (AddValue
-                                                    (ConstantParam "Interest")
-                                                    (ConstantParam "Amount")
-                                                )
-                                                Close 
-                                            ))]
-                                        503 Close 
-                                    )
-                                ))]
-                            502 Close 
-                        )
-                    ))]
-                501
+        (When
+            [(Case
+                (Deposit
+                    (Role "Buyer")
+                    (Role "Buyer")
+                    (Token "" "")
+                    (ConstantParam "Collateral amount")
+                )
                 (When
                     [(Case
                         (Deposit
-                            (Role "Lender")
-                            (Role "Lender")
+                            (Role "Seller")
+                            (Role "Buyer")
                             (Token "" "")
-                            (ConstantParam "Amount")
+                            (ConstantParam "Price")
                         )
-                        (Pay
-                            (Role "Lender")
-                            (Party (Role "Borrower"))
-                            (Token "" "")
-                            (ConstantParam "Amount")
-                            (When
-                                [(Case
-                                    (Deposit
-                                        (Role "Borrower")
-                                        (Role "Borrower")
-                                        (Token "" "")
-                                        (AddValue
-                                            (ConstantParam "Interest")
-                                            (ConstantParam "Amount")
-                                        )
+                        (When
+                            [(Case
+                                (Choice
+                                    (ChoiceId
+                                        "Everything is alright"
+                                        (Role "Buyer")
                                     )
-                                    (Pay
-                                        (Role "Borrower")
-                                        (Party (Role "Lender"))
-                                        (Token "" "")
-                                        (AddValue
-                                            (ConstantParam "Interest")
-                                            (ConstantParam "Amount")
-                                        )
-                                        Close 
-                                    ))]
-                                503 Close 
-                            )
+                                    [(Bound 0 0)]
+                                )
+                                Close) , (Case
+                                (Choice
+                                    (ChoiceId
+                                        "Report problem"
+                                        (Role "Buyer")
+                                    )
+                                    [(Bound 1 1)]
+                                )
+                                (Pay
+                                    (Role "Seller")
+                                    (Account (Role "Buyer"))
+                                    (Token "" "")
+                                    (ConstantParam "Price")
+                                    (When
+                                        [(Case
+                                            (Choice
+                                                (ChoiceId
+                                                    "Confirm problem"
+                                                    (Role "Seller")
+                                                )
+                                                [(Bound 1 1)]
+                                            )
+                                            Close ), (Case
+                                            (Choice
+                                                (ChoiceId
+                                                    "Dispute problem"
+                                                    (Role "Seller")
+                                                )
+                                                [(Bound 0 0)]
+                                            )
+                                            (Pay
+                                                (Role "Seller")
+                                                (Party (PK "0000000000000000000000000000000000000000000000000000000000000000"))
+                                                (Token "" "")
+                                                (ConstantParam "Collateral amount")
+                                                (Pay
+                                                    (Role "Buyer")
+                                                    (Party (PK "0000000000000000000000000000000000000000000000000000000000000000"))
+                                                    (Token "" "")
+                                                    (ConstantParam "Collateral amount")
+                                                    (When
+                                                        [(Case
+                                                            (Choice
+                                                                (ChoiceId
+                                                                    "Confirm problem"
+                                                                    (Role "Seller")
+                                                                )
+                                                                [(Bound 1 1)]
+                                                            )
+                                                            Close ), (Case
+                                                            (Choice
+                                                                (ChoiceId
+                                                                    "Dispute problem"
+                                                                    (Role "Seller")
+                                                                )
+                                                                [(Bound 0 0)]
+                                                            )
+                                                            (Pay
+                                                                (Role "Seller")
+                                                                (Party (PK "0000000000000000000000000000000000000000000000000000000000000000"))
+                                                                (Token "" "")
+                                                                (ConstantParam "Collateral amount")
+                                                                (Pay
+                                                                    (Role "Buyer")
+                                                                    (Party (PK "0000000000000000000000000000000000000000000000000000000000000000"))
+                                                                    (Token "" "")
+                                                                    (ConstantParam "Collateral amount")
+                                                                    Close
+                                                                )
+                                                            ))]
+                                                        12 Close 
+                                                    )
+                                                )
+                                            ))]
+                                        14 Close 
+                                    )
+                                ))]
+                            55 Close 
                         ))]
-                    502 Close 
-                )
-            )
+                    66 Close 
+                ))]
+            111 Close 
         )), (Case
         (Deposit
-            (Role "Lender")
-            (Role "Lender")
+            (Role "Seller")
+            (Role "Seller")
             (Token "" "")
-            (ConstantParam "Amount")
+            (ConstantParam "Collateral amount")
         )
-        (Pay
-            (Role "Lender")
-            (Party (Role "Borrower"))
-            (Token "" "")
-            (ConstantParam "Amount")
-            (When
-                [(Case
-                    (Deposit
-                        (Role "Borrower")
-                        (Role "Borrower")
-                        (Token "" "")
-                        (AddValue
-                            (ConstantParam "Interest")
-                            (ConstantParam "Amount")
-                        )
-                    )
-                    (Pay
-                        (Role "Borrower")
-                        (Party (Role "Lender"))
-                        (Token "" "")
-                        (AddValue
-                            (ConstantParam "Interest")
-                            (ConstantParam "Amount")
-                        )
-                        (When
-                            [(Case
-                                (Deposit
-                                    (Role "Lender")
-                                    (Role "Lender")
-                                    (Token "" "")
-                                    (ConstantParam "Amount")
-                                )
-                                (Pay
-                                    (Role "Lender")
-                                    (Party (Role "Borrower"))
-                                    (Token "" "")
-                                    (ConstantParam "Amount")
-                                    (When
-                                        [(Case
-                                            (Deposit
-                                                (Role "Borrower")
-                                                (Role "Borrower")
-                                                (Token "" "")
-                                                (AddValue
-                                                    (ConstantParam "Interest")
-                                                    (ConstantParam "Amount")
-                                                )
-                                            )
-                                            (Pay
-                                                (Role "Borrower")
-                                                (Party (Role "Lender"))
-                                                (Token "" "")
-                                                (AddValue
-                                                    (ConstantParam "Interest")
-                                                    (ConstantParam "Amount")
-                                                )
-                                                Close 
-                                            ))]
-                                        503 Close 
-                                    )
-                                ))]
-                            502 Close 
-                        )
-                    ))]
-                501
+        (When
+            [(Case
+                (Deposit
+                    (Role "Buyer")
+                    (Role "Buyer")
+                    (Token "" "")
+                    (ConstantParam "Collateral amount")
+                )
                 (When
                     [(Case
                         (Deposit
-                            (Role "Lender")
-                            (Role "Lender")
+                            (Role "Seller")
+                            (Role "Buyer")
                             (Token "" "")
-                            (ConstantParam "Amount")
+                            (ConstantParam "Price")
                         )
-                        (Pay
-                            (Role "Lender")
-                            (Party (Role "Borrower"))
-                            (Token "" "")
-                            (ConstantParam "Amount")
-                            (When
-                                [(Case
-                                    (Deposit
-                                        (Role "Borrower")
-                                        (Role "Borrower")
-                                        (Token "" "")
-                                        (AddValue
-                                            (ConstantParam "Interest")
-                                            (ConstantParam "Amount")
-                                        )
+                        (When
+                            [(Case
+                                (Choice
+                                    (ChoiceId
+                                        "Everything is alright"
+                                        (Role "Buyer")
                                     )
-                                    (Pay
-                                        (Role "Borrower")
-                                        (Party (Role "Lender"))
-                                        (Token "" "")
-                                        (AddValue
-                                            (ConstantParam "Interest")
-                                            (ConstantParam "Amount")
-                                        )
-                                        Close
-                                    ))]
-                                1 Close 
-                            )
+                                    [(Bound 0 0)]
+                                )
+                                Close ), (Case
+                                (Choice
+                                    (ChoiceId
+                                        "Report problem"
+                                        (Role "Buyer")
+                                    )
+                                    [(Bound 1 1)]
+                                )
+                                (Pay
+                                    (Role "Seller")
+                                    (Account (Role "Buyer"))
+                                    (Token "" "")
+                                    (ConstantParam "Price")
+                                    (When
+                                        [(Case
+                                            (Choice
+                                                (ChoiceId
+                                                    "Confirm problem"
+                                                    (Role "Seller")
+                                                )
+                                                [(Bound 1 1)]
+                                            )
+                                            Close ), (Case
+                                            (Choice
+                                                (ChoiceId
+                                                    "Dispute problem"
+                                                    (Role "Seller")
+                                                )
+                                                [(Bound 0 0)]
+                                            )
+                                            (Pay
+                                                (Role "Seller")
+                                                (Party (PK "0000000000000000000000000000000000000000000000000000000000000000"))
+                                                (Token "" "")
+                                                (ConstantParam "Collateral amount")
+                                                (Pay
+                                                    (Role "Buyer")
+                                                    (Party (PK "0000000000000000000000000000000000000000000000000000000000000000"))
+                                                    (Token "" "")
+                                                    (ConstantParam "Collateral amount")
+                                                    Close 
+                                                )
+                                            ))]
+                                        555 Close 
+                                    )
+                                ))]
+                            444 Close 
                         ))]
-                    502 Close 
-                )
-            )
+                    333 Close 
+                ))]
+            44 Close 
         ))]
-    500 Close 
+    111 Close 

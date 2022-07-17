@@ -23,13 +23,6 @@ pub(crate) enum AstNode {
     Null
 }
 
-impl Default for AstNode {
-    fn default() -> Self {
-        AstNode::Null
-    }
-}
-
-
 #[derive(Debug)]
 pub struct ValueId(pub String);
 
@@ -38,46 +31,46 @@ pub struct Bound(pub i64,pub i64);
 
 #[derive(Debug)]
 pub struct ChoiceId { 
-    pub owner : Party,
+    pub owner : Option<Party>,
     pub name : String
 }
 
 #[derive(Debug)]
 pub enum Payee {
-    Party(Box<Party>),
-    Account(Box<Party>)
+    Party(Option<Party>),
+    Account(Option<Party>)
 }
 
 #[derive(Debug)]
 pub enum Observation { 
-    ValueGT(Box<Value>,Box<Value>),
-    ValueGE(Box<Value>,Box<Value>),
-    ValueLT(Box<Value>,Box<Value>),
-    ValueLE(Box<Value>,Box<Value>),
-    ValueEQ(Box<Value>,Box<Value>),
+    ValueGT(Option<Box<Value>>,Option<Box<Value>>),
+    ValueGE(Option<Box<Value>>,Option<Box<Value>>),
+    ValueLT(Option<Box<Value>>,Option<Box<Value>>),
+    ValueLE(Option<Box<Value>>,Option<Box<Value>>),
+    ValueEQ(Option<Box<Value>>,Option<Box<Value>>),
     TrueObs,
     FalseObs,
-    ChoseSomething(ChoiceId),        
-    OrObs(Box<Observation>,Box<Observation>),
-    AndObs(Box<Observation>,Box<Observation>),
-    NotObs(Box<Observation>)
+    ChoseSomething(Option<ChoiceId>),        
+    OrObs(Option<Box<Observation>>,Option<Box<Observation>>),
+    AndObs(Option<Box<Observation>>,Option<Box<Observation>>),
+    NotObs(Option<Box<Observation>>)
 }
 
 #[derive(Debug)]
 pub enum Value {
     TimeIntervalStart,
     TimeIntervalEnd,
-    AvailableMoney(Party,Token), 
+    AvailableMoney(Option<Party>,Option<Token>), 
     ConstantValue(i64), 
     ConstantParam(String), 
     UseValue(String), 
-    MulValue(Box<Value>,Box<Value>), 
-    DivValue(Box<Value>,Box<Value>), 
-    SubValue(Box<Value>,Box<Value>), 
-    AddValue(Box<Value>,Box<Value>), 
-    NegValue(Box<Value>), 
-    ChoiceValue(ChoiceId), 
-    Cond(Observation,Box<Value>,Box<Value>)
+    MulValue(Option<Box<Value>>,Option<Box<Value>>), 
+    DivValue(Option<Box<Value>>,Option<Box<Value>>), 
+    SubValue(Option<Box<Value>>,Option<Box<Value>>), 
+    AddValue(Option<Box<Value>>,Option<Box<Value>>), 
+    NegValue(Option<Box<Value>>), 
+    ChoiceValue(Option<ChoiceId>), 
+    Cond(Option<Observation>,Option<Box<Value>>,Option<Box<Value>>)
 
 }
 
@@ -100,22 +93,22 @@ pub enum Party {
 
 #[derive(Debug)]
 pub enum Action {
-    Deposit { by: Party, into_account_of: Party, currency: Token, the_amount_of: Value },
-    Notify { notify_if: Observation },
-    Case(Box<Action>,Contract),
-    Choice(ChoiceId,Vec<Bound>)
+    Deposit { by: Option<Party>, into_account_of: Option<Party>, currency: Option<Token>, the_amount_of: Option<Value> },
+    Notify { notify_if: Option<Observation> },
+    Case(Option<Box<Action>>,Option<Box<Contract>>),
+    Choice(Option<ChoiceId>,Vec<Option<Bound>>)
 }
 
 #[derive(Debug)]
 pub struct Case { 
-    pub action: Action, 
-    pub contract: Box<Contract>
+    pub action: Option<Action>, 
+    pub contract: Option<Box<Contract>>
 }
 
 #[derive(Debug)]
 pub enum Timeout {
     TimeConstant(i64),
-    TimeInterval(Box<Timeout>,Box<Timeout>),
+    TimeInterval(Option<Box<Timeout>>,Option<Box<Timeout>>),
     TimeParam(String)
 }
 
@@ -123,30 +116,30 @@ pub enum Timeout {
 pub enum Contract {
     Close,
     When  { 
-        cases: Vec<Case>, 
-        timeout: Timeout, 
-        timeout_continuation: Box<Contract> 
+        cases: Vec<Option<Case>>, 
+        timeout: Option<Timeout>, 
+        timeout_continuation: Option<Box<Contract>> 
     },
     If  { 
-        observation: Observation, 
-        then_contract: Box<Contract>, 
-        else_contract: Box<Contract> 
+        observation: Option<Observation>, 
+        then_contract: Option<Box<Contract>>, 
+        else_contract: Option<Box<Contract>> 
     },
     Assert { 
-        check_that: Observation, 
-        continue_as: Box<Contract> 
+        check_that: Option<Observation>, 
+        continue_as: Option<Box<Contract>> 
     },
     Let { 
         value_name: String, 
-        value: Box<Value>, 
-        continue_as: Box<Contract> 
+        value: Option<Box<Value>>, 
+        continue_as: Option<Box<Contract>> 
     },
     Pay { 
-        party: Party, 
-        payee: Payee, 
-        currency: Token, 
-        amount: Value, 
-        continue_as: Box<Contract>
+        party: Option<Party>, 
+        payee: Option<Payee>, 
+        currency: Option<Token>, 
+        amount: Option<Value>, 
+        continue_as: Option<Box<Contract>>
     }
 }
 
@@ -166,19 +159,38 @@ Impl_From_For!(@Contract,MarloweContract);
 Impl_From_For!(@i64,MarloweNumber);
 Impl_From_For!(@Observation,MarloweObservation);
 
+
+
 impl std::fmt::Display for Action {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Action::Deposit { by, into_account_of, currency, the_amount_of } => 
-                write!(f, "(Deposit {} {} {} {})",by,into_account_of,currency,the_amount_of),
+                write!(f, "(Deposit {} {} {} {})",
+                    match into_account_of {None=>"?party".to_string(),Some(v)=>format!("{v}")},    
+                    match by {None=>"?from_party".to_string(),Some(v)=>format!("{v}")},
+                    match currency {None=>"?token".to_string(),Some(v)=>format!("{v}")},
+                    match the_amount_of {None=>"?value".to_string(),Some(v)=>format!("{v}")},
+                ),
             Action::Notify { notify_if: observation } => 
-                write!(f, "(Notify {})",observation),
+                write!(f, "(Notify {})",
+                    match observation {None=>"?observation".to_string(),Some(v)=>format!("{v}")},
+                ),
             Action::Case(action, contract) => 
-                write!(f, "(Case {} {})",action,contract),
+                write!(f, "(Case {} {})",
+                    match action {None=>"?action".to_string(),Some(v)=>format!("{v}")},
+                    match contract {None=>"?contract".to_string(),Some(v)=>format!("{v}")}
+                ),
             Action::Choice(choice_id,bounds) => {
-                let stritems : Vec<String> = bounds.iter().map(|x|format!("{}",x)).collect();
-             
-                write!(f, "(Choice {} [{}])",choice_id,stritems.join(","))
+                let stritems : Vec<String> = bounds.iter().map(|x|
+                    match x {
+                        Some(v) => format!("{}",v),
+                        None => String::from("?bound")
+                    }
+                ).collect();
+                write!(f, "(Choice {} [{}])",
+                    match choice_id {None=>"?choiceId".to_string(),Some(v)=>format!("{v}")},
+                    stritems.join(",")
+                )
             },
         }
     }
@@ -187,8 +199,11 @@ impl std::fmt::Display for Action {
 impl std::fmt::Display for Payee {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Payee::Account(p) => write!(f, "(Account {p})"),
-            Payee::Party(p) => write!(f, "(Party {p})"),
+            Payee::Account(p) => write!(f, "(Account {})",
+                match p {None=>"?party".to_string(),Some(v)=>format!("{v}")}),
+            Payee::Party(p) => write!(f, "(Party {})",
+                match p {None=>"?party".to_string(),Some(v)=>format!("{v}")}
+            ),
         }
     }
 }
@@ -211,27 +226,52 @@ impl std::fmt::Display for Observation {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Observation::ValueGT(a, b) => 
-                write!(f, "(ValueGT {} {})",a,b),
+                write!(f, "(ValueGT {} {})",
+                match a {None=>"?value".to_string(),Some(v)=>format!("{v}")},
+                match b {None=>"?value".to_string(),Some(v)=>format!("{v}")}
+            ),
             Observation::ValueGE(a,b) => 
-                write!(f, "(ValueGE {} {})",a,b),
+                write!(f, "(ValueGE {} {})",
+                match a {None=>"?value".to_string(),Some(v)=>format!("{v}")},
+                match b {None=>"?value".to_string(),Some(v)=>format!("{v}")}
+            ),
             Observation::ValueLT(a,b) => 
-                write!(f, "(ValueLT {} {})",a,b),
+                write!(f, "(ValueLT {} {})",
+                match a {None=>"?value".to_string(),Some(v)=>format!("{v}")},
+                match b {None=>"?value".to_string(),Some(v)=>format!("{v}")}
+            ),
             Observation::ValueLE(a,b) => 
-                write!(f, "(ValueLE {} {})",a,b),
+                write!(f, "(ValueLE {} {})",
+                match a {None=>"?value".to_string(),Some(v)=>format!("{v}")},
+                match b {None=>"?value".to_string(),Some(v)=>format!("{v}")}
+            ),
             Observation::ValueEQ(a,b) => 
-                write!(f, "(ValueEQ {} {})",a,b),
+                write!(f, "(ValueEQ {} {})",
+                match a {None=>"?value".to_string(),Some(v)=>format!("{v}")},
+                match b {None=>"?value".to_string(),Some(v)=>format!("{v}")}
+            ),
             Observation::TrueObs => 
                 write!(f, "TrueObs"),            
             Observation::FalseObs => 
                 write!(f, "FalseObs"),
             Observation::ChoseSomething(a) => 
-                write!(f, "(ChoseSomething {})",a),
+                write!(f, "(ChoseSomething {})",
+                    match a {None=>"?choiceId".to_string(),Some(v)=>format!("{v}")}
+                ),
             Observation::OrObs(a, b) => 
-                write!(f, "(OrObs {} {})",a,b),
+                write!(f, "(OrObs {} {})",
+                    match a {None=>"?observation".to_string(),Some(v)=>format!("{v}")},
+                    match b {None=>"?observation".to_string(),Some(v)=>format!("{v}")}
+                ),
             Observation::AndObs(a, b) => 
-                write!(f, "(AndObs {} {})",a,b),        
+                write!(f, "(AndObs {} {})",
+                match a {None=>"?observation".to_string(),Some(v)=>format!("{v}")},
+                match b {None=>"?observation".to_string(),Some(v)=>format!("{v}")}
+            ),    
             Observation::NotObs(a) => 
-                write!(f, "(NotObs {})",a),
+                write!(f, "(NotObs {})",
+                    match a {None=>"?observation".to_string(),Some(v)=>format!("{v}")}
+                )
         }
     }
 }
@@ -242,7 +282,10 @@ impl std::fmt::Display for Value {
             Value::TimeIntervalEnd => write!(f,"TimeIntervalEnd"),
             Value::TimeIntervalStart => write!(f,"TimeIntervalStart"),
             Value::AvailableMoney(a, b) => 
-                write!(f, "(AvailableMoney {} {})",a,b),
+                write!(f, "(AvailableMoney {} {})",
+                    match a {None=>"?party".to_string(),Some(v)=>format!("{v}")},
+                    match b {None=>"?token".to_string(),Some(v)=>format!("{v}")}
+                ),
             Value::ConstantValue(a) => 
                 write!(f, "(Constant {})",a),
             Value::ConstantParam(a) => 
@@ -250,19 +293,39 @@ impl std::fmt::Display for Value {
             Value::UseValue(a) => 
                 write!(f, "(UseValue \"{}\")",a),
             Value::MulValue(a, b) => 
-                write!(f, "(MulValue {a} {b})"),
+                write!(f, "(MulValue {} {})",
+                    match a {None=>"?value".to_string(),Some(v)=>format!("{v}")},
+                    match b {None=>"?value".to_string(),Some(v)=>format!("{v}")}
+                ),
             Value::DivValue(a, b) => 
-                write!(f, "(DivValue {a} {b})"),
+                write!(f, "(DivValue {} {})",
+                    match a {None=>"?value".to_string(),Some(v)=>format!("{v}")},
+                    match b {None=>"?value".to_string(),Some(v)=>format!("{v}")}
+                ),
             Value::SubValue(a, b) => 
-                write!(f, "(SubValue {a} {b})"),
+                write!(f, "(SubValue {} {})",
+                    match a {None=>"?value".to_string(),Some(v)=>format!("{v}")},
+                    match b {None=>"?value".to_string(),Some(v)=>format!("{v}")}
+                ),
             Value::AddValue(a, b) => 
-                write!(f, "(AddValue {a} {b})"),
+                write!(f, "(AddValue {} {})",
+                    match a {None=>"?value".to_string(),Some(v)=>format!("{v}")},
+                    match b {None=>"?value".to_string(),Some(v)=>format!("{v}")}
+                ),
             Value::NegValue(a) => 
-                write!(f, "(NegValue {})",a),
+                write!(f, "(NegValue {})",
+                    match a {None=>"?value".to_string(),Some(v)=>format!("{v}")}
+                ),
             Value::ChoiceValue(a) => 
-                write!(f, "(ChoiceValue {a})"),
+                write!(f, "(ChoiceValue {})",
+                    match a {None=>"?choiceId".to_string(),Some(v)=>format!("{v}")}
+                ),
             Value::Cond(a, b, c) => 
-                write!(f, "(Cond {a} {b} {c})"),
+                write!(f, "(Cond {} {} {})",
+                match a {None=>"?observation".to_string(),Some(v)=>format!("{v}")},
+                match b {None=>"?value".to_string(),Some(v)=>format!("{v}")},
+                match c {None=>"?value".to_string(),Some(v)=>format!("{v}")}
+            ),
         }
     }
 }
@@ -279,13 +342,18 @@ impl std::fmt::Display for Token {
 
 impl std::fmt::Display for ChoiceId {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "(ChoiceId \"{}\" {})",self.name,self.owner)
+        write!(f, "(ChoiceId \"{}\" {})",self.name,
+            match &self.owner {None=>"?party".to_string(),Some(v)=>format!("{v}")}
+        )
     }
 }
 
 impl std::fmt::Display for Bound {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "(Bound {} {})",self.0,self.1)
+        write!(f, "(Bound {} {})",
+            self.0,
+            self.1
+        )
     }
 }
 
@@ -297,7 +365,10 @@ impl std::fmt::Display for Timeout {
                 write!(f, "{}",x),
 
             Timeout::TimeInterval(a, b) => 
-                write!(f, "(TimeInterval {} {})",a,b),
+                write!(f, "(TimeInterval {} {})",
+                match a {None=>"?timeout".to_string(),Some(v)=>format!("{v}")},
+                match b {None=>"?timeout".to_string(),Some(v)=>format!("{v}")}
+                ),
             
                 Timeout::TimeParam(x) => 
                 write!(f, "(TimeParam \"{}\")",x),
@@ -307,7 +378,10 @@ impl std::fmt::Display for Timeout {
 
 impl std::fmt::Display for Case {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "(Case {} {})",self.action,self.contract)
+        write!(f, "(Case {} {})",
+            match &self.action {None=>"?action".to_string(),Some(v)=>format!("{v}")},
+            match &self.contract {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
+        )
     }
 }
 
@@ -317,39 +391,86 @@ impl std::fmt::Display for Contract {
         match self {
             Contract::Close => write!(f, "Close"),
             Contract::When { cases, timeout, timeout_continuation } => {
-                let case_str : Vec<String> = cases.iter().map(|x|format!("{}",x)).collect();
+                
+                let case_str : Vec<String> = cases.iter().map(|x|
+                    match x {
+                        Some(v) => format!("{}",v),
+                        None => "?case".to_string()
+                    }
+                ).collect();
+
                 if f.alternate() {
-                    write!(f, "When [ {} ] {} {}",case_str.join(",\n"),timeout,timeout_continuation)
+                    write!(f, "When [ {} ] {} {}",case_str.join(",\n"),
+                        match timeout {None=>"?timeout".to_string(),Some(v)=>format!("{v}")},
+                        match timeout_continuation {None=>"?contract".to_string(),Some(v)=>format!("{v}")}
+                    )
                 } else {
-                    write!(f, "(When [ {} ] {} {})",case_str.join(",\n"),timeout,timeout_continuation)
+                    write!(f, "(When [ {} ] {} {})",case_str.join(",\n"),
+                        match timeout {None=>"?timeout".to_string(),Some(v)=>format!("{v}")},
+                        match timeout_continuation {None=>"?contract".to_string(),Some(v)=>format!("{v}")}
+                    )
                 }
             }
             Contract::If { observation, then_contract, else_contract } => {
                 if f.alternate() {
-                    write!(f, "If {observation} {then_contract} {else_contract}")
+                    write!(f, "If {} {} {}",
+                        match observation {None=>"?observation".to_string(),Some(v)=>format!("{v}")}, 
+                        match then_contract {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
+                        match else_contract {None=>"?contract".to_string(),Some(v)=>format!("{v}")}
+                    )
                 } else {
-                    write!(f, "(If {observation} {then_contract} {else_contract})")
+                    write!(f, "(If {} {} {})",
+                        match observation {None=>"?observation".to_string(),Some(v)=>format!("{v}")}, 
+                        match then_contract {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
+                        match else_contract {None=>"?contract".to_string(),Some(v)=>format!("{v}")}
+                    )
                 }
             },
             Contract::Assert { check_that, continue_as } => {
                 if f.alternate() {
-                    write!(f, "Assert {check_that} {continue_as}")
+                    write!(f, "Assert {} {}",
+                        match check_that {None=>"?observation".to_string(),Some(v)=>format!("{v}")}, 
+                        match continue_as {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
+                    )
                 } else {
-                    write!(f, "(Assert {check_that} {continue_as})")
+                    write!(f, "(Assert {} {})",
+                        match check_that {None=>"?observation".to_string(),Some(v)=>format!("{v}")}, 
+                        match continue_as {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
+                    )
                 }
             },
             Contract::Let { value_name, value, continue_as } => { 
                 if f.alternate() {
-                    write!(f, "Let \"{value_name}\" {value} {continue_as}")
+                    write!(f, "Let \"{}\" {} {}",
+                        value_name,
+                        match value {None=>"?value".to_string(),Some(v)=>format!("{v}")},
+                        match continue_as {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
+                )
                 } else {
-                    write!(f, "(Let \"{value_name}\" {value} {continue_as})")
+                    write!(f, "(Let \"{}\" {} {})",
+                        value_name,
+                        match value {None=>"?value".to_string(),Some(v)=>format!("{v}")},
+                        match continue_as {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
+                    )
                 }
             },
             Contract::Pay { party, payee, currency, amount, continue_as } => { 
                 if f.alternate() {
-                    write!(f, "Pay {party} {payee} {currency} {amount} {continue_as}")
+                    write!(f, "Pay {} {} {} {} {}",
+                        match party {None=>"?party".to_string(),Some(v)=>format!("{v}")},
+                        match payee {None=>"?payee".to_string(),Some(v)=>format!("{v}")},
+                        match currency {None=>"?token".to_string(),Some(v)=>format!("{v}")},
+                        match amount {None=>"?value".to_string(),Some(v)=>format!("{v}")},
+                        match continue_as {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
+                    )
                 } else {
-                    write!(f, "(Pay {party} {payee} {currency} {amount} {continue_as})")
+                    write!(f, "(Pay {} {} {} {} {})",
+                        match party {None=>"?party".to_string(),Some(v)=>format!("{v}")},
+                        match payee {None=>"?payee".to_string(),Some(v)=>format!("{v}")},
+                        match currency {None=>"?token".to_string(),Some(v)=>format!("{v}")},
+                        match amount {None=>"?value".to_string(),Some(v)=>format!("{v}")},
+                        match continue_as {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
+                    )
                 }
             },
             

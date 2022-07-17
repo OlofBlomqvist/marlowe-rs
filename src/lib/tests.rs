@@ -22,7 +22,7 @@ fn deserialize_wrapped_simple_observation_should_fail() {
     let simple_contract = "When [ (Case (Notify (TrueObs)) Close) ] (TimeParam \"test\") Close";
     let deserialized = deserialize(&simple_contract);
     match deserialized {
-        Ok(d) => panic!("{d}"),
+        Ok(v) => panic!("{v}"),
         Err(_e) => {},
     }
 }
@@ -31,14 +31,14 @@ fn deserialize_wrapped_simple_observation_should_fail() {
 fn serialize_and_print() {
     let my_contract = Contract::When {
         cases: vec![
-            Case { 
-                action: Action::Notify { 
-                    notify_if: Observation::TrueObs 
-                }, 
-                contract: Contract::Close.boxed() }
-        ],
-        timeout: Timeout::TimeParam("test".into()),
-        timeout_continuation: Contract::Close.boxed(),
+            Some(Case { 
+                action: Some(Action::Notify { 
+                    notify_if: Some(Observation::TrueObs) 
+                }), 
+                contract: Some(Contract::Close.boxed()) }
+            )],
+        timeout: Some(Timeout::TimeParam("test".into())),
+        timeout_continuation: Some(Contract::Close.boxed()),
     };
 
     let serialized = serialize(my_contract);
@@ -53,26 +53,26 @@ fn serialize_and_print() {
 fn can_generate_contract() {
     Contract::When {
         cases: vec![
-            Case {
-                action: Action::Notify { 
-                    notify_if: Observation::TrueObs 
-                },
-                contract: Contract::Pay { 
-                    party: Party::Role("test".to_string()), 
-                    payee: Payee::Account(Box::new(Party::PK("00000000000000000000".into()))), 
-                    currency: Token::ADA, 
-                    amount: Value::ConstantValue(42), 
-                    continue_as: Contract::Close.boxed()
-                }.boxed()
-            },
-            Case { 
-                action: Action::Notify { 
-                    notify_if: Observation::TrueObs 
-                }, 
-                contract: Contract::Close.boxed() }
+            Some(Case {
+                action: Some(Action::Notify { 
+                    notify_if: Some(Observation::TrueObs)
+                }),
+                contract: Some(Contract::Pay { 
+                    party: Some(Party::Role("test".to_string())), 
+                    payee: Some(Payee::Account(Some(Party::PK("00000000000000000000".into())))), 
+                    currency: Some(Token::ADA), 
+                    amount: Some(Value::ConstantValue(42)), 
+                    continue_as: Some(Contract::Close.boxed())
+                }.boxed())
+            }),
+            Some(Case { 
+                action: Some(Action::Notify { 
+                    notify_if: Some(Observation::TrueObs) 
+                }), 
+                contract: Some(Contract::Close.boxed()) })
         ],
-        timeout: Timeout::TimeParam("test".to_owned()),
-        timeout_continuation: Contract::Close.boxed(),
+        timeout: Some(Timeout::TimeParam("test".to_owned())),
+        timeout_continuation: Some(Contract::Close.boxed()),
     };
 }
 
@@ -83,6 +83,7 @@ fn can_generate_contract() {
 fn can_parse_playground_samples() {
     _ = std::fs::remove_file("IN.TEMP");
     _ = std::fs::remove_file("OUT.TEMP");
+    _ = std::fs::remove_file("OUT.UNCOMPRESSED.TEMP");
     let paths = std::fs::read_dir("marlowe_playground_samples").unwrap();
     let mut count = 0;
     for path in paths {
@@ -111,16 +112,18 @@ fn can_parse_playground_samples() {
 
                 let compressed_serialized_input = strep(&serialized_contract);
                 let compressed_serialized_output = strep(&serialize(x));
-
+                
                 if compressed_serialized_output != compressed_serialized_input {
                     _ = std::fs::write("OUT.TEMP", compressed_serialized_output);
                     _ = std::fs::write("IN.TEMP", compressed_serialized_input);
+                    _ = std::fs::write("OUT.UNCOMPRESSED.TEMP",serialized_contract);
                     panic!("the re-serialized contract {path_string} is different from the original! see in.temp and out.temp")
                 } else {
                     println!("Successfully validated {path_string}");
                 }
             },
-            Err(e) => panic!("{e:#}"),
+            Err(e) => panic!("{path_string} ::: {e:?}"),
+            
         }
        
     }
@@ -175,44 +178,32 @@ fn read_from_file(path:&str) -> String {
 }
 
 #[cfg(test)]
-#[decurse::decurse]
 fn modify(contract:Contract) -> Contract {
 
-    fn handle_timeout(timeout:Timeout) -> Timeout {
-        match timeout {
-            Timeout::TimeConstant(_) => Timeout::TimeConstant(99999),
-            Timeout::TimeInterval(a, b) => 
-                Timeout::TimeInterval(
-                    Box::new(handle_timeout(*a)),
-                    Box::new(handle_timeout(*b))
-                ),
-            Timeout::TimeParam(_) => Timeout::TimeParam("FAAAKEEEEEOUT".to_string()),
-        }
-    }
 
     match contract {
         Contract::Close => contract,
         Contract::When { cases, timeout, timeout_continuation } => Contract::When {
             cases,
-            timeout: handle_timeout(timeout),
+            timeout: timeout,
             timeout_continuation
         },
         Contract::If { observation, then_contract, else_contract } => 
             Contract::If { 
                 observation, 
-                then_contract: modify(*then_contract).boxed(), 
-                else_contract: modify(*else_contract).boxed() 
+                then_contract: Some(modify(*then_contract.unwrap()).boxed()), 
+                else_contract: Some(modify(*else_contract.unwrap()).boxed())
             },
         Contract::Assert { check_that, continue_as } => 
             Contract::Assert { 
                 check_that, 
-                continue_as: modify(*continue_as).boxed() 
+                continue_as: Some(modify(*continue_as.unwrap()).boxed()) 
             },
         Contract::Let { value_name, value, continue_as } => 
             Contract::Let { 
                 value_name, 
                 value, 
-                continue_as: Box::new(modify(*continue_as))  
+                continue_as: Some(Box::new(modify(*continue_as.unwrap())))  
             },
         Contract::Pay { party, payee, currency, amount, continue_as } => 
             Contract::Pay {
@@ -220,7 +211,21 @@ fn modify(contract:Contract) -> Contract {
                 payee,
                 currency,
                 amount,
-                continue_as: modify(*continue_as).boxed() 
+                continue_as: Some(modify(*continue_as.unwrap()).boxed()) 
             },
+    }
+}
+
+
+#[test]
+fn new_parser() {
+    let simple_contract = "When [ (Case (Notify TrueObs) Close) ] (TimeParam \"test\") Close";
+    let deserialized = deserialize(&simple_contract);
+    match deserialized {
+        Ok(d) => {
+            let serialized = serialize(d);
+            println!("{serialized}");
+        },
+        Err(e) => panic!("{e}"),
     }
 }

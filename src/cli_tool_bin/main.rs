@@ -74,15 +74,24 @@ fn main() {
         true => {
             let tokens = 
                 MarloweParser::parse(
-                    Rule::Contract,
+                    Rule::MainContract,
                     &serialized_input,                     
                 );
-            let t = tokens.unwrap();
-            let json = serde_json::to_string_pretty(&t).unwrap();
-            println!("{}",json);
+            match tokens {
+                Ok(v) => {
+                    let json = serde_json::to_string_pretty(&v).unwrap();
+                    println!("{}",json);
+                },
+                Err(e) => {
+                    println!("{:?}",e);
+                },
+            }
+            
+            
         },
         _ => {           
-            let deserialized_instance = deserialize(&serialized_input);
+            let deserialized_instance = 
+                deserialize(&serialized_input);
             match deserialized_instance {
                 Ok(c) => {
                     let serialized = serialize(c);

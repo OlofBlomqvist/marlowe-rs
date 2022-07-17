@@ -9,12 +9,10 @@ license-file = "licence"
 
 [dependencies]
 pest_derive = "2.1.0"
-decurse = "0.0.4"
 pest = { version = "2.1.3", features= ["pretty-print"] }
 serde = "1.0.137"
 serde_json ="1.0.81"
 clap = { version = "3.1.18", features = ["derive"] }
-
 
 [lib]
 name = "marlowe_lang"

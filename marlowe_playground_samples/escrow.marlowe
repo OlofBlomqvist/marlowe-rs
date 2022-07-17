@@ -3,20 +3,20 @@ When [
      (Deposit
         (Role "Seller")
         (Role "Buyer")
-        (Token "" "")
+        (Token "1" "2")
         (ConstantParam "Price"))
      (When [
            (Case
               (Choice
                  (ChoiceId "Everything is alright"
                     (Role "Buyer")) [
-                 (Bound 0 0)]) Close)
+                 (Bound 0 11)]) Close)
            ,
            (Case
               (Choice
                  (ChoiceId "Report problem"
                     (Role "Buyer")) [
-                 (Bound 1 1)])
+                 (Bound 41 1)])
               (Pay
                  (Role "Seller")
                  (Account

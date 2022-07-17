@@ -1,50 +1,34 @@
 WHITESPACE = _{ " " | "\t" | "\r" | "\n" | "\r\n" }
 comma  = _{ "," }
-
 lpar   = _{ "(" }
 rpar   = _{ ")" }
 lbra   = _{ "[" }
 rbra   = _{ "]" }
-
-string = ${ "\"" ~ str_inner ~ "\""  }
-str_inner = @{ str_char* }
-str_char = {
+Number = ${ "-"{0,1} ~ ASCII_DIGIT+ }
+quoted_string = _{ "\"" ~ string ~ "\""  }
+string = { str_char* }
+str_char = _{
     !("\"" | "\\") ~ ANY
     | "\\" ~ ("\"" | "\\" )
 }
 
-Number = ${ "-"{0,1} ~ ASCII_DIGIT+ }
-
-Bound = ${ "Bound" ~ WHITESPACE+ ~ Number ~ WHITESPACE+ ~ Number}
+Bound = ${  "Bound" ~ WHITESPACE+ ~ Number ~ WHITESPACE+ ~ Number}
 xBound = _{ 
-    lpar ~ Bound ~ rpar | Bound
+    BoundHole | Bound | lpar ~ Bound ~ rpar
 }
 
-ChoiceId = ${ lpar ~ WHITESPACE* ~"ChoiceId" ~ WHITESPACE+ ~ string ~ WHITESPACE+ ~ Party ~ WHITESPACE* ~ rpar}
-
-
-ValueId = @{ string }
-
+Timeout = _{ TimeoutHole | TimeConstant | Number | TimeParam }
 TimeConstant = { ASCII_DIGIT+ }
 TimeInterval = ${ lpar ~ WHITESPACE* ~ "TimeInterval" ~ WHITESPACE+ ~ Timeout ~ WHITESPACE+ ~ Timeout ~ WHITESPACE* ~ rpar }
-TimeParam = ${ lpar ~ WHITESPACE* ~ "TimeParam" ~ WHITESPACE+ ~ string ~ WHITESPACE* ~ rpar }
-Timeout = { TimeConstant | Number | TimeParam }
+TimeParam = ${ lpar ~ WHITESPACE* ~ "TimeParam" ~ WHITESPACE+ ~ quoted_string ~ WHITESPACE* ~ rpar }
 
-Party = _{ PkRoleOrAccount }
-
-PkRoleOrAccount = _{ lpar ~ (Role | PK) ~ rpar }
-Role = ${ "Role" ~ WHITESPACE+ ~ string}
-
-PubKey = ${ "\"" ~ ("0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"|"A"|"B"|"C"|"D"|"E"|"F"){64,64} ~ "\"" }
-
-PK = ${ "PK" ~ WHITESPACE+ ~ PubKey }
-
-Account = ${ "Account" ~ WHITESPACE+ ~ PkRoleOrAccount }
-
-Token = ${ lpar ~ WHITESPACE* ~ "Token" ~ WHITESPACE+ ~ string ~ WHITESPACE+ ~ string ~ WHITESPACE* ~ rpar }
-
-Value = _{ 
-      ConstantParam
+Token = _{TokenHole|ADA|Currency}
+ADA = { "Token \"\" \"\"" }
+Currency = ${ lpar ~ WHITESPACE* ~ "Token" ~ WHITESPACE+ ~ quoted_string ~ WHITESPACE+ ~ quoted_string ~ WHITESPACE* ~ rpar }
+ChoiceId = ${ lpar ~ WHITESPACE* ~"ChoiceId" ~ WHITESPACE+ ~ quoted_string ~ WHITESPACE+ ~ Party ~ WHITESPACE* ~ rpar}
+Value = _{   
+    ValueHole
+    | ConstantParam
     | AvailableMoney
     | Cond
     | ChoiceValue
@@ -67,12 +51,12 @@ Value = _{
     SubValue = ${ lpar ~ WHITESPACE* ~ "SubValue" ~ WHITESPACE+ ~ Value ~ WHITESPACE+ ~ Value ~ WHITESPACE* ~ rpar}
     AddValue = ${ lpar ~ WHITESPACE* ~ "AddValue" ~ WHITESPACE+ ~ Value ~ WHITESPACE+ ~ Value ~ WHITESPACE* ~ rpar}
     NegValue = ${ lpar ~ WHITESPACE* ~ "NegValue" ~ WHITESPACE+ ~ Value ~ WHITESPACE+ ~ Value ~ rpar}
-    UseValue = ${ lpar ~ WHITESPACE* ~ "UseValue" ~ WHITESPACE+ ~ ValueId ~ WHITESPACE* ~ rpar}
-    ConstantParam = ${ lpar ~ WHITESPACE* ~ "ConstantParam" ~ WHITESPACE+ ~ string ~ WHITESPACE* ~ rpar }
+    UseValue = ${ lpar ~ WHITESPACE* ~ "UseValue" ~ WHITESPACE+ ~ quoted_string ~ WHITESPACE* ~ rpar}
+    ConstantParam = ${ lpar ~ WHITESPACE* ~ "ConstantParam" ~ WHITESPACE+ ~ quoted_string ~ WHITESPACE* ~ rpar }
     Constant = ${ (lpar ~ WHITESPACE*){0,1} ~ "Constant" ~ WHITESPACE+ ~ Number ~ (WHITESPACE* ~ rpar){0,1} }
     AvailableMoney = ${ lpar ~ WHITESPACE* ~ "AvailableMoney" ~ WHITESPACE+ ~ Party ~ WHITESPACE+ ~ Token ~ WHITESPACE* ~ rpar}
 
-Observation = _{ TrueObs | FalseObs | ValueEQ | ValueLE | 
+Observation = _{ ObservationHole | TrueObs | FalseObs | ValueEQ | ValueLE | 
                  ValueLT | ValueGT | ValueGE | OrObs | 
                  NotObs | AndObs | ChoseSomething }
     ValueEQ = ${ lpar ~ WHITESPACE* ~ "ValueE"  ~ WHITESPACE+  ~ Value  ~ WHITESPACE+ ~ Value ~WHITESPACE* ~ rpar }
@@ -87,8 +71,8 @@ Observation = _{ TrueObs | FalseObs | ValueEQ | ValueLE |
     OrObs =  ${ lpar ~ WHITESPACE* ~ "OrObs"  ~ WHITESPACE+ ~ Observation ~ WHITESPACE+ ~ Observation ~ WHITESPACE* ~ rpar }
     AndObs = ${ lpar ~ WHITESPACE* ~ "AndObs" ~ WHITESPACE+ ~ Observation ~ WHITESPACE+ ~ Observation ~ WHITESPACE* ~ rpar }
    
-Action = @{ Case | Notify | Choice | Deposit }
-    Deposit = ${ lpar ~ WHITESPACE* ~"Deposit" ~ WHITESPACE+ ~ Party ~ WHITESPACE+ ~ Party ~ WHITESPACE+ ~ Token ~ WHITESPACE+ ~ Value ~ WHITESPACE* ~ rpar }
+Action = _{ ActionHole | Notify | Choice | Deposit }
+    Deposit = ${ lpar ~ WHITESPACE* ~"Deposit" ~ WHITESPACE+ ~ Party ~ WHITESPACE+ ~ FromParty ~ WHITESPACE+ ~ Token ~ WHITESPACE+ ~ Value ~ WHITESPACE* ~ rpar }
     Choice =  ${ lpar ~ WHITESPACE* ~"Choice"  ~ WHITESPACE+ ~ ChoiceId ~ WHITESPACE+ ~ ArrayOfBounds ~ WHITESPACE* ~ rpar }
     Notify =  ${ lpar ~ WHITESPACE* ~"Notify"  ~ WHITESPACE+ ~ Observation ~ WHITESPACE* ~ rpar }
 
@@ -97,29 +81,32 @@ Case = ${
     | "Case" ~ WHITESPACE+ ~ Action ~ WHITESPACE+ ~ WrappedContract
 }
 
-PayeeAccount = ${ "Account" ~ WHITESPACE+ ~ Party }
-PayeeParty = ${ "Party" ~ WHITESPACE+ ~ Party}
+Payee = _{ PayeeHole | PayeeAccount | PayeeParty }
+PayeeAccount = ${ lpar ~ "Account" ~ WHITESPACE+ ~ Party ~ rpar }
+PayeeParty = ${ lpar ~ "Party" ~ WHITESPACE+ ~ Party ~ rpar }
+Party = _{ PartyHole | Role | PK }
+FromParty = _{ FromPartyHole | Role | PK }
+Role = ${ lpar ~ "Role" ~ WHITESPACE+ ~ quoted_string ~ rpar }
+PubKey = ${ "\"" ~ ("0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"|"A"|"B"|"C"|"D"|"E"|"F"){64,64} ~ "\"" }
+PK = ${ lpar ~ "PK" ~ WHITESPACE+ ~ PubKey ~ rpar }
+Account = ${ "Account" ~ WHITESPACE+ ~ Party }
 
-Payee = _{ 
-    lpar ~ (PayeeAccount|PayeeParty) ~ rpar 
-}
+MainContract = _{ Contract ~ EOI }
 
-MainContract = { Contract ~ EOI }
-
-Contract = _{ Close | When | If | Let | Assert | Pay }
+Contract = { Close | When | If | Let | Assert | Pay }
     When   = ${ "When" ~ WHITESPACE+ ~ ArrayOfCases ~ WHITESPACE+ ~ Timeout ~ WHITESPACE+ ~ WrappedContract }
     Pay    = ${ "Pay"  ~ WHITESPACE+ ~ Party ~ WHITESPACE+ ~ Payee ~ WHITESPACE+ ~ Token ~ WHITESPACE+ ~ Value  ~ WHITESPACE+ ~ WrappedContract }
     If     = ${ "If"   ~ WHITESPACE+ ~ Observation ~ WHITESPACE+ ~ WrappedContract ~ WHITESPACE+ ~ WrappedContract }
-    Let    = ${ "Let"  ~ WHITESPACE+ ~ string ~ WHITESPACE+ ~ Value ~ WHITESPACE+ ~ WrappedContract }
+    Let    = ${ "Let"  ~ WHITESPACE+ ~ quoted_string ~ WHITESPACE+ ~ Value ~ WHITESPACE+ ~ WrappedContract }
     Assert = ${ "Assert" ~ WHITESPACE+ ~ Observation ~ WHITESPACE+ ~ WrappedContract }
     Close  = { "Close" }
 
-WrappedContract = ${
-    Close | "(" ~ WHITESPACE* ~ (Assert|Let|If|Pay|When) ~ WHITESPACE* ~  ")"
+WrappedContract = _{
+    ContractHole | Close | "(" ~ WHITESPACE* ~ (Assert|Let|If|Pay|When) ~ WHITESPACE* ~  ")"
 }
 
 ArrayOfCases = ${ 
-     lbra ~ WHITESPACE* ~ Case ~ (WHITESPACE* ~ "," ~ WHITESPACE* ~ Case)* ~ WHITESPACE* ~ rbra 
+     lbra ~ WHITESPACE* ~ (Case|CaseHole) ~ (WHITESPACE* ~ "," ~ WHITESPACE* ~ (Case|CaseHole))* ~ WHITESPACE* ~ rbra 
      | lbra ~ WHITESPACE* ~ rbra
 }
 
@@ -127,3 +114,19 @@ ArrayOfBounds = ${
      lbra ~ WHITESPACE* ~ xBound ~ (WHITESPACE* ~ "," ~ WHITESPACE* ~ xBound)* ~ WHITESPACE* ~ rbra 
      | lbra ~ WHITESPACE* ~ rbra
 }
+
+Hole = _ { "?"~("-"|"_"|ASCII_DIGIT|ASCII_ALPHA)* }
+PartyHole = { Hole }
+FromPartyHole = { Hole }
+ContractHole = { Hole }
+PayeeHole = { Hole }
+ValueHole = { Hole }
+ObservationHole = { Hole }
+TimeoutHole = { Hole }
+TokenHole = { Hole }
+BoundHole = { Hole }
+RoleHole = { Hole }
+PubkeyHole = { Hole }
+CaseHole = { Hole }
+ActionHole = { Hole }
+AccountHole = { Hole }

@@ -15,11 +15,6 @@ It is used by the MarloweLSP VSCode Extention (Syntax highlighting for Marlowe i
 - Serialize the Rust types back in to Marlowe.
 - Tokenization of Marlowe contracts.
 
-### Planned features
-
-- Indentation and general formatting.
-- Basic logical validation of contracts.
-
 ### Disclaimers
 
 - This crate was created as a learning exercise and should not be trusted anywhere near a production environment at this time.
@@ -41,14 +36,14 @@ use marlowe_lang::parsing::{
 
 let my_contract = Contract::When {
     cases: vec![
-        Case { 
-            action: Action::Notify { 
-                notify_if: Observation::TrueObs 
-            }, 
-            contract: Contract::Close.boxed() }
+        Some(Case { 
+            action: Some(Action::Notify { 
+                notify_if: Some(Observation::TrueObs) 
+            }), 
+            contract: Some(Contract::Close.boxed()) } )
     ],
-    timeout: Timeout::TimeParam("test".into()),
-    timeout_continuation: Contract::Close.boxed(),
+    timeout: Some(imeout::TimeParam("test".into())),
+    timeout_continuation: Some(Contract::Close.boxed()),
 };
 
 let serialized = serialize(my_contract);

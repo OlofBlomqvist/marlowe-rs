@@ -1,0 +1,112 @@
+When [
+  (Case
+     (Deposit
+        (Role "Seller")
+        (Role "Seller")
+        (Token "" "")
+        (ConstantParam "Collateral amount"))
+     (When [
+        (Case
+           (Deposit
+              ?party
+              ?from_party
+              (Token "" "")
+              ?value)
+           (When [
+              (Case
+                 ?action
+                 (When [  
+                       (Case
+                          (Choice
+                             (ChoiceId "Everything is alright"
+                                ?party) [
+                             ?bound]) ?contract)
+                       ,
+                       (Case
+                          ?action
+                          (Pay
+                            ?party
+                            ?payee
+                             (Token "" "")
+                             (ConstantParam "Price")
+                             (When [
+                                    ?case,
+                                   (Case
+                                      (Choice
+                                         (ChoiceId "Confirm problem"
+                                            (Role "Seller")) [
+                                         (Bound 1 1)]) Close)
+                                   ,
+                                   (Case
+                                      ?action
+                                      (Pay
+                                         ?party
+                                         ?payee
+                                         ?token
+                                         ?value
+                                         (Pay
+                                            ?party
+                                            (Party
+                                               ?party)
+                                            (Token "" "")
+                                            ?value (When
+    [
+      ?case,
+      (Case
+        (Deposit
+            ?party
+            ?from_party
+            ?token ?value
+        )
+        (Pay
+            ?party
+            ?payee
+            ?token
+            ?value ?contract
+        ))]
+    ?timeout
+    ?contract))))] (TimeParam "Complaint deadline") (When
+    [
+      ?case,
+      (Case
+        (Deposit
+            ?party
+            ?from_party
+            ?token ?value
+        )
+        (Pay
+            ?party
+            ?payee
+            ?token
+            ?value ?contract
+        ))]
+    ?timeout
+    ?contract) )))] (TimeParam "Dispute by buyer timeout")  (When
+    [(Case
+        (Notify ?observation)
+        ?contract), (Case
+        (Deposit
+            (Role "INTOACCOF")
+            (Role "BY")
+            (Token "" "")
+            (ConstantParam "Collateral amount")
+        )
+        (When
+            [(Case
+                (Deposit
+                    ?party
+                    ?from_party
+                    (Token "" "")
+                    ?value
+                )
+                (When
+                    [(Case
+                        (Notify ?observation)
+                        ?contract)]
+                    (TimeParam "Deposit of price by buyer timeout")
+                    Close )
+                )]
+            0 ?contract)
+        )]
+    (TimeParam "Collateral deposit by seller timeout")
+    Close )  ))] (TimeParam "Deposit of price by buyer timeout") Close))] ?timeout ?contract))] (TimeParam "Collateral deposit by seller timeout") Close
