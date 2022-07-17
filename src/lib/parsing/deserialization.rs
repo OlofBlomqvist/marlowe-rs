@@ -27,10 +27,6 @@ fn option_to_result<T>(maybe_ast_node:Option<T>,msg:&str) -> Result<T,&str> {
     }
 }
 
-/// Marks the start and end character of the parsed input
-/// that a specific token was generated from.
-pub struct TokenRange(i64,i64);
-
 fn parse<T>(pair:Pair<Rule>) -> std::result::Result<T,String>
     where Result<T, String>: From<AstNode> { 
         parse_raw(pair)?.into() }
