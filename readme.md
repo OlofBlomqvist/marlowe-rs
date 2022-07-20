@@ -55,3 +55,53 @@ println!("{serialized}");
 ```text
 When [ Case (Notify (TrueObs)) Close ] (TimeParam "test") Close
 ```
+
+You can also parse contracts in to a token tree if you wish to inspect it yourself,
+either in rust or using the cli like in the example below:
+
+```bash
+rustup default nightly
+cargo install marlowe_lang
+marlowe_lang_cli -r from-file your_contract.marlowe
+```
+
+Which would return something similar to this:
+```text
+{
+  "pos": [
+    0,
+    3468
+  ],
+  "pairs": [
+    {
+      "pos": [
+        0,
+        3468
+      ],
+      "rule": "Contract",
+      "inner": {
+        "pos": [
+          0,
+          3468
+        ],
+        "pairs": [
+          {
+            "pos": [
+              0,
+              3468
+            ],
+            "rule": "When",
+            "inner": {
+              "pos": [
+                5,
+                3468
+              ],
+              "pairs": [ .........
+```
+
+Or if the input is invalid such as in the below example, you will receive an error:
+
+```
+$ marlowe_lang_cli -r from-standard-input 'Assert xTrueObs Close'
+Error { variant: ParsingError { positives: [ValueEQ, ValueLE, ValueLT, ValueGT, ValueGE, TrueObs, FalseObs, ChoseSomething, NotObs, OrObs, AndObs, ObservationHole], negatives: [] }, location: Pos(7), line_col: Pos((1, 8)), path: None, line: "Assert xTrueObs Close", continued_line: None }
+```
