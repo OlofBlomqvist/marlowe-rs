@@ -1,0 +1,34 @@
+When
+    [(Case
+        (Deposit
+            (Role "ddd")
+            (Role "Ada provider")
+            (Token "" "")
+            (Cond
+                TrueObs 
+                (Constant 1)
+                (AddValue
+                    (AddValue
+                        (NegValue (Constant 3))
+                        (ConstantParam "adasdasd")
+                    )
+                    (SubValue
+                        (ChoiceValue
+                            (ChoiceId
+                                "name"
+                                (Role "role")
+                            ))
+                        (MulValue
+                            TimeIntervalStart 
+                            (DivValue
+                                (UseValue "value")
+                                TimeIntervalEnd 
+                            )
+                        )
+                    )
+                )
+            )
+        )
+        Close )]
+    (TimeParam "Timeout for Ada deposit")
+    Close 

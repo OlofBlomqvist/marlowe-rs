@@ -1,9 +1,11 @@
+use serde::{Serialize, Deserialize, ser::SerializeStruct };
+
 use crate::{
     Impl_From_For_Vec, 
     Impl_From_For
 };
 
-#[derive(Debug)]
+#[derive(Debug,Serialize, Deserialize)]
 pub(crate) enum AstNode {
     StringValue(String),
     MarloweToken(crate::types::marlowe::Token),
@@ -23,40 +25,69 @@ pub(crate) enum AstNode {
     Null
 }
 
-#[derive(Debug)]
+#[serde(rename_all = "lowercase")]
+#[derive(Debug,Serialize, Deserialize)]
 pub struct ValueId(pub String);
 
-#[derive(Debug)]
+#[serde(rename_all = "lowercase")]
+#[derive(Debug, Deserialize)]
 pub struct Bound(pub i64,pub i64);
 
-#[derive(Debug)]
+#[serde(rename_all = "lowercase")]
+#[derive(Debug, Deserialize)]
 pub struct ChoiceId { 
-    pub owner : Option<Party>,
-    pub name : String
+    pub choice_owner : Option<Party>,
+    pub choice_name : String
 }
 
-#[derive(Debug)]
+#[serde(rename_all = "lowercase")]
+#[derive(Debug,Serialize, Deserialize)]
 pub enum Payee {
     Party(Option<Party>),
     Account(Option<Party>)
 }
 
-#[derive(Debug)]
+#[serde(rename_all = "lowercase")]
+#[derive(Debug,Serialize, Deserialize)]
 pub enum Observation { 
-    ValueGT(Option<Box<Value>>,Option<Box<Value>>),
-    ValueGE(Option<Box<Value>>,Option<Box<Value>>),
-    ValueLT(Option<Box<Value>>,Option<Box<Value>>),
-    ValueLE(Option<Box<Value>>,Option<Box<Value>>),
-    ValueEQ(Option<Box<Value>>,Option<Box<Value>>),
-    TrueObs,
-    FalseObs,
+    ValueGT {
+        value: Option<Box<Value>>,
+        gt_than: Option<Box<Value>>
+    },
+    ValueGE {
+        value: Option<Box<Value>>,
+        ge_than: Option<Box<Value>>
+    },
+    ValueLT {
+        value: Option<Box<Value>>,
+        lt_than: Option<Box<Value>>
+    },
+    ValueLE {
+        value: Option<Box<Value>>,
+        le_than: Option<Box<Value>>
+    },
+    ValueEQ {
+        value: Option<Box<Value>>,
+        equal_to: Option<Box<Value>>
+    },
+    True,
+    False,
     ChoseSomething(Option<ChoiceId>),        
-    OrObs(Option<Box<Observation>>,Option<Box<Observation>>),
-    AndObs(Option<Box<Observation>>,Option<Box<Observation>>),
-    NotObs(Option<Box<Observation>>)
+    OrObs {
+        either: Option<Box<Observation>>,
+        or: Option<Box<Observation>>
+    },
+    AndObs {
+        both: Option<Box<Observation>>,
+        and: Option<Box<Observation>>
+    },
+    NotObs {
+        not: Option<Box<Observation>>
+    }
 }
 
-#[derive(Debug)]
+#[serde(rename_all = "lowercase")]
+#[derive(Debug, Deserialize)]
 pub enum Value {
     TimeIntervalStart,
     TimeIntervalEnd,
@@ -71,75 +102,88 @@ pub enum Value {
     NegValue(Option<Box<Value>>), 
     ChoiceValue(Option<ChoiceId>), 
     Cond(Option<Observation>,Option<Box<Value>>,Option<Box<Value>>)
-
 }
 
+
+#[serde(rename_all = "lowercase")]
+#[derive(Serialize,Deserialize)]
 pub enum BoolObs{
     True,
     False
 }
 
-#[derive(Debug)]
+#[serde(rename_all = "lowercase")]
+#[serde(untagged)]
+#[derive(Debug,Serialize, Deserialize)]
 pub enum Token {
     ADA,
-    Custom(String,String)
+    Custom { token_name: String, currency_symbol: String }
 }
 
-#[derive(Debug)]
+#[serde(rename_all = "lowercase")]
+#[derive(Debug,Deserialize)]
 pub enum Party {
-    Role(String),
-    PK(String)
+    Role { role_token: String },
+    PK { pk_hash: String }
 }
 
-#[derive(Debug)]
+
+#[serde(rename_all = "lowercase")]
+#[serde(untagged)] 
+#[derive(Debug,Serialize, Deserialize)]
 pub enum Action {
-    Deposit { by: Option<Party>, into_account_of: Option<Party>, currency: Option<Token>, the_amount_of: Option<Value> },
+    Deposit { party: Option<Party>, of_token: Option<Token>, into_account: Option<Party>, deposits: Option<Value> },
     Notify { notify_if: Option<Observation> },
     Case(Option<Box<Action>>,Option<Box<Contract>>),
-    Choice(Option<ChoiceId>,Vec<Option<Bound>>)
+    Choice { for_choice: Option<ChoiceId>, choose_between: Vec<Option<Bound>> }
 }
 
-#[derive(Debug)]
+
+#[serde(rename_all = "lowercase")]
+#[derive(Debug,Serialize,Deserialize)]
 pub struct Case { 
-    pub action: Option<Action>, 
-    pub contract: Option<Box<Contract>>
+    pub then: Option<Box<Contract>>,
+    pub case: Option<Action>
 }
 
-#[derive(Debug)]
+#[serde(rename_all = "lowercase")]
+#[derive(Debug,Deserialize)]
 pub enum Timeout {
     TimeConstant(i64),
     TimeInterval(Option<Box<Timeout>>,Option<Box<Timeout>>),
     TimeParam(String)
 }
 
-#[derive(Debug)]
+#[serde(rename_all = "lowercase")]
+#[serde(untagged)] 
+#[derive(Debug, Deserialize)]
 pub enum Contract {
     Close,
     When  { 
-        cases: Vec<Option<Case>>, 
-        timeout: Option<Timeout>, 
-        timeout_continuation: Option<Box<Contract>> 
+        when: Vec<Option<Case>>, 
+        timeout_continuation: Option<Box<Contract>>,
+        timeout: Option<Timeout>
     },
     If  { 
-        observation: Option<Observation>, 
-        then_contract: Option<Box<Contract>>, 
-        else_contract: Option<Box<Contract>> 
+        r#if: Option<Observation>, 
+        then: Option<Box<Contract>>, 
+        r#else: Option<Box<Contract>> 
     },
     Assert { 
-        check_that: Option<Observation>, 
-        continue_as: Option<Box<Contract>> 
+        assert: Option<Observation>, 
+        then: Option<Box<Contract>> 
     },
     Let { 
-        value_name: String, 
-        value: Option<Box<Value>>, 
-        continue_as: Option<Box<Contract>> 
+        r#let: String, 
+        be: Option<Box<Value>>, 
+        then: Option<Box<Contract>> 
     },
     Pay { 
-        party: Option<Party>, 
-        payee: Option<Payee>, 
-        currency: Option<Token>, 
-        amount: Option<Value>, 
-        continue_as: Option<Box<Contract>>
+        from_account: Option<Party>, 
+        to: Option<Payee>, 
+        token: Option<Token>, 
+        pay: Option<Value>, 
+        then: Option<Box<Contract>>
     }
 }
 
@@ -164,12 +208,12 @@ Impl_From_For!(@Observation,MarloweObservation);
 impl std::fmt::Display for Action {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Action::Deposit { by, into_account_of, currency, the_amount_of } => 
+            Action::Deposit { party, into_account, of_token, deposits } => 
                 write!(f, "(Deposit {} {} {} {})",
-                    match into_account_of {None=>"?party".to_string(),Some(v)=>format!("{v}")},    
-                    match by {None=>"?from_party".to_string(),Some(v)=>format!("{v}")},
-                    match currency {None=>"?token".to_string(),Some(v)=>format!("{v}")},
-                    match the_amount_of {None=>"?value".to_string(),Some(v)=>format!("{v}")},
+                    match into_account {None=>"?party".to_string(),Some(v)=>format!("{v}")},    
+                    match party {None=>"?from_party".to_string(),Some(v)=>format!("{v}")},
+                    match of_token {None=>"?token".to_string(),Some(v)=>format!("{v}")},
+                    match deposits {None=>"?value".to_string(),Some(v)=>format!("{v}")},
                 ),
             Action::Notify { notify_if: observation } => 
                 write!(f, "(Notify {})",
@@ -180,15 +224,15 @@ impl std::fmt::Display for Action {
                     match action {None=>"?action".to_string(),Some(v)=>format!("{v}")},
                     match contract {None=>"?contract".to_string(),Some(v)=>format!("{v}")}
                 ),
-            Action::Choice(choice_id,bounds) => {
-                let stritems : Vec<String> = bounds.iter().map(|x|
+            Action::Choice { for_choice, choose_between } => {
+                let stritems : Vec<String> = choose_between.iter().map(|x|
                     match x {
                         Some(v) => format!("{}",v),
                         None => String::from("?bound")
                     }
                 ).collect();
                 write!(f, "(Choice {} [{}])",
-                    match choice_id {None=>"?choiceId".to_string(),Some(v)=>format!("{v}")},
+                    match for_choice {None=>"?choiceId".to_string(),Some(v)=>format!("{v}")},
                     stritems.join(",")
                 )
             },
@@ -212,8 +256,8 @@ impl std::fmt::Display for Party {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
 
         match self {
-            Party::Role(s) => write!(f, "(Role \"{}\")",s),
-            Party::PK(s) => {
+            Party::Role { role_token: s } => write!(f, "(Role \"{}\")",s),
+            Party::PK { pk_hash: s } => {
                 // todo: we currently allow serializing any length and content string
                 // here but we should probably not ...
                 write!(f, "(PK \"{}\")",s)
@@ -225,50 +269,50 @@ impl std::fmt::Display for Party {
 impl std::fmt::Display for Observation {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            Observation::ValueGT(a, b) => 
+            Observation::ValueGT { value: a, gt_than: b } => 
                 write!(f, "(ValueGT {} {})",
                 match a {None=>"?value".to_string(),Some(v)=>format!("{v}")},
                 match b {None=>"?value".to_string(),Some(v)=>format!("{v}")}
             ),
-            Observation::ValueGE(a,b) => 
+            Observation::ValueGE { value: a, ge_than: b } => 
                 write!(f, "(ValueGE {} {})",
                 match a {None=>"?value".to_string(),Some(v)=>format!("{v}")},
                 match b {None=>"?value".to_string(),Some(v)=>format!("{v}")}
             ),
-            Observation::ValueLT(a,b) => 
+            Observation::ValueLT { value: a, lt_than: b } => 
                 write!(f, "(ValueLT {} {})",
                 match a {None=>"?value".to_string(),Some(v)=>format!("{v}")},
                 match b {None=>"?value".to_string(),Some(v)=>format!("{v}")}
             ),
-            Observation::ValueLE(a,b) => 
+            Observation::ValueLE { value: a, le_than: b } => 
                 write!(f, "(ValueLE {} {})",
                 match a {None=>"?value".to_string(),Some(v)=>format!("{v}")},
                 match b {None=>"?value".to_string(),Some(v)=>format!("{v}")}
             ),
-            Observation::ValueEQ(a,b) => 
+            Observation::ValueEQ { value: a, equal_to: b } =>  
                 write!(f, "(ValueEQ {} {})",
                 match a {None=>"?value".to_string(),Some(v)=>format!("{v}")},
                 match b {None=>"?value".to_string(),Some(v)=>format!("{v}")}
             ),
-            Observation::TrueObs => 
+            Observation::True => 
                 write!(f, "TrueObs"),            
-            Observation::FalseObs => 
+            Observation::False => 
                 write!(f, "FalseObs"),
             Observation::ChoseSomething(a) => 
                 write!(f, "(ChoseSomething {})",
                     match a {None=>"?choiceId".to_string(),Some(v)=>format!("{v}")}
                 ),
-            Observation::OrObs(a, b) => 
+            Observation::OrObs { either: a, or: b } => 
                 write!(f, "(OrObs {} {})",
                     match a {None=>"?observation".to_string(),Some(v)=>format!("{v}")},
                     match b {None=>"?observation".to_string(),Some(v)=>format!("{v}")}
                 ),
-            Observation::AndObs(a, b) => 
+            Observation::AndObs { both: a, and: b } => 
                 write!(f, "(AndObs {} {})",
                 match a {None=>"?observation".to_string(),Some(v)=>format!("{v}")},
                 match b {None=>"?observation".to_string(),Some(v)=>format!("{v}")}
             ),    
-            Observation::NotObs(a) => 
+            Observation::NotObs { not: a } => 
                 write!(f, "(NotObs {})",
                     match a {None=>"?observation".to_string(),Some(v)=>format!("{v}")}
                 )
@@ -335,15 +379,15 @@ impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
             Token::ADA => write!(f,"(Token \"\" \"\")"),
-            Token::Custom(a,b) => write!(f,"(Token \"{}\" \"{}\")",a,b),
+            Token::Custom { currency_symbol: a,token_name: b } => write!(f,"(Token \"{}\" \"{}\")",a,b),
         }
     }
 }
 
 impl std::fmt::Display for ChoiceId {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "(ChoiceId \"{}\" {})",self.name,
-            match &self.owner {None=>"?party".to_string(),Some(v)=>format!("{v}")}
+        write!(f, "(ChoiceId \"{}\" {})",self.choice_name,
+            match &self.choice_owner {None=>"?party".to_string(),Some(v)=>format!("{v}")}
         )
     }
 }
@@ -379,8 +423,8 @@ impl std::fmt::Display for Timeout {
 impl std::fmt::Display for Case {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "(Case {} {})",
-            match &self.action {None=>"?action".to_string(),Some(v)=>format!("{v}")},
-            match &self.contract {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
+            match &self.case {None=>"?action".to_string(),Some(v)=>format!("{v}")},
+            match &self.then {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
         )
     }
 }
@@ -390,9 +434,9 @@ impl std::fmt::Display for Contract {
         
         match self {
             Contract::Close => write!(f, "Close"),
-            Contract::When { cases, timeout, timeout_continuation } => {
+            Contract::When { when, timeout, timeout_continuation } => {
                 
-                let case_str : Vec<String> = cases.iter().map(|x|
+                let case_str : Vec<String> = when.iter().map(|x|
                     match x {
                         Some(v) => format!("{}",v),
                         None => "?case".to_string()
@@ -411,35 +455,35 @@ impl std::fmt::Display for Contract {
                     )
                 }
             }
-            Contract::If { observation, then_contract, else_contract } => {
+            Contract::If { r#if, then, r#else } => {
                 if f.alternate() {
                     write!(f, "If {} {} {}",
-                        match observation {None=>"?observation".to_string(),Some(v)=>format!("{v}")}, 
-                        match then_contract {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
-                        match else_contract {None=>"?contract".to_string(),Some(v)=>format!("{v}")}
+                        match r#if {None=>"?observation".to_string(),Some(v)=>format!("{v}")}, 
+                        match then {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
+                        match r#else {None=>"?contract".to_string(),Some(v)=>format!("{v}")}
                     )
                 } else {
                     write!(f, "(If {} {} {})",
-                        match observation {None=>"?observation".to_string(),Some(v)=>format!("{v}")}, 
-                        match then_contract {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
-                        match else_contract {None=>"?contract".to_string(),Some(v)=>format!("{v}")}
+                        match r#if {None=>"?observation".to_string(),Some(v)=>format!("{v}")}, 
+                        match then {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
+                        match r#else {None=>"?contract".to_string(),Some(v)=>format!("{v}")}
                     )
                 }
             },
-            Contract::Assert { check_that, continue_as } => {
+            Contract::Assert { assert, then } => {
                 if f.alternate() {
                     write!(f, "Assert {} {}",
-                        match check_that {None=>"?observation".to_string(),Some(v)=>format!("{v}")}, 
-                        match continue_as {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
+                        match assert {None=>"?observation".to_string(),Some(v)=>format!("{v}")}, 
+                        match then {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
                     )
                 } else {
                     write!(f, "(Assert {} {})",
-                        match check_that {None=>"?observation".to_string(),Some(v)=>format!("{v}")}, 
-                        match continue_as {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
+                        match assert {None=>"?observation".to_string(),Some(v)=>format!("{v}")}, 
+                        match then {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
                     )
                 }
             },
-            Contract::Let { value_name, value, continue_as } => { 
+            Contract::Let { r#let: value_name, be: value, then: continue_as } => { 
                 if f.alternate() {
                     write!(f, "Let \"{}\" {} {}",
                         value_name,
@@ -454,7 +498,13 @@ impl std::fmt::Display for Contract {
                     )
                 }
             },
-            Contract::Pay { party, payee, currency, amount, continue_as } => { 
+            Contract::Pay { 
+                from_account: party, 
+                to: payee, 
+                token: currency, 
+                pay: amount, 
+                then: continue_as 
+            } => { 
                 if f.alternate() {
                     write!(f, "Pay {} {} {} {} {}",
                         match party {None=>"?party".to_string(),Some(v)=>format!("{v}")},
@@ -488,3 +538,7 @@ pub trait Boxer { fn boxed(self) -> Box<Contract>; }
 impl Boxer for Contract {
     fn boxed(self) -> Box<Contract> { Box::new(self) }
 }
+
+
+
+

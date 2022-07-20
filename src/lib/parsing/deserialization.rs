@@ -88,11 +88,11 @@ fn parse_raw(pair:Pair<Rule>) -> Result<AstNode,String> {
             Rule::ConstantParam => fold_back!(AstNode::MarloweValue(Value::ConstantParam(get_next_into!()))),
             Rule::ArrayOfCases => fold_back!(AstNode::MarloweCaseList(current_operation.extracted_child_ast_nodes)),
             Rule::ArrayOfBounds => fold_back!(AstNode::MarloweBoundList(current_operation.extracted_child_ast_nodes)),
-            Rule::PK => fold_back!(AstNode::MarloweParty(Party::PK(get_next_into!()))),
+            Rule::PK => fold_back!(AstNode::MarloweParty(Party::PK { pk_hash : get_next_into!() })),
             Rule::TimeParam => fold_back!(AstNode::MarloweTimeout(Timeout::TimeParam(get_next_into!()))),
             Rule::PayeeAccount => fold_back!(AstNode::MarlowePayee(Payee::Account(get_next_into!()))),
             Rule::PayeeParty => fold_back!(AstNode::MarlowePayee(Payee::Party(get_next_into!()))),
-            Rule::Role => fold_back!(AstNode::MarloweParty(Party::Role(get_next_node(&mut current_operation)?.try_into()?))),
+            Rule::Role => fold_back!(AstNode::MarloweParty(Party::Role { role_token : get_next_node(&mut current_operation)?.try_into()?})),
             Rule::Notify => fold_back!(AstNode::MarloweAction(Action::Notify { 
                 notify_if: get_next_node(&mut current_operation)?.try_into()? })),            
             Rule::Case => {
@@ -100,8 +100,8 @@ fn parse_raw(pair:Pair<Rule>) -> Result<AstNode,String> {
                 let contract_node = continuation_contract.try_into()?;
                 let action = get_next_into!();
                 fold_back!(AstNode::MarloweCase(crate::types::marlowe::Case {
-                    action: action,
-                    contract: contract_node
+                    case: action,
+                    then: contract_node
                 }));
             }
             Rule::When => {
@@ -109,7 +109,7 @@ fn parse_raw(pair:Pair<Rule>) -> Result<AstNode,String> {
                 let timeout = get_next_into!();
                 let cases = get_next_into!();
                 fold_back!(AstNode::MarloweContract(Contract::When { 
-                    cases: cases,
+                    when: cases,
                     timeout: timeout, 
                     timeout_continuation: contract_node
                 }))
@@ -118,7 +118,7 @@ fn parse_raw(pair:Pair<Rule>) -> Result<AstNode,String> {
             Rule::Currency => {
                 let v2 : String = get_next_into!();
                 let v1 : String = get_next_into!();
-                let token = Token::Custom(v1, v2);
+                let token = Token::Custom { currency_symbol: v1, token_name: v2 };
                 fold_back!(AstNode::MarloweToken(token))
             }
             Rule::Deposit => {
@@ -127,17 +127,17 @@ fn parse_raw(pair:Pair<Rule>) -> Result<AstNode,String> {
                 let by_party = get_next_into!();
                 let into_account_of = get_next_into!();
                 fold_back!(AstNode::MarloweAction(Action::Deposit { 
-                    by: by_party, 
-                    into_account_of: into_account_of, 
-                    currency: token, 
-                    the_amount_of: value 
+                    party: by_party, 
+                    into_account: into_account_of, 
+                    of_token: token, 
+                    deposits: value 
                 }))
             }
             Rule::ChoiceId => {
                 let party = get_next_into!();
                 let s = get_next_into!();
                 fold_back!(AstNode::MarloweChoiceId(ChoiceId {
-                    name: s, owner: party,
+                    choice_name: s, choice_owner: party,
                 }))
             }
             Rule::Bound => {
@@ -147,14 +147,14 @@ fn parse_raw(pair:Pair<Rule>) -> Result<AstNode,String> {
             Rule::Choice => {
                 let bound = get_next_into!();
                 let choice_id = get_next_into!();
-                fold_back!(AstNode::MarloweAction( Action::Choice (choice_id,bound) ))
+                fold_back!(AstNode::MarloweAction( Action::Choice  { for_choice: choice_id, choose_between: bound } ))
             }
             Rule::string => {
                 let s = option_to_result(current_operation.string_representation,"failed to parse a string.")?;
                 fold_back!(AstNode::StringValue(s))
             }
-            Rule::TrueObs => fold_back!(AstNode::MarloweObservation(Observation::TrueObs)),
-            Rule::FalseObs => fold_back!(AstNode::MarloweObservation(Observation::FalseObs)),
+            Rule::TrueObs => fold_back!(AstNode::MarloweObservation(Observation::True)),
+            Rule::FalseObs => fold_back!(AstNode::MarloweObservation(Observation::False)),
             Rule::Number => {                
                 let n = option_to_result(current_operation.string_representation,"Failed to parse a number!")?;
                 let nn = match n.parse::<i64>() {
@@ -170,11 +170,11 @@ fn parse_raw(pair:Pair<Rule>) -> Result<AstNode,String> {
                 let payee = get_next_into!();
                 let party = get_next_into!();
                 fold_back!(AstNode::MarloweContract(Contract::Pay { 
-                    party: party, 
-                    payee: payee, 
-                    currency: token, 
-                    amount: value, 
-                    continue_as: continuation
+                    from_account: party, 
+                    to: payee, 
+                    token: token, 
+                    pay: value, 
+                    then: continuation
                 }))
             }
             Rule::SubValue => {
@@ -190,19 +190,30 @@ fn parse_raw(pair:Pair<Rule>) -> Result<AstNode,String> {
             Rule::ValueGT => {
                 let v2 = get_next_into!();
                 let v1 = get_next_into!();
-                fold_back!(AstNode::MarloweObservation(Observation::ValueGT(
-                    v1,v2
-                )))
+                fold_back!(AstNode::MarloweObservation(Observation::ValueGT {
+                    value: v1,
+                    gt_than: v2
+                }))
             }
             Rule::ValueGE => {
                 let v2 = get_next_into!();
                 let v1 = get_next_into!();
-                fold_back!(AstNode::MarloweObservation(Observation::ValueGE(v1,v2)))
+                fold_back!(AstNode::MarloweObservation(Observation::ValueGE {
+                    value: v1,
+                    ge_than: v2
+                }))
             }
             Rule::ValueLT => {
                 let v2 = get_next_into!();
                 let v1 = get_next_into!();
-                fold_back!(AstNode::MarloweObservation(Observation::ValueLT(v1,v2)))
+                fold_back!(AstNode::MarloweObservation(Observation::ValueLT {
+                    value: v1,
+                    lt_than: v2
+                }))
+            }
+            Rule::NegValue => {
+                let v = get_next_into!();
+                fold_back!(AstNode::MarloweValue(Value::NegValue(v)))
             }
             Rule::Cond => {
                 let v2 = get_next_into!();
@@ -224,6 +235,12 @@ fn parse_raw(pair:Pair<Rule>) -> Result<AstNode,String> {
                 let v1 = get_next_into!();
                 fold_back!(AstNode::MarloweValue(Value::DivValue(v1,v2)))
             }
+            Rule::TimeIntervalEnd => {
+                fold_back!(AstNode::MarloweValue(Value::TimeIntervalEnd))
+            },
+            Rule::TimeIntervalStart => {
+                fold_back!(AstNode::MarloweValue(Value::TimeIntervalStart))
+            }
             Rule::TimeConstant => {
                 let vv = option_to_result(current_operation.string_representation,"failed to parse time constant")?;
                 let vvv = match vv.parse::<i64>() {
@@ -237,7 +254,7 @@ fn parse_raw(pair:Pair<Rule>) -> Result<AstNode,String> {
                 let then_contract = get_next_into!();
                 let observation = get_next_into!();
                 fold_back!(AstNode::MarloweContract(Contract::If { 
-                    observation, then_contract, else_contract 
+                    r#if: observation, then: then_contract, r#else: else_contract 
                 }))
             }
             Rule::Let => {
@@ -245,8 +262,9 @@ fn parse_raw(pair:Pair<Rule>) -> Result<AstNode,String> {
                 let value = get_next_into!();
                 let s: Option<String> = get_next_into!();
                 fold_back!(AstNode::MarloweContract(Contract::Let { 
-                    value_name: option_to_result(s,"Failed to parse a 'let' contract node.")?, 
-                    value, continue_as 
+                    r#let: option_to_result(s,"Failed to parse a 'let' contract node.")?, 
+                    be: value, 
+                    then: continue_as 
                 }))
             }
             Rule::Constant => {
@@ -260,6 +278,7 @@ fn parse_raw(pair:Pair<Rule>) -> Result<AstNode,String> {
                 let vv = v.trim_start_matches("\"").trim_end_matches("\"");
                 fold_back!(AstNode::StringValue(vv.to_string()));
             }
+            
             Rule::ActionHole|
             Rule::ContractHole|
             Rule::TokenHole|
@@ -271,6 +290,7 @@ fn parse_raw(pair:Pair<Rule>) -> Result<AstNode,String> {
             Rule::BoundHole|
             Rule::PayeeHole|
             Rule::TimeoutHole => fold_back!(AstNode::Null),
+            
             unmatched_rule => {
                 return Err(format!("The rule {unmatched_rule:?} is ready to be intialized but there is no match for it.. it has these children {:?}. This is most likely a bug in the marlowe_lang library. ",current_operation.extracted_child_ast_nodes))
             }

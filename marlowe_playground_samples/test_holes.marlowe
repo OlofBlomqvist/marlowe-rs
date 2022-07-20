@@ -58,12 +58,7 @@ When [
             ?from_party
             ?token ?value
         )
-        (Pay
-            ?party
-            ?payee
-            ?token
-            ?value ?contract
-        ))]
+        ?contract)]
     ?timeout
     ?contract))))] (TimeParam "Complaint deadline") (When
     [

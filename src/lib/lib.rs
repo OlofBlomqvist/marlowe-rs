@@ -49,12 +49,12 @@
 //! };
 //! 
 //! let my_contract = Contract::When {
-//!     cases: vec![
+//!     when: vec![
 //!         Some(Case { 
-//!             action: Some(Action::Notify { 
-//!                 notify_if: Some(Observation::TrueObs)
+//!             case: Some(Action::Notify { 
+//!                 notify_if: Some(Observation::True)
 //!             }), 
-//!             contract: Some(Contract::Close.boxed()) })
+//!             then: Some(Contract::Close.boxed()) })
 //!     ],
 //!     timeout: Some(Timeout::TimeParam("test".into())),
 //!     timeout_continuation: Some(Contract::Close.boxed()),
@@ -67,7 +67,7 @@
 //! 
 //! #### Where 'println!("{serialized}")' would output this:
 //! ```text
-//! When [ Case (Notify (TrueObs)) Close ] (TimeParam "test") Close
+//! When [ Case (Notify (True)) Close ] (TimeParam "test") Close
 //! ```
 
 

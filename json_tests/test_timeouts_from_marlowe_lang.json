@@ -1,0 +1,465 @@
+{
+    "when": [
+        {
+            "then": {
+                "when": [
+                    {
+                        "then": {
+                            "when": [
+                                {
+                                    "then": {
+                                        "when": [
+                                            {
+                                                "then": "close",
+                                                "case": {
+                                                    "for_choice": {
+                                                        "choice_owner": {
+                                                            "role_token": "Buyer"
+                                                        },
+                                                        "choice_name": "Everything is alright"
+                                                    },
+                                                    "choose_between": [
+                                                        {
+                                                            "to": 0,
+                                                            "from": 0
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "then": {
+                                                    "token": {
+                                                        "currency_symbol": "",
+                                                        "token_name": ""
+                                                    },
+                                                    "to": {
+                                                        "Account": {
+                                                            "role_token": "Buyer"
+                                                        }
+                                                    },
+                                                    "then": {
+                                                        "when": [
+                                                            {
+                                                                "then": "close",
+                                                                "case": {
+                                                                    "for_choice": {
+                                                                        "choice_owner": {
+                                                                            "role_token": "Seller"
+                                                                        },
+                                                                        "choice_name": "Confirm problem"
+                                                                    },
+                                                                    "choose_between": [
+                                                                        {
+                                                                            "to": 1,
+                                                                            "from": 1
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            },
+                                                            {
+                                                                "then": {
+                                                                    "token": {
+                                                                        "currency_symbol": "",
+                                                                        "token_name": ""
+                                                                    },
+                                                                    "to": {
+                                                                        "Party": {
+                                                                            "pk_hash": "0000000000000000000000000000000000000000000000000000000000000000"
+                                                                        }
+                                                                    },
+                                                                    "then": {
+                                                                        "token": {
+                                                                            "currency_symbol": "",
+                                                                            "token_name": ""
+                                                                        },
+                                                                        "to": {
+                                                                            "Party": {
+                                                                                "pk_hash": "0000000000000000000000000000000000000000000000000000000000000000"
+                                                                            }
+                                                                        },
+                                                                        "then": {
+                                                                            "when": [
+                                                                                {
+                                                                                    "then": "close",
+                                                                                    "case": {
+                                                                                        "for_choice": {
+                                                                                            "choice_owner": {
+                                                                                                "role_token": "Seller"
+                                                                                            },
+                                                                                            "choice_name": "Confirm problem"
+                                                                                        },
+                                                                                        "choose_between": [
+                                                                                            {
+                                                                                                "to": 1,
+                                                                                                "from": 1
+                                                                                            }
+                                                                                        ]
+                                                                                    }
+                                                                                },
+                                                                                {
+                                                                                    "then": {
+                                                                                        "token": {
+                                                                                            "currency_symbol": "",
+                                                                                            "token_name": ""
+                                                                                        },
+                                                                                        "to": {
+                                                                                            "Party": {
+                                                                                                "pk_hash": "0000000000000000000000000000000000000000000000000000000000000000"
+                                                                                            }
+                                                                                        },
+                                                                                        "then": {
+                                                                                            "token": {
+                                                                                                "currency_symbol": "",
+                                                                                                "token_name": ""
+                                                                                            },
+                                                                                            "to": {
+                                                                                                "Party": {
+                                                                                                    "pk_hash": "0000000000000000000000000000000000000000000000000000000000000000"
+                                                                                                }
+                                                                                            },
+                                                                                            "then": "close",
+                                                                                            "pay": {
+                                                                                                "ConstantParam": "Collateral amount"
+                                                                                            },
+                                                                                            "from_account": {
+                                                                                                "role_token": "Buyer"
+                                                                                            }
+                                                                                        },
+                                                                                        "pay": {
+                                                                                            "ConstantParam": "Collateral amount"
+                                                                                        },
+                                                                                        "from_account": {
+                                                                                            "role_token": "Seller"
+                                                                                        }
+                                                                                    },
+                                                                                    "case": {
+                                                                                        "for_choice": {
+                                                                                            "choice_owner": {
+                                                                                                "role_token": "Seller"
+                                                                                            },
+                                                                                            "choice_name": "Dispute problem"
+                                                                                        },
+                                                                                        "choose_between": [
+                                                                                            {
+                                                                                                "to": 0,
+                                                                                                "from": 0
+                                                                                            }
+                                                                                        ]
+                                                                                    }
+                                                                                }
+                                                                            ],
+                                                                            "timeout_continuation": "close",
+                                                                            "timeout": 42
+                                                                        },
+                                                                        "pay": {
+                                                                            "ConstantParam": "Collateral amount"
+                                                                        },
+                                                                        "from_account": {
+                                                                            "role_token": "Buyer"
+                                                                        }
+                                                                    },
+                                                                    "pay": {
+                                                                        "ConstantParam": "Collateral amount"
+                                                                    },
+                                                                    "from_account": {
+                                                                        "role_token": "Seller"
+                                                                    }
+                                                                },
+                                                                "case": {
+                                                                    "for_choice": {
+                                                                        "choice_owner": {
+                                                                            "role_token": "Seller"
+                                                                        },
+                                                                        "choice_name": "Dispute problem"
+                                                                    },
+                                                                    "choose_between": [
+                                                                        {
+                                                                            "to": 0,
+                                                                            "from": 0
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            }
+                                                        ],
+                                                        "timeout_continuation": "close",
+                                                        "timeout": 42
+                                                    },
+                                                    "pay": {
+                                                        "ConstantParam": "Price"
+                                                    },
+                                                    "from_account": {
+                                                        "role_token": "Seller"
+                                                    }
+                                                },
+                                                "case": {
+                                                    "for_choice": {
+                                                        "choice_owner": {
+                                                            "role_token": "Buyer"
+                                                        },
+                                                        "choice_name": "Report problem"
+                                                    },
+                                                    "choose_between": [
+                                                        {
+                                                            "to": 1,
+                                                            "from": 1
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ],
+                                        "timeout_continuation": "close",
+                                        "timeout": 42
+                                    },
+                                    "case": {
+                                        "party": {
+                                            "role_token": "Buyer"
+                                        },
+                                        "into_account": {
+                                            "role_token": "Seller"
+                                        },
+                                        "of_token": {
+                                            "currency_symbol": "",
+                                            "token_name": ""
+                                        },
+                                        "deposits": {
+                                            "ConstantParam": "Price"
+                                        }
+                                    }
+                                }
+                            ],
+                            "timeout_continuation": "close",
+                            "timeout": 42
+                        },
+                        "case": {
+                            "party": {
+                                "role_token": "Buyer"
+                            },
+                            "into_account": {
+                                "role_token": "Buyer"
+                            },
+                            "of_token": {
+                                "currency_symbol": "",
+                                "token_name": ""
+                            },
+                            "deposits": {
+                                "ConstantParam": "Collateral amount"
+                            }
+                        }
+                    }
+                ],
+                "timeout_continuation": "close",
+                "timeout": 42
+            },
+            "case": {
+                "party": {
+                    "role_token": "Seller"
+                },
+                "into_account": {
+                    "role_token": "Seller"
+                },
+                "of_token": {
+                    "currency_symbol": "",
+                    "token_name": ""
+                },
+                "deposits": {
+                    "ConstantParam": "Collateral amount"
+                }
+            }
+        },
+        {
+            "then": {
+                "when": [
+                    {
+                        "then": {
+                            "when": [
+                                {
+                                    "then": {
+                                        "when": [
+                                            {
+                                                "then": "close",
+                                                "case": {
+                                                    "for_choice": {
+                                                        "choice_owner": {
+                                                            "role_token": "Buyer"
+                                                        },
+                                                        "choice_name": "Everything is alright"
+                                                    },
+                                                    "choose_between": [
+                                                        {
+                                                            "to": 0,
+                                                            "from": 0
+                                                        }
+                                                    ]
+                                                }
+                                            },
+                                            {
+                                                "then": {
+                                                    "token": {
+                                                        "currency_symbol": "",
+                                                        "token_name": ""
+                                                    },
+                                                    "to": {
+                                                        "Account": {
+                                                            "role_token": "Buyer"
+                                                        }
+                                                    },
+                                                    "then": {
+                                                        "when": [
+                                                            {
+                                                                "then": "close",
+                                                                "case": {
+                                                                    "for_choice": {
+                                                                        "choice_owner": {
+                                                                            "role_token": "Seller"
+                                                                        },
+                                                                        "choice_name": "Confirm problem"
+                                                                    },
+                                                                    "choose_between": [
+                                                                        {
+                                                                            "to": 1,
+                                                                            "from": 1
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            },
+                                                            {
+                                                                "then": {
+                                                                    "token": {
+                                                                        "currency_symbol": "",
+                                                                        "token_name": ""
+                                                                    },
+                                                                    "to": {
+                                                                        "Party": {
+                                                                            "pk_hash": "0000000000000000000000000000000000000000000000000000000000000000"
+                                                                        }
+                                                                    },
+                                                                    "then": {
+                                                                        "token": {
+                                                                            "currency_symbol": "",
+                                                                            "token_name": ""
+                                                                        },
+                                                                        "to": {
+                                                                            "Party": {
+                                                                                "pk_hash": "0000000000000000000000000000000000000000000000000000000000000000"
+                                                                            }
+                                                                        },
+                                                                        "then": "close",
+                                                                        "pay": {
+                                                                            "ConstantParam": "Collateral amount"
+                                                                        },
+                                                                        "from_account": {
+                                                                            "role_token": "Buyer"
+                                                                        }
+                                                                    },
+                                                                    "pay": {
+                                                                        "ConstantParam": "Collateral amount"
+                                                                    },
+                                                                    "from_account": {
+                                                                        "role_token": "Seller"
+                                                                    }
+                                                                },
+                                                                "case": {
+                                                                    "for_choice": {
+                                                                        "choice_owner": {
+                                                                            "role_token": "Seller"
+                                                                        },
+                                                                        "choice_name": "Dispute problem"
+                                                                    },
+                                                                    "choose_between": [
+                                                                        {
+                                                                            "to": 0,
+                                                                            "from": 0
+                                                                        }
+                                                                    ]
+                                                                }
+                                                            }
+                                                        ],
+                                                        "timeout_continuation": "close",
+                                                        "timeout": 42
+                                                    },
+                                                    "pay": {
+                                                        "ConstantParam": "Price"
+                                                    },
+                                                    "from_account": {
+                                                        "role_token": "Seller"
+                                                    }
+                                                },
+                                                "case": {
+                                                    "for_choice": {
+                                                        "choice_owner": {
+                                                            "role_token": "Buyer"
+                                                        },
+                                                        "choice_name": "Report problem"
+                                                    },
+                                                    "choose_between": [
+                                                        {
+                                                            "to": 1,
+                                                            "from": 1
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                        ],
+                                        "timeout_continuation": "close",
+                                        "timeout": 42
+                                    },
+                                    "case": {
+                                        "party": {
+                                            "role_token": "Buyer"
+                                        },
+                                        "into_account": {
+                                            "role_token": "Seller"
+                                        },
+                                        "of_token": {
+                                            "currency_symbol": "",
+                                            "token_name": ""
+                                        },
+                                        "deposits": {
+                                            "ConstantParam": "Price"
+                                        }
+                                    }
+                                }
+                            ],
+                            "timeout_continuation": "close",
+                            "timeout": 42
+                        },
+                        "case": {
+                            "party": {
+                                "role_token": "Buyer"
+                            },
+                            "into_account": {
+                                "role_token": "Buyer"
+                            },
+                            "of_token": {
+                                "currency_symbol": "",
+                                "token_name": ""
+                            },
+                            "deposits": {
+                                "ConstantParam": "Collateral amount"
+                            }
+                        }
+                    }
+                ],
+                "timeout_continuation": "close",
+                "timeout": 42
+            },
+            "case": {
+                "party": {
+                    "role_token": "Seller"
+                },
+                "into_account": {
+                    "role_token": "Seller"
+                },
+                "of_token": {
+                    "currency_symbol": "",
+                    "token_name": ""
+                },
+                "deposits": {
+                    "ConstantParam": "Collateral amount"
+                }
+            }
+        }
+    ],
+    "timeout_continuation": "close",
+    "timeout": 42
+}

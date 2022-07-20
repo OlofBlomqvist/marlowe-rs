@@ -8,6 +8,7 @@
 //! OPTIONS:
 //!     -h, --help       Print help information
 //!     -r               Return the pest.rs rule/token stream
+//!     -j               Return the contract as json
 //!     -V, --version    Print version information
 //!
 //! SUBCOMMANDS:
@@ -51,6 +52,9 @@ struct Args {
     /// Input contract or path
     #[clap(subcommand)] 
     command: MyCommands,
+    /// Return the contract in json format (experimental feature)
+    #[clap(short = 'j')]
+    json: bool,
     /// Return the pest.rs rule/token stream
     #[clap(short = 'r')]
     raw: bool,
@@ -94,8 +98,17 @@ fn main() {
                 deserialize(&serialized_input);
             match deserialized_instance {
                 Ok(c) => {
-                    let serialized = serialize(c);
-                    println!("{serialized}");
+                    match args.json {
+                        true => {
+                            
+                            let json = serde_json::to_string_pretty(&c).unwrap();
+                            println!("{}",json);
+                        },
+                        false => {
+                            let serialized = serialize(c);
+                            println!("{serialized}");
+                        },
+                    }
                 },
                 Err(e) => println!("{:#}",e),
             }

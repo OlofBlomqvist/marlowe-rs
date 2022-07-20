@@ -27,7 +27,7 @@ ADA = { "Token \"\" \"\"" }
 Currency = ${ lpar ~ WHITESPACE* ~ "Token" ~ WHITESPACE+ ~ quoted_string ~ WHITESPACE+ ~ quoted_string ~ WHITESPACE* ~ rpar }
 ChoiceId = ${ lpar ~ WHITESPACE* ~"ChoiceId" ~ WHITESPACE+ ~ quoted_string ~ WHITESPACE+ ~ Party ~ WHITESPACE* ~ rpar}
 Value = _{   
-    ValueHole
+    Constant
     | ConstantParam
     | AvailableMoney
     | Cond
@@ -38,9 +38,9 @@ Value = _{
     | AddValue
     | NegValue
     | UseValue
-    | Constant
     | TimeIntervalStart
     | TimeIntervalEnd
+    | ValueHole
  }
     TimeIntervalStart = { "TimeIntervalStart" }
     TimeIntervalEnd = { "TimeIntervalEnd" }
@@ -50,10 +50,10 @@ Value = _{
     DivValue = ${ lpar ~ WHITESPACE* ~ "DivValue" ~ WHITESPACE+ ~ Value ~ WHITESPACE+ ~ Value ~ WHITESPACE* ~ rpar}
     SubValue = ${ lpar ~ WHITESPACE* ~ "SubValue" ~ WHITESPACE+ ~ Value ~ WHITESPACE+ ~ Value ~ WHITESPACE* ~ rpar}
     AddValue = ${ lpar ~ WHITESPACE* ~ "AddValue" ~ WHITESPACE+ ~ Value ~ WHITESPACE+ ~ Value ~ WHITESPACE* ~ rpar}
-    NegValue = ${ lpar ~ WHITESPACE* ~ "NegValue" ~ WHITESPACE+ ~ Value ~ WHITESPACE+ ~ Value ~ rpar}
+    NegValue = ${ lpar ~ WHITESPACE* ~ "NegValue" ~ WHITESPACE+ ~ Value ~ WHITESPACE* ~ rpar}
     UseValue = ${ lpar ~ WHITESPACE* ~ "UseValue" ~ WHITESPACE+ ~ quoted_string ~ WHITESPACE* ~ rpar}
+    Constant = ${ lpar ~ WHITESPACE* ~ "Constant" ~ WHITESPACE+ ~ Number ~ WHITESPACE* ~ rpar }
     ConstantParam = ${ lpar ~ WHITESPACE* ~ "ConstantParam" ~ WHITESPACE+ ~ quoted_string ~ WHITESPACE* ~ rpar }
-    Constant = ${ (lpar ~ WHITESPACE*){0,1} ~ "Constant" ~ WHITESPACE+ ~ Number ~ (WHITESPACE* ~ rpar){0,1} }
     AvailableMoney = ${ lpar ~ WHITESPACE* ~ "AvailableMoney" ~ WHITESPACE+ ~ Party ~ WHITESPACE+ ~ Token ~ WHITESPACE* ~ rpar}
 
 Observation = _{ ObservationHole | TrueObs | FalseObs | ValueEQ | ValueLE | 

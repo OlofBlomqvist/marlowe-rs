@@ -4,7 +4,7 @@ When [
         (Role "Ada provider")
         (Role "Ada provider")
         (Token "" "")
-        (MulValue
+        (AddValue
            (Constant 1000000)
            (ConstantParam "Amount of Ada")))
      (When [
@@ -19,9 +19,7 @@ When [
               (Party
                  (Role "Dollar provider"))
               (Token "" "")
-              (MulValue
-                 (Constant 1000000)
-                 (ConstantParam "Amount of Ada"))
+              (NegValue (Constant 11))
               (Pay
                  (Role "Dollar provider")
                  (Party

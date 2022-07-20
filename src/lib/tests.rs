@@ -30,12 +30,12 @@ fn deserialize_wrapped_simple_observation_should_fail() {
 #[test]
 fn serialize_and_print() {
     let my_contract = Contract::When {
-        cases: vec![
+        when: vec![
             Some(Case { 
-                action: Some(Action::Notify { 
-                    notify_if: Some(Observation::TrueObs) 
+                case: Some(Action::Notify { 
+                    notify_if: Some(Observation::True) 
                 }), 
-                contract: Some(Contract::Close.boxed()) }
+                then: Some(Contract::Close.boxed()) }
             )],
         timeout: Some(Timeout::TimeParam("test".into())),
         timeout_continuation: Some(Contract::Close.boxed()),
@@ -52,24 +52,24 @@ fn serialize_and_print() {
 #[test]
 fn can_generate_contract() {
     Contract::When {
-        cases: vec![
+        when: vec![
             Some(Case {
-                action: Some(Action::Notify { 
-                    notify_if: Some(Observation::TrueObs)
+                case: Some(Action::Notify { 
+                    notify_if: Some(Observation::True)
                 }),
-                contract: Some(Contract::Pay { 
-                    party: Some(Party::Role("test".to_string())), 
-                    payee: Some(Payee::Account(Some(Party::PK("00000000000000000000".into())))), 
-                    currency: Some(Token::ADA), 
-                    amount: Some(Value::ConstantValue(42)), 
-                    continue_as: Some(Contract::Close.boxed())
+                then: Some(Contract::Pay { 
+                    from_account: Some(Party::Role { role_token: "test".to_string() }), 
+                    to: Some(Payee::Account(Some(Party::PK { pk_hash : "00000000000000000000".into() }))), 
+                    token: Some(Token::ADA), 
+                    pay: Some(Value::ConstantValue(42)), 
+                    then: Some(Contract::Close.boxed())
                 }.boxed())
             }),
             Some(Case { 
-                action: Some(Action::Notify { 
-                    notify_if: Some(Observation::TrueObs) 
+                case: Some(Action::Notify { 
+                    notify_if: Some(Observation::True) 
                 }), 
-                contract: Some(Contract::Close.boxed()) })
+                then: Some(Contract::Close.boxed()) })
         ],
         timeout: Some(Timeout::TimeParam("test".to_owned())),
         timeout_continuation: Some(Contract::Close.boxed()),
@@ -183,35 +183,36 @@ fn modify(contract:Contract) -> Contract {
 
     match contract {
         Contract::Close => contract,
-        Contract::When { cases, timeout, timeout_continuation } => Contract::When {
-            cases,
-            timeout: timeout,
-            timeout_continuation
-        },
-        Contract::If { observation, then_contract, else_contract } => 
+        Contract::When { when: cases, timeout, timeout_continuation } => 
+            Contract::When {
+                when: cases,
+                timeout: timeout,
+                timeout_continuation
+            },
+        Contract::If { r#if: observation, then: then_contract, r#else: else_contract } => 
             Contract::If { 
-                observation, 
-                then_contract: Some(modify(*then_contract.unwrap()).boxed()), 
-                else_contract: Some(modify(*else_contract.unwrap()).boxed())
+                r#if: observation, 
+                then: Some(modify(*then_contract.unwrap()).boxed()), 
+                r#else: Some(modify(*else_contract.unwrap()).boxed())
             },
-        Contract::Assert { check_that, continue_as } => 
+        Contract::Assert { assert, then } => 
             Contract::Assert { 
-                check_that, 
-                continue_as: Some(modify(*continue_as.unwrap()).boxed()) 
+                assert, 
+                then: Some(modify(*then.unwrap()).boxed()) 
             },
-        Contract::Let { value_name, value, continue_as } => 
+        Contract::Let { r#let: let_x, be: be_value, then:continue_as } => 
             Contract::Let { 
-                value_name, 
-                value, 
-                continue_as: Some(Box::new(modify(*continue_as.unwrap())))  
+                r#let: let_x, 
+                be: be_value, 
+                then: Some(Box::new(modify(*continue_as.unwrap())))  
             },
-        Contract::Pay { party, payee, currency, amount, continue_as } => 
+        Contract::Pay { from_account: party, to: payee, token: currency, pay: amount, then: continue_as } => 
             Contract::Pay {
-                party,
-                payee,
-                currency,
-                amount,
-                continue_as: Some(modify(*continue_as.unwrap()).boxed()) 
+                from_account: party,
+                to: payee,
+                token: currency,
+                pay: amount,
+                then: Some(modify(*continue_as.unwrap()).boxed()) 
             },
     }
 }
