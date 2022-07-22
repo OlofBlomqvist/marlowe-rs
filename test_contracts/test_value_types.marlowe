@@ -6,11 +6,14 @@ When
             (Token "" "")
             (Cond
                 TrueObs 
-                (Constant 1)
+                (AvailableMoney
+                    (Role "role")
+                    (Token "" "")
+                )
                 (AddValue
                     (AddValue
                         (NegValue (Constant 3))
-                        (ConstantParam "adasdasd")
+                        (Constant 3)
                     )
                     (SubValue
                         (ChoiceValue
@@ -30,5 +33,5 @@ When
             )
         )
         Close )]
-    (TimeParam "Timeout for Ada deposit")
+    888
     Close 

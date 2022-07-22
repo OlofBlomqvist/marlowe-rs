@@ -1,4 +1,7 @@
+use std::collections::{HashSet, HashMap};
+
 use pest::iterators::Pair;
+use serde::de::value;
 use crate::parsing::Rule;
 use crate::types::marlowe::*;
 
@@ -27,12 +30,19 @@ fn option_to_result<T>(maybe_ast_node:Option<T>,msg:&str) -> Result<T,&str> {
     }
 }
 
-fn parse<T>(pair:Pair<Rule>) -> std::result::Result<T,String>
+fn parse_with_input<T>(pair:Pair<Rule>,input:HashMap<String,i64>) -> std::result::Result<T,String>
     where Result<T, String>: From<AstNode> { 
-        parse_raw(pair)?.into() }
+        parse_raw(pair,input)?.into() }
 
-fn parse_raw(pair:Pair<Rule>) -> Result<AstNode,String> {
+fn parse_raw(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<AstNode,String> {
     
+    let mut keys : Vec<String> = input.keys().map(|x|x.to_owned()).collect();
+    keys.dedup();
+
+    if input.keys().len() != keys.len() {
+        return Err(String::from("Input data cannot contain duplicate keys."))
+    }
+
     let rule = pair.as_rule();
     let outer_inner = pair.clone().into_inner();
     let child_count = outer_inner.clone().count();
@@ -85,11 +95,31 @@ fn parse_raw(pair:Pair<Rule>) -> Result<AstNode,String> {
             Rule::Contract => fold_back!(get_next!()),
             Rule::Close => fold_back!(AstNode::MarloweContract(Contract::Close)),
             Rule::UseValue => fold_back!(AstNode::MarloweValue(Value::UseValue(get_next_into!()))),            
-            Rule::ConstantParam => fold_back!(AstNode::MarloweValue(Value::ConstantParam(get_next_into!()))),
+            Rule::ConstantParam => {
+                let parameter_name : String = get_next_into!();
+                let input_parameter_value : Option<&i64> = input.get(&parameter_name);
+                match input_parameter_value {
+                    Some(value_from_input) => {
+                        fold_back!(AstNode::MarloweValue(Value::ConstantValue(*value_from_input)))
+                    },
+                    None => {
+                        fold_back!(AstNode::MarloweValue(Value::ConstantParam(parameter_name)))
+                    },
+                }
+            },
             Rule::ArrayOfCases => fold_back!(AstNode::MarloweCaseList(current_operation.extracted_child_ast_nodes)),
             Rule::ArrayOfBounds => fold_back!(AstNode::MarloweBoundList(current_operation.extracted_child_ast_nodes)),
             Rule::PK => fold_back!(AstNode::MarloweParty(Party::PK { pk_hash : get_next_into!() })),
-            Rule::TimeParam => fold_back!(AstNode::MarloweTimeout(Timeout::TimeParam(get_next_into!()))),
+            Rule::TimeParam => {
+                let parameter_name : String = get_next_into!();
+                let input_parameter_value : Option<&i64> = input.get(&parameter_name);
+                match input_parameter_value {
+                    Some(value_from_input) => {
+                        fold_back!(AstNode::MarloweTimeout(Timeout::TimeConstant(*value_from_input)))
+                    },
+                    None => fold_back!(AstNode::MarloweTimeout(Timeout::TimeParam(parameter_name))),
+                }
+            },
             Rule::PayeeAccount => fold_back!(AstNode::MarlowePayee(Payee::Account(get_next_into!()))),
             Rule::PayeeParty => fold_back!(AstNode::MarlowePayee(Payee::Party(get_next_into!()))),
             Rule::Role => fold_back!(AstNode::MarloweParty(Party::Role { role_token : get_next_node(&mut current_operation)?.try_into()?})),
@@ -225,6 +255,11 @@ fn parse_raw(pair:Pair<Rule>) -> Result<AstNode,String> {
                 let v = get_next_into!();
                 fold_back!(AstNode::MarloweValue(Value::ChoiceValue(v)))
             }
+            Rule::AvailableMoney => {
+                let t = get_next_into!();
+                let p = get_next_into!();
+                fold_back!(AstNode::MarloweValue(Value::AvailableMoney(p,t)))
+            }
             Rule::AddValue => {
                 let v2 = get_next_into!();
                 let v1 = get_next_into!();
@@ -311,16 +346,21 @@ fn parse_raw(pair:Pair<Rule>) -> Result<AstNode,String> {
 
 
 /// Parses a string into an instance of a Marlowe contract
-pub fn deserialize(content:&str) -> Result<Contract,String>  {
+pub fn deserialize(content:&str) -> Result<Contract,String>  { 
+    deserialize_with_input(content,Default::default())
+}
+/// Parses a string into an instance of a Marlowe contract using the input data 
+/// to populate constant and timeout parameters.
+pub fn deserialize_with_input(content:&str,input:HashMap<String,i64>) -> Result<Contract,String>  {
     match <super::MarloweParser as pest::Parser::<Rule>>::parse(
         Rule::MainContract, 
         content
     ) {
         Result::Ok(mut pairs) => {
             match pairs.next() {
-                None => Result::Err("it doesnt look like anything to me.".to_string()),
+                None => Result::Err("it doesn't look like anything to me.".to_string()),
                 Some(root) => {
-                    match parse::<Contract>(root) {
+                    match parse_with_input::<Contract>(root,input) {
                         Ok(v) => Ok(v),
                         Err(e) => Err(e),
                     }

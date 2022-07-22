@@ -1,4 +1,3 @@
-#![recursion_limit = "100"]
 #![feature(generator_trait)]
 #![feature(generators)]
 #![feature(if_let_guard)]
@@ -21,12 +20,20 @@
 //! When the Marlowe v3 specs are finalized, this crate will (hopefully) be
 //! updated to reflect those.
 //! 
+//! ## Features
+//! 
+//! - De-serialize from Marlowe.
+//! - Serialize to Marlowe.
+//! - Serialize to Marlowe 'core' JSON (experimental).
+//! - Initialize Marlowe DSL based contracts with parameter input values (experimental).
+//! - Tokenize Marlowe DSL contracts to allow for deeper contract inspection and validation.
+//!  
 //! ## Main entry-points:
 //! 
 //! - [`Serialization`]
 //! - [`Deserialization`]
 //!
-//! [`Serialization`]:  parsing/serialization/fn.serialize.html
+//! [`Serialization`]:  parsing/serialization/marlowe/fn.serialize.html
 //! [`Deserialization`]: parsing/deserialization/fn.deserialize.html
 //! 
 //! This crate uses [Pest.rs](https://pest.rs)!
@@ -45,7 +52,7 @@
 //! use marlowe_lang::types::marlowe::*;
 //! use marlowe_lang::parsing::{
 //!  deserialization::deserialize,
-//!  serialization::serialize,
+//!  serialization::marlowe::serialize,
 //! };
 //! 
 //! let my_contract = Contract::When {
@@ -68,7 +75,7 @@
 //! #### Where 'println!("{serialized}")' would output this:
 //! ```text
 //! When [ Case (Notify (True)) Close ] (TimeParam "test") Close
-//! ```
+//! ``` 
 
 
 #[macro_use] extern crate pest;

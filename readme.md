@@ -14,6 +14,8 @@ It is used by the MarloweLSP VSCode Extention (Syntax highlighting for Marlowe i
 - Deserialize Marlowe contracts in to Rust types.
 - Serialize the Rust types back in to Marlowe.
 - Tokenization of Marlowe contracts.
+- Experimental support for initializing contract variables.
+- Experimental support for serializing to marlowe core (json) for use with the marlowe-cli tool etc.
 
 ### Disclaimers
 
@@ -56,17 +58,51 @@ println!("{serialized}");
 When [ Case (Notify (TrueObs)) Close ] (TimeParam "test") Close
 ```
 
+Using the library directly, or by installing the cli_tool, 
+you can also serialize to json, or print a pest.rs token tree:
+
+// install marlowe_lang_cli
+```bash
+rustup default nightly
+cargo install marlowe_lang
+```
+
+Serialize into marlowe json (experimental support):
+```bash
+marlowe_lang_cli -i "TEST_PARAM_NAME=123123,MY_TIMEOUT=1233335553" -j from-file my_file.marlowe
+```
+
+which would return json similar to below:
+
+```json
+{
+  "when": [
+    {
+      "then": {
+        "when": [
+          {
+            "then": {
+              "when": [
+                {
+                  "then": {
+                    "when": [
+                      {
+                        "then": "close",
+                        "case": {
+                          "for_choice": {
+                            "choice_owner": {
+                              "role_token": "Buyer".....
+```
+
 You can also parse contracts in to a token tree if you wish to inspect it yourself,
 either in rust or using the cli like in the example below:
 
 ```bash
-rustup default nightly
-cargo install marlowe_lang
 marlowe_lang_cli -r from-file your_contract.marlowe
 ```
 
 Which would return something similar to this:
-```text
+```json
 {
   "pos": [
     0,

@@ -1,0 +1,19 @@
+When
+    [(Case
+        (Deposit
+            (Role "BANK")
+            (Role "KALLE")
+            (Token "12" "ROFL")
+            (Constant 123)
+        )
+        (Pay
+            (Role "BANK")
+            (Party (Role "role"))
+            (Token "12" "ROFL")
+            (AddValue
+                TimeIntervalStart 
+                (Constant 3)
+            )
+            Close 
+        ))]
+    (TimeParam "Kalle") Close 

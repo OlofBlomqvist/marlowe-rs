@@ -1,0 +1,200 @@
+When
+    [(Case
+        (Deposit
+            (Role "Seller")
+            (Role "Seller")
+            (Token "" "")
+            (ConstantParam "TEST_PARAMETER_ONE")
+        )
+        (When
+            [(Case
+                (Deposit
+                    (Role "Buyer")
+                    (Role "Buyer")
+                    (Token "" "")
+                    (ConstantParam "TEST_PARAMETER_ONE")
+                )
+                (When
+                    [(Case
+                        (Deposit
+                            (Role "Seller")
+                            (Role "Buyer")
+                            (Token "" "")
+                            (ConstantParam "TEST_PARAMETER_ONE")
+                        )
+                        (When
+                            [(Case
+                                (Choice
+                                    (ChoiceId
+                                        "Everything is alright"
+                                        (Role "Buyer")
+                                    )
+                                    [(Bound 0 0)]
+                                )
+                                Close) , (Case
+                                (Choice
+                                    (ChoiceId
+                                        "Report problem"
+                                        (Role "Buyer")
+                                    )
+                                    [(Bound 1 1)]
+                                )
+                                (Pay
+                                    (Role "Seller")
+                                    (Account (Role "Buyer"))
+                                    (Token "" "")
+                                    (ConstantParam "TEST_PARAMETER_TWO")
+                                    (When
+                                        [(Case
+                                            (Choice
+                                                (ChoiceId
+                                                    "Confirm problem"
+                                                    (Role "Seller")
+                                                )
+                                                [(Bound 1 1)]
+                                            )
+                                            Close ), (Case
+                                            (Choice
+                                                (ChoiceId
+                                                    "Dispute problem"
+                                                    (Role "Seller")
+                                                )
+                                                [(Bound 0 0)]
+                                            )
+                                            (Pay
+                                                (Role "Seller")
+                                                (Party (PK "0000000000000000000000000000000000000000000000000000000000000000"))
+                                                (Token "" "")
+                                                (ConstantParam "TEST_PARAMETER_ONE")
+                                                (Pay
+                                                    (Role "Buyer")
+                                                    (Party (PK "0000000000000000000000000000000000000000000000000000000000000000"))
+                                                    (Token "" "")
+                                                    (ConstantParam "TEST_PARAMETER_ONE")
+                                                    (When
+                                                        [(Case
+                                                            (Choice
+                                                                (ChoiceId
+                                                                    "Confirm problem"
+                                                                    (Role "Seller")
+                                                                )
+                                                                [(Bound 1 1)]
+                                                            )
+                                                            Close ), (Case
+                                                            (Choice
+                                                                (ChoiceId
+                                                                    "Dispute problem"
+                                                                    (Role "Seller")
+                                                                )
+                                                                [(Bound 0 0)]
+                                                            )
+                                                            (Pay
+                                                                (Role "Seller")
+                                                                (Party (PK "0000000000000000000000000000000000000000000000000000000000000000"))
+                                                                (Token "" "")
+                                                                (ConstantParam "TEST_PARAMETER_ONE")
+                                                                (Pay
+                                                                    (Role "Buyer")
+                                                                    (Party (PK "0000000000000000000000000000000000000000000000000000000000000000"))
+                                                                    (Token "" "")
+                                                                    (ConstantParam "TEST_PARAMETER_ONE")
+                                                                    Close
+                                                                )
+                                                            ))]
+                                                        12 Close 
+                                                    )
+                                                )
+                                            ))]
+                                        14 Close 
+                                    )
+                                ))]
+                            55 Close 
+                        ))]
+                    66 Close 
+                ))]
+            111 Close 
+        )), (Case
+        (Deposit
+            (Role "Seller")
+            (Role "Seller")
+            (Token "" "")
+            (ConstantParam "TEST_PARAMETER_ONE")
+        )
+        (When
+            [(Case
+                (Deposit
+                    (Role "Buyer")
+                    (Role "Buyer")
+                    (Token "" "")
+                    (ConstantParam "TEST_PARAMETER_ONE")
+                )
+                (When
+                    [(Case
+                        (Deposit
+                            (Role "Seller")
+                            (Role "Buyer")
+                            (Token "" "")
+                            (ConstantParam "TEST_PARAMETER_TWO")
+                        )
+                        (When
+                            [(Case
+                                (Choice
+                                    (ChoiceId
+                                        "Everything is alright"
+                                        (Role "Buyer")
+                                    )
+                                    [(Bound 0 0)]
+                                )
+                                Close ), (Case
+                                (Choice
+                                    (ChoiceId
+                                        "Report problem"
+                                        (Role "Buyer")
+                                    )
+                                    [(Bound 1 1)]
+                                )
+                                (Pay
+                                    (Role "Seller")
+                                    (Account (Role "Buyer"))
+                                    (Token "" "")
+                                    (ConstantParam "TEST_PARAMETER_TWO")
+                                    (When
+                                        [(Case
+                                            (Choice
+                                                (ChoiceId
+                                                    "Confirm problem"
+                                                    (Role "Seller")
+                                                )
+                                                [(Bound 1 1)]
+                                            )
+                                            Close ), (Case
+                                            (Choice
+                                                (ChoiceId
+                                                    "Dispute problem"
+                                                    (Role "Seller")
+                                                )
+                                                [(Bound 0 0)]
+                                            )
+                                            (Pay
+                                                (Role "Seller")
+                                                (Party (PK "0000000000000000000000000000000000000000000000000000000000000000"))
+                                                (Token "" "")
+                                                (ConstantParam "TEST_PARAMETER_ONE")
+                                                (Pay
+                                                    (Role "Buyer")
+                                                    (Party (PK "0000000000000000000000000000000000000000000000000000000000000000"))
+                                                    (Token "" "")
+                                                    (ConstantParam "TEST_PARAMETER_ONE")
+                                                    Close 
+                                                )
+                                            ))]
+                                        555 Close 
+                                    )
+                                ))]
+                            (TimeParam "TEST_PARAMETER_THREE") Close 
+                        ))]
+                    333 Close 
+                ))]
+            44 Close 
+        ))]
+    111 Close 

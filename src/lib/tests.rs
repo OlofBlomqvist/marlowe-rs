@@ -1,11 +1,17 @@
+use std::collections::HashMap;
 
-
+use crate::parsing::deserialization::deserialize_with_input;
 #[cfg(test)]
 use crate::{
+    parsing,
+    parsing::Rule,
     types::marlowe::*,
     parsing::deserialization::deserialize,
-    parsing::serialization::serialize
+    parsing::serialization::marlowe::serialize
 };
+
+#[cfg(test)]
+use pest::iterators::Pair;
 
 #[test]
 fn deserialize_unwrapped_simple_observation_should_succeed() {
@@ -84,7 +90,7 @@ fn can_parse_playground_samples() {
     _ = std::fs::remove_file("IN.TEMP");
     _ = std::fs::remove_file("OUT.TEMP");
     _ = std::fs::remove_file("OUT.UNCOMPRESSED.TEMP");
-    let paths = std::fs::read_dir("marlowe_playground_samples").unwrap();
+    let paths = std::fs::read_dir("test_contracts").unwrap();
     let mut count = 0;
     for path in paths {
 
@@ -128,7 +134,7 @@ fn can_parse_playground_samples() {
        
     }
     if count == 0 {
-        panic!("The marlowe_playground_samples directory is empty!!!")
+        panic!("The test_contracts directory is empty!!!")
     }
     
 }
@@ -229,4 +235,116 @@ fn new_parser() {
         },
         Err(e) => panic!("{e}"),
     }
+}
+
+#[test]
+fn json_core_should_return_error_for_uninitialized_timeout_params() {
+    let contract_path = "test_contracts/test_uninitialized_timeout.marlowe";
+    let serialized_contract = read_from_file(contract_path);
+    let tokens = <parsing::MarloweParser as pest::Parser<crate::parsing::Rule>>::parse(
+        crate::parsing::Rule::MainContract,
+        &serialized_contract,                     
+    ).unwrap();
+    
+    let flat = tokens.flatten();
+
+    // Verify that we have uninitialized time params
+    let bad : Vec<Pair<Rule>> = flat.filter( |x| x.as_rule() == crate::parsing::Rule::TimeParam ).collect();
+    
+    if bad.is_empty() {
+        panic!("This test is broken. There should be uninitialized time parameters in the contract, but none were found: {:?}",contract_path);   
+    }
+
+    let deserialized = deserialize(&serialized_contract).unwrap();
+
+    match parsing::serialization::json::serialize(deserialized) {
+        Ok(_v) => {
+            panic!("Should not be possible to serialize prior to initializing all constant params")
+        },
+        Err(e) => {
+            println!("Successfully validated that contracts with uninitialized timeouts can not be serialized: {:?}",e)
+        },
+    }
+    
+}
+
+#[test]
+fn json_core_should_return_error_for_uninitialized_constant_params() {
+    let contract_path = "test_contracts/test_uninitialized_constants.marlowe";
+    let serialized_contract = read_from_file(contract_path);
+    let tokens = <parsing::MarloweParser as pest::Parser<crate::parsing::Rule>>::parse(
+        crate::parsing::Rule::MainContract,
+        &serialized_contract,                     
+    ).unwrap();
+    
+    let flat = tokens.flatten();
+    let bad : Vec<Pair<Rule>> = flat.filter( |x| x.as_rule() == crate::parsing::Rule::ConstantParam ).collect();
+    
+    if bad.is_empty() {
+        panic!("This test is broken. There should be uninitialized constant parameters in the contract, but none were found: {:?}",contract_path);   
+    }
+
+    let deserialized = deserialize(&serialized_contract).unwrap();
+
+    match parsing::serialization::json::serialize(deserialized) {
+        Ok(_v) => {
+            panic!("Should not be possible to serialize prior to initializing all constant params")
+        },
+        Err(e) => {
+            println!("Successfully validated that contracts with uninitialized constant parameters can not be serialized: {:?}",e)
+        },
+    }
+    
+}
+
+
+
+#[test]
+fn json_core_should_return_output_identical_to_playground() {
+    let contract_path = "test_contracts/test_timeouts.marlowe";
+    let serialized_contract = read_from_file(contract_path);
+    let tokens = <parsing::MarloweParser as pest::Parser<crate::parsing::Rule>>::parse(
+        crate::parsing::Rule::MainContract,
+        &serialized_contract,                     
+    ).unwrap();
+    
+    let flat = tokens.flatten();
+    let bad : Vec<Pair<Rule>> = flat.filter( |x| x.as_rule() == crate::parsing::Rule::ConstantParam ).collect();
+    
+    if bad.is_empty() {
+        panic!("This test is broken. There should be uninitialized constant parameters in the contract, but none were found: {:?}",contract_path);   
+    }
+
+    let mut input = HashMap::new();
+    input.insert("TEST_PARAMETER_ONE".to_string(),666);
+    input.insert("TEST_PARAMETER_TWO".to_string(),4242);
+    input.insert("TEST_PARAMETER_THREE".to_string(),1658504132546);
+    let deserialized = deserialize_with_input(&serialized_contract,input).unwrap();
+
+    match parsing::serialization::json::serialize(deserialized) {
+        Ok(json_core) => {
+
+            let json_play = read_from_file("json_tests/test_timeouts_as_serialized_by_playground.json")
+                .replace(" ","")
+                .replace("\t","")
+                .replace("\n","")
+                .replace("\r","");
+
+            let json_core = json_core
+                .replace(" ","")
+                .replace("\t","")
+                .replace("\n","")
+                .replace("\r","");
+
+            if json_play == json_core {
+                println!("Successfully validated that contracts with all parameters initialized!")
+            } else {
+                panic!("json serialization by marlowe_lang differs from that of the playground. ")
+            }
+        },
+        Err(e) => {
+            panic!("Input was given but serialization failed anyway...: {:?}",e)
+        },
+    }
+    
 }

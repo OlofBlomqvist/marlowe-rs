@@ -118,12 +118,12 @@
                                                                                                 }
                                                                                             },
                                                                                             "then": "close",
-                                                                                            "pay": 0,
+                                                                                            "pay": 666,
                                                                                             "from_account": {
                                                                                                 "role_token": "Buyer"
                                                                                             }
                                                                                         },
-                                                                                        "pay": 0,
+                                                                                        "pay": 666,
                                                                                         "from_account": {
                                                                                             "role_token": "Seller"
                                                                                         }
@@ -147,12 +147,12 @@
                                                                             "timeout_continuation": "close",
                                                                             "timeout": 12
                                                                         },
-                                                                        "pay": 0,
+                                                                        "pay": 666,
                                                                         "from_account": {
                                                                             "role_token": "Buyer"
                                                                         }
                                                                     },
-                                                                    "pay": 0,
+                                                                    "pay": 666,
                                                                     "from_account": {
                                                                         "role_token": "Seller"
                                                                     }
@@ -176,7 +176,7 @@
                                                         "timeout_continuation": "close",
                                                         "timeout": 14
                                                     },
-                                                    "pay": 0,
+                                                    "pay": 4242,
                                                     "from_account": {
                                                         "role_token": "Seller"
                                                     }
@@ -211,7 +211,7 @@
                                         "into_account": {
                                             "role_token": "Seller"
                                         },
-                                        "deposits": 0
+                                        "deposits": 666
                                     }
                                 }
                             ],
@@ -229,7 +229,7 @@
                             "into_account": {
                                 "role_token": "Buyer"
                             },
-                            "deposits": 0
+                            "deposits": 666
                         }
                     }
                 ],
@@ -247,7 +247,7 @@
                 "into_account": {
                     "role_token": "Seller"
                 },
-                "deposits": 0
+                "deposits": 666
             }
         },
         {
@@ -328,12 +328,12 @@
                                                                             }
                                                                         },
                                                                         "then": "close",
-                                                                        "pay": 0,
+                                                                        "pay": 666,
                                                                         "from_account": {
                                                                             "role_token": "Buyer"
                                                                         }
                                                                     },
-                                                                    "pay": 0,
+                                                                    "pay": 666,
                                                                     "from_account": {
                                                                         "role_token": "Seller"
                                                                     }
@@ -357,7 +357,7 @@
                                                         "timeout_continuation": "close",
                                                         "timeout": 555
                                                     },
-                                                    "pay": 0,
+                                                    "pay": 4242,
                                                     "from_account": {
                                                         "role_token": "Seller"
                                                     }
@@ -379,7 +379,7 @@
                                             }
                                         ],
                                         "timeout_continuation": "close",
-                                        "timeout": 444
+                                        "timeout": 1658504132546
                                     },
                                     "case": {
                                         "party": {
@@ -392,7 +392,7 @@
                                         "into_account": {
                                             "role_token": "Seller"
                                         },
-                                        "deposits": 0
+                                        "deposits": 4242
                                     }
                                 }
                             ],
@@ -410,7 +410,7 @@
                             "into_account": {
                                 "role_token": "Buyer"
                             },
-                            "deposits": 0
+                            "deposits": 666
                         }
                     }
                 ],
@@ -428,7 +428,7 @@
                 "into_account": {
                     "role_token": "Seller"
                 },
-                "deposits": 0
+                "deposits": 666
             }
         }
     ],
