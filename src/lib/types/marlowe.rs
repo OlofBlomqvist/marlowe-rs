@@ -25,10 +25,6 @@ pub(crate) enum AstNode {
     Null
 }
 
-#[derive(Debug,Serialize)]
-#[serde(rename_all = "lowercase")]
-pub struct ValueId(pub String);
-
 #[derive(Debug)]
 pub struct Bound(pub i64,pub i64);
 

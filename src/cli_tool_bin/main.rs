@@ -39,14 +39,20 @@ enum InputType {
     String
 }
 
+
 #[derive(Subcommand)]
 enum MyCommands {
     /// Read contract from .marlowe file
     FromFile {path: String} ,
     /// Read raw marlowe contract from standard input
-    FromStandardInput { contract: String }
+    FromStandardInput { contract: String },
+    /// Create a basic initial state (experimental).
+    CreateState {
+        creator_role: String,
+        initial_ada: i64
+    }
+    
 }
-
 #[derive(ClapParser)]
 #[clap(author, version, about, long_about = None)]
 #[clap(propagate_version = true)]
@@ -78,6 +84,38 @@ fn main() {
             }, 
             MyCommands::FromStandardInput { contract} => {
                 contract
+            },
+            MyCommands::CreateState { creator_role, initial_ada } => {
+                
+                // This method currently just uses a basic string template for providing quick way of generating an initial state.
+                // It should be replaced with an actual implementation such that the initial state can be created with more
+                // precision. Format of the template is taken from here:
+                // https://github.com/input-output-hk/marlowe-cardano/blob/main/marlowe-cli/lectures/03-marlowe-cli-abstract.ipynb
+
+                // probably should support PK as creator as well? "pk_hash": "0a11b0c7e25dc5d9c63171bdf39d9741b901dc903e12b4e162348e07"
+
+                let template = "
+{
+    \"accounts\": [
+        [[{\"role_token\": \"$CREATOR_ROLE\"}, {\"currency_symbol\": \"\", \"token_name\": \"\"}], $INITIAL_LOVELACE]
+    ],
+    \"choices\": [],
+    \"boundValues\": [],
+    \"minTime\": 1
+}
+                ";
+                
+                let lovelace = initial_ada*1000;
+                let result = template
+                    .replace("$CREATOR_ROLE",
+                        &creator_role)
+                    .replace("$INITIAL_LOVELACE",
+                        lovelace.to_string().as_str()
+                    ).to_string();
+                    
+                println!("{}",result);
+                return;
+                
             }
         };
 

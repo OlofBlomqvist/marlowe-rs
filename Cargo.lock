@@ -172,7 +172,7 @@ checksum = "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
 
 [[package]]
 name = "marlowe_lang"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "clap",
  "pest",
