@@ -233,6 +233,14 @@ fn parse_raw(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<AstNode,String
                     ge_than: v2
                 }))
             }
+            Rule::ValueEQ => {
+                let v2 = get_next_into!();
+                let v1 = get_next_into!();
+                fold_back!(AstNode::MarloweObservation(Observation::ValueEQ {
+                    value: v1,
+                    equal_to: v2
+                }))
+            }
             Rule::ValueLT => {
                 let v2 = get_next_into!();
                 let v1 = get_next_into!();

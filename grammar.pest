@@ -59,7 +59,7 @@ Value = _{
 Observation = _{ ObservationHole | TrueObs | FalseObs | ValueEQ | ValueLE | 
                  ValueLT | ValueGT | ValueGE | OrObs | 
                  NotObs | AndObs | ChoseSomething }
-    ValueEQ = ${ lpar ~ WHITESPACE* ~ "ValueE"  ~ WHITESPACE+  ~ Value  ~ WHITESPACE+ ~ Value ~WHITESPACE* ~ rpar }
+    ValueEQ = ${ lpar ~ WHITESPACE* ~ "ValueEQ"  ~ WHITESPACE+  ~ Value ~ WHITESPACE+  ~ Value ~WHITESPACE*  ~ rpar }
     ValueLE = ${ lpar ~ WHITESPACE* ~ "ValueLE" ~ WHITESPACE+  ~ Value ~ WHITESPACE+  ~ Value ~WHITESPACE*  ~ rpar }
     ValueLT = ${ lpar ~ WHITESPACE* ~ "ValueLT" ~ WHITESPACE+  ~ Value ~ WHITESPACE+  ~ Value ~WHITESPACE*  ~ rpar }
     ValueGT = ${ lpar ~ WHITESPACE* ~ "ValueGT" ~ WHITESPACE+  ~ Value ~ WHITESPACE+  ~ Value ~WHITESPACE*  ~ rpar }
