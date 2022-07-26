@@ -1,37 +1,142 @@
-## Welcome to GitHub Pages
+# Marlowe Lang
 
-You can use the [editor on GitHub](https://github.com/OlofBlomqvist/marlowe_lang/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
+[![crates.io](https://img.shields.io/crates/v/marlowe_lang.svg)](https://crates.io/crates/marlowe_lang)
+[![Documentation](https://docs.rs/marlowe_lang/badge.svg)](https://docs.rs/marlowe_lang)
+[![BuildAndTest](https://github.com/OlofBlomqvist/marlowe_rust/actions/workflows/rust.yml/badge.svg?branch=master)](https://github.com/OlofBlomqvist/marlowe_rust/actions/workflows/rust.yml)
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+An experimental Rust implementation of the Marlowe DSL for Cardano smart (financial) contracts. 
+It allows you to create Marlowe contracts from Rust rather than using Marlowe directly.
 
-### Markdown
+It is used by the MarloweLSP VSCode Extention (Syntax highlighting for Marlowe in VSCode).
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+### Main Features
 
-```markdown
-Syntax highlighted code block
+- Deserialize Marlowe contracts in to Rust types.
+- Serialize the Rust types back in to Marlowe.
+- Tokenization of Marlowe contracts.
+- Experimental support for initializing contract variables.
+- Experimental support for serializing to marlowe core (json) for use with the marlowe-cli tool etc.
 
-# Header 1
-## Header 2
-### Header 3
+### Disclaimers
 
-- Bulleted
-- List
+- This crate was created as a learning exercise and should not be trusted anywhere near a production environment at this time.
 
-1. Numbered
-2. List
+- It is a side-project and might be dropped completely at any time (it may already be dead!)
 
-**Bold** and _Italic_ and `Code` text
+- The pest.rs grammar file is just an initial attempt to make sense of the language from a high level. 
+  It will likely have to be rebuilt from the ground up when Marlowe v3 is official.
 
-[Link](url) and ![Image](src)
+
+### Example usage
+
+```rust
+use marlowe_lang::types::marlowe::*;
+use marlowe_lang::parsing::{
+ deserialization::deserialize,
+ serialization::serialize,
+};
+
+let my_contract = Contract::When {
+    cases: vec![
+        Some(Case { 
+            action: Some(Action::Notify { 
+                notify_if: Some(Observation::TrueObs) 
+            }), 
+            contract: Some(Contract::Close.boxed()) } )
+    ],
+    timeout: Some(imeout::TimeParam("test".into())),
+    timeout_continuation: Some(Contract::Close.boxed()),
+};
+
+let serialized = serialize(my_contract);
+let deserialized : Contract = deserialize(&serialized).unwrap();
+println!("{serialized}");
 ```
 
-For more details see [Basic writing and formatting syntax](https://docs.github.com/en/github/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax).
+#### Where 'println!("{serialized}")' would output this:
+```text
+When [ Case (Notify (TrueObs)) Close ] (TimeParam "test") Close
+```
 
-### Jekyll Themes
+Using the library directly, or by installing the cli_tool, 
+you can also serialize to json, or print a pest.rs token tree:
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/OlofBlomqvist/marlowe_lang/settings/pages). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
+// install marlowe_lang_cli
+```bash
+rustup default nightly
+cargo install marlowe_lang
+```
 
-### Support or Contact
+Serialize into marlowe json (experimental support):
+```bash
+marlowe_lang_cli -i "TEST_PARAM_NAME=123123,MY_TIMEOUT=1233335553" -j from-file my_file.marlowe
+```
 
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+which would return json similar to below:
+
+```json
+{
+  "when": [
+    {
+      "then": {
+        "when": [
+          {
+            "then": {
+              "when": [
+                {
+                  "then": {
+                    "when": [
+                      {
+                        "then": "close",
+                        "case": {
+                          "for_choice": {
+                            "choice_owner": {
+                              "role_token": "Buyer".....
+```
+
+You can also parse contracts in to a token tree if you wish to inspect it yourself,
+either in rust or using the cli like in the example below:
+
+```bash
+marlowe_lang_cli -r from-file your_contract.marlowe
+```
+
+Which would return something similar to this:
+```json
+{
+  "pos": [
+    0,
+    3468
+  ],
+  "pairs": [
+    {
+      "pos": [
+        0,
+        3468
+      ],
+      "rule": "Contract",
+      "inner": {
+        "pos": [
+          0,
+          3468
+        ],
+        "pairs": [
+          {
+            "pos": [
+              0,
+              3468
+            ],
+            "rule": "When",
+            "inner": {
+              "pos": [
+                5,
+                3468
+              ],
+              "pairs": [ .........
+```
+
+Or if the input is invalid such as in the below example, you will receive an error:
+
+```
+$ marlowe_lang_cli -r from-standard-input 'Assert xTrueObs Close'
+Error { variant: ParsingError { positives: [ValueEQ, ValueLE, ValueLT, ValueGT, ValueGE, TrueObs, FalseObs, ChoseSomething, NotObs, OrObs, AndObs, ObservationHole], negatives: [] }, location: Pos(7), line_col: Pos((1, 8)), path: None, line: "Assert xTrueObs Close", continued_line: None }
