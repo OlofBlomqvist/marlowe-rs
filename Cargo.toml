@@ -17,7 +17,7 @@ clap = { version = "3.1.18", features = ["derive"] }
 # =============================================================
 console_error_panic_hook = { version = "0.1.7", optional = true }
 serde_derive = { version = "1.0.144", optional = true }
-uplc = { git = "https://github.com/txpipe/aiken", optional = true }
+#uplc = { git = "https://github.com/txpipe/aiken", optional = true }
 hex = { version = "0.4.3", optional = true }
 minicbor = { version = "0.18.0", optional = true }
 cardano-multiplatform-lib = { version = "2.0.0", optional = true }
@@ -31,7 +31,7 @@ utils = [
     "dep:cardano-multiplatform-lib",
     "dep:minicbor",
     "dep:hex",
-    "dep:uplc",
+    #"dep:uplc",
     "dep:serde_derive" ]
 wasm = [
     "utils",
