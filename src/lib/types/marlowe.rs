@@ -1,4 +1,5 @@
 use serde::{Serialize };
+use std::collections::HashMap;
 
 use crate::{
     Impl_From_For_Vec, 
@@ -189,6 +190,35 @@ impl Boxer for Contract {
     fn boxed(self) -> Box<Contract> { Box::new(self) }
 }
 
+#[cfg(feature = "utils")]
+#[derive(Debug,Serialize)]
+pub struct StateAccountInfo {
+    pub account_id : Party,
+    pub token : Token,
+    pub amount : i64
+}
 
+type ValueId = String;
 
+#[cfg(feature = "utils")]
+#[derive(Debug,Serialize)]
+pub struct MarloweDatumState {
+    pub choices : Vec<ChoiceId> , // Map ChoiceId ChosenNum
+    pub accounts : Vec<StateAccountInfo>, // Accounts: Map (AccountId, Token) Integer
+    pub min_time : u64 , // POSIXTime 
+    pub bound_values : HashMap<ValueId,u64> // Map ValueId Integer
+}
+
+#[cfg(feature = "utils")]
+#[derive(Debug,Serialize)]
+pub struct MarloweInput {
+    pub todo : String // todo
+}
+
+#[cfg(feature = "utils")]
+#[derive(Debug,Serialize)]
+pub struct MarloweDatum {
+    pub state : MarloweDatumState,
+    pub contract : Contract
+}
 

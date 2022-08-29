@@ -87,8 +87,9 @@ PayeeParty = ${ lpar ~ "Party" ~ WHITESPACE+ ~ Party ~ rpar }
 Party = _{ PartyHole | Role | PK }
 FromParty = _{ FromPartyHole | Role | PK }
 Role = ${ lpar ~ "Role" ~ WHITESPACE+ ~ quoted_string ~ rpar }
-PubKey = ${ "\"" ~ ("0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"|"A"|"B"|"C"|"D"|"E"|"F"){64,64} ~ "\"" }
-PK = ${ lpar ~ "PK" ~ WHITESPACE+ ~ PubKey ~ rpar }
+PubKey = ${ "\"" ~ ("0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"|"A"|"B"|"C"|"D"|"E"|"F"|"a"|"b"|"c"|"d"|"e"|"f"){64,64} ~ "\"" }
+PubKeyHash = ${ "\"" ~ ("0"|"1"|"2"|"3"|"4"|"5"|"6"|"7"|"8"|"9"|"A"|"B"|"C"|"D"|"E"|"F"|"a"|"b"|"c"|"d"|"e"|"f"){56,56} ~ "\"" }
+PK = ${ lpar ~ "PK" ~ WHITESPACE+ ~ (PubKey|PubKeyHash) ~ rpar }
 Account = ${ "Account" ~ WHITESPACE+ ~ Party }
 
 MainContract = _{ Contract ~ EOI }

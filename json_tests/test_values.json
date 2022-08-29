@@ -1,0 +1,45 @@
+{
+    "then": "close",
+    "let": "LET_ME",
+    "be": {
+        "and": {
+            "divide": {
+                "value": "time_interval_start",
+                "minus": 0
+            },
+            "by": {
+                "times": "time_interval_end",
+                "multiply": {
+                    "then": 1,
+                    "if": {
+                        "not": {
+                            "value": {
+                                "in_account": {
+                                    "role_token": "FROMACC"
+                                },
+                                "amount_of_token": {
+                                    "token_name": "12",
+                                    "currency_symbol": "aa"
+                                }
+                            },
+                            "equal_to": {
+                                "negate": 1
+                            }
+                        }
+                    },
+                    "else": {
+                        "value_of_choice": {
+                            "choice_owner": {
+                                "role_token": "ROLLEN"
+                            },
+                            "choice_name": "SOMECHOICE"
+                        }
+                    }
+                }
+            }
+        },
+        "add": {
+            "use_value": "USE_NAME"
+        }
+    }
+}

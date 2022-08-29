@@ -1,0 +1,31 @@
+Let
+    "LET_ME"
+    (AddValue
+        (UseValue "USE_NAME")
+        (DivValue
+            (SubValue
+                TimeIntervalStart 
+                (ConstantParam "CONSTANTO")
+            )
+            (MulValue
+                (Cond
+                    (NotObs
+                        (ValueEQ
+                            (AvailableMoney
+                                (Role "FROMACC")
+                                (Token "aa" "12")
+                            )
+                            (NegValue (Constant 1))
+                        ))
+                    (Constant 1)
+                    (ChoiceValue
+                        (ChoiceId
+                            "SOMECHOICE"
+                            (Role "ROLLEN")
+                        ))
+                )
+                TimeIntervalEnd 
+            )
+        )
+    )
+    Close 

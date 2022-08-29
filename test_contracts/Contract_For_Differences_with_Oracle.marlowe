@@ -8,7 +8,7 @@ When [
      (When [
         (Case
            (Deposit
-              (Role "Counterparty")
+              (PK "fd37884bbd044c72e5f29de1b777a9c1c1d531773535cd5b55e2f6ff")
               (Role "Counterparty")
               (Token "" "")
               (ConstantParam "Amount paid by counterparty"))
@@ -39,7 +39,7 @@ When [
                                                (Role "kraken")))))
                                    (Constant 10000000000000000))
                                 (If
-                                   (ValueGT
+                                   (ValueEQ
                                       (ConstantParam "Amount of Ada to use as asset")
                                       (UseValue "Price in second window"))
                                    (Let "Decrease in price"

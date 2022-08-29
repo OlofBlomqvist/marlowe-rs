@@ -1,7 +1,5 @@
-use std::collections::{HashSet, HashMap};
-
+use std::collections::HashMap;
 use pest::iterators::Pair;
-use serde::de::value;
 use crate::parsing::Rule;
 use crate::types::marlowe::*;
 
@@ -249,6 +247,20 @@ fn parse_raw(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<AstNode,String
                     lt_than: v2
                 }))
             }
+            Rule::NotObs => {
+                let v = get_next_into!();
+                fold_back!(AstNode::MarloweObservation(Observation::NotObs { not: v }))
+            }
+            Rule::AndObs => {
+                let b = get_next_into!();
+                let a = get_next_into!();
+                fold_back!(AstNode::MarloweObservation(
+                    Observation::AndObs { 
+                        both: a, 
+                        and: b
+                    }
+                ))
+            }
             Rule::NegValue => {
                 let v = get_next_into!();
                 fold_back!(AstNode::MarloweValue(Value::NegValue(v)))
@@ -316,7 +328,8 @@ fn parse_raw(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<AstNode,String
                 fold_back!(AstNode::MarloweValue(Value::ConstantValue(nn)))
 
             }
-            Rule::PubKey => {
+
+            Rule::PubKeyHash | Rule::PubKey => {
                 let v = option_to_result(current_operation.string_representation,"failed to parse pubkey")?;
                 let vv = v.trim_start_matches("\"").trim_end_matches("\"");
                 fold_back!(AstNode::StringValue(vv.to_string()));

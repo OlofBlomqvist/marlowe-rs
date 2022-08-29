@@ -17,21 +17,24 @@
 //!     help                   Print this message or the help of the given subcommand(s)
 //! ```
 
-use std::collections::{HashSet, HashMap};
+use pest::Parser;
+use std::collections::HashMap;
 
-use marlowe_lang::parsing::{
-    deserialization::{deserialize, deserialize_with_input},
-    serialization::marlowe::serialize,
-    Rule, MarloweParser, self
+use marlowe_lang::extras::utils::*;
+
+use marlowe_lang::{
+    parsing::{
+        deserialization::{deserialize_with_input},
+        serialization::marlowe::serialize,
+        Rule, MarloweParser, self
+    }
 };
-
 
 use clap::{
     ArgEnum,
     Subcommand,
     Parser as ClapParser
 };
-use pest::{Parser, iterators::Pairs};
 
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ArgEnum)]
 enum InputType {
@@ -40,18 +43,61 @@ enum InputType {
 }
 
 
+
 #[derive(Subcommand)]
 enum MyCommands {
-    /// Read contract from .marlowe file
-    FromFile {path: String} ,
-    /// Read raw marlowe contract from standard input
-    FromStandardInput { contract: String },
+    
+    /// Read a contract (marlowe-dsl) from a file
+    ContractFromFile {
+        /// Path to a file
+        path: String
+    },    
+
+    /// Read a cborhex encoded contract from a file (experimental feature)
+    ContractFromCborFile {
+        /// Path to a file
+        path: String
+    },
+
+    /// Read a contract (marlowe-dsl) from standard input
+    ContractFromStandardInput { 
+        contract: String
+    },
+    
+    /// Read a cborhex encoded contract from standard input (experimental feature)
+    ContractFromCborHexStandardInput { 
+        contract: String
+    },
+
+    /// Parse cborhex encoded marlowe redeemer / input (experimental feature)
+    InputFromCborHexFromFile {
+        /// Path to a file
+        path: String
+    },
+
+    /// Parse cborhex encoded marlowe redeemer / input (experimental feature)
+    InputFromCborHex {
+        /// Path to a file
+        cbor_hex: String
+    },
+
+    /// Parse marlowe datum from a file containing the cborhex (experimental feature)
+    DatumFromCborHexFile {
+        /// Path to a file
+        path: String
+    },
+
+    /// Parse marlowe datum from cbor hex (experimental feature)
+    DatumFromCborHex {
+        datum: String
+    },
+
     /// Create a basic initial state (experimental).
     CreateState {
         creator_role: String,
         initial_ada: i64
     }
-    
+
 }
 #[derive(ClapParser)]
 #[clap(author, version, about, long_about = None)]
@@ -70,54 +116,103 @@ struct Args {
     /// Example 1: -d "my_constant_parameter=123, my_other_constant_parameter_name=321, timeout_number_one=2022-03-04@15:41:31"
     /// Example 2: -d "timeout_number_one=4128381238132"
     #[clap(short = 'i')]
-    init: Option<String>
+    init: Option<String>,
+
+    #[clap(short = 'c')]
+    cbor_hex: bool,
+    
 }
 
 fn main() {
 
     let args = Args::parse();
     
-    let serialized_input = 
-        match args.command {
-            MyCommands::FromFile { path } => {
-                read_from_file(path)
-            }, 
-            MyCommands::FromStandardInput { contract} => {
-                contract
-            },
-            MyCommands::CreateState { creator_role, initial_ada } => {
-                
-                // This method currently just uses a basic string template for providing quick way of generating an initial state.
-                // It should be replaced with an actual implementation such that the initial state can be created with more
-                // precision. Format of the template is taken from here:
-                // https://github.com/input-output-hk/marlowe-cardano/blob/main/marlowe-cli/lectures/03-marlowe-cli-abstract.ipynb
+    #[allow(unused_assignments)]
+    let mut serialized_input = String::new();
+    
+    match args.command {
+        
+        MyCommands::ContractFromFile { path } => {
+            serialized_input = read_from_file(path)
+        }, 
+        MyCommands::ContractFromStandardInput { contract} => {
+            serialized_input = contract
+        },
+        MyCommands::CreateState { creator_role, initial_ada } => {
+            
+            // This method currently just uses a basic string template for providing quick way of generating an initial state.
+            // It should be replaced with an actual implementation such that the initial state can be created with more
+            // precision. Format of the template is taken from here:
+            // https://github.com/input-output-hk/marlowe-cardano/blob/main/marlowe-cli/lectures/03-marlowe-cli-abstract.ipynb
 
-                // probably should support PK as creator as well? "pk_hash": "0a11b0c7e25dc5d9c63171bdf39d9741b901dc903e12b4e162348e07"
+            // probably should support PK as creator as well? "pk_hash": "0a11b0c7e25dc5d9c63171bdf39d9741b901dc903e12b4e162348e07"
 
-                let template = "
+            let template = "
 {
-    \"accounts\": [
-        [[{\"role_token\": \"$CREATOR_ROLE\"}, {\"currency_symbol\": \"\", \"token_name\": \"\"}], $INITIAL_LOVELACE]
-    ],
-    \"choices\": [],
-    \"boundValues\": [],
-    \"minTime\": 1
+\"accounts\": [
+    [[{\"role_token\": \"$CREATOR_ROLE\"}, {\"currency_symbol\": \"\", \"token_name\": \"\"}], $INITIAL_LOVELACE]
+],
+\"choices\": [],
+\"boundValues\": [],
+\"minTime\": 1
 }
-                ";
+            ";
+            
+            let lovelace = initial_ada*1000;
+            let result = template
+                .replace("$CREATOR_ROLE",
+                    &creator_role)
+                .replace("$INITIAL_LOVELACE",
+                    lovelace.to_string().as_str()
+                ).to_string();
                 
-                let lovelace = initial_ada*1000;
-                let result = template
-                    .replace("$CREATOR_ROLE",
-                        &creator_role)
-                    .replace("$INITIAL_LOVELACE",
-                        lovelace.to_string().as_str()
-                    ).to_string();
-                    
-                println!("{}",result);
-                return;
-                
+            println!("{}",result);
+            return;
+            
+        }
+        MyCommands::ContractFromCborFile { path } => {
+            let cbor_hex = read_from_file(path);
+            let decoded = try_decode_cborhex_marlowe_contract(&cbor_hex).unwrap();
+            serialized_input = parsing::serialization::marlowe::serialize(decoded);
+
+        },
+        MyCommands::ContractFromCborHexStandardInput { contract } => {
+            let decoded = try_decode_cborhex_marlowe_contract(&contract).unwrap();
+            serialized_input = parsing::serialization::marlowe::serialize(decoded);
+        },
+        MyCommands::InputFromCborHex { cbor_hex } => {
+            let input = decode_input_cbor_hex(&cbor_hex);
+            println!("{}",input);
+            return;
+        },
+        MyCommands::InputFromCborHexFromFile { path } => {
+            let cbor_hex = read_from_file(path);
+            let input = decode_input_cbor_hex(&cbor_hex);
+            println!("{}",input);
+            return;
+        },
+        MyCommands::DatumFromCborHexFile { path } => {
+            let cbor_hex = read_from_file(path);
+            let datum = try_decode_cborhex_marlowe_plutus_datum(&cbor_hex).unwrap();
+            if (args.json) {
+                println!("Contract (JSON): {}",marlowe_lang::parsing::serialization::json::serialize(datum.contract).unwrap());
+            } else {
+                println!("Contract (Marlowe-DSL): {}",marlowe_lang::parsing::serialization::marlowe::serialize(datum.contract));
             }
-        };
+            return;
+        },
+        MyCommands::DatumFromCborHex { datum } => {
+            let datum = try_decode_cborhex_marlowe_plutus_datum(&datum).unwrap();
+            println!("State (JSON): {}\n",serde_json::to_string_pretty(&datum.state).unwrap());
+            if (args.json) {
+                println!("Contract (JSON): {}",marlowe_lang::parsing::serialization::json::serialize(datum.contract).unwrap());
+            } else {
+                println!("Contract (Marlowe-DSL): {}",marlowe_lang::parsing::serialization::marlowe::serialize(datum.contract));
+            }
+            
+            return;
+        },
+    };
 
     match args.raw {
         true => {
