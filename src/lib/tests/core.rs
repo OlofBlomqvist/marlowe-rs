@@ -66,7 +66,7 @@ fn can_generate_contract() {
                 then: Some(Contract::Pay { 
                     from_account: Some(Party::Role { role_token: "test".to_string() }), 
                     to: Some(Payee::Account(Some(Party::PK { pk_hash : "00000000000000000000".into() }))), 
-                    token: Some(Token::ADA), 
+                    token: Some(Token::ada()), 
                     pay: Some(Value::ConstantValue(42)), 
                     then: Some(Contract::Close.boxed())
                 }.boxed())
@@ -90,13 +90,16 @@ fn can_parse_playground_samples() {
     _ = std::fs::remove_file("IN.TEMP");
     _ = std::fs::remove_file("OUT.TEMP");
     _ = std::fs::remove_file("OUT.UNCOMPRESSED.TEMP");
-    let paths = std::fs::read_dir("test_contracts").unwrap();
+    let paths = std::fs::read_dir("test_data").unwrap();
     let mut count = 0;
     for path in paths {
 
         count = count + 1;
         let canonical_path = path.unwrap().path().canonicalize().unwrap();
         let path_string = canonical_path.display().to_string();
+        if !path_string.to_uppercase().ends_with(".MARLOWE") {
+            continue
+        }
         let serialized_contract = read_from_file(&path_string);
 
         let deserialization_result = deserialize(&serialized_contract);
@@ -134,7 +137,7 @@ fn can_parse_playground_samples() {
        
     }
     if count == 0 {
-        panic!("The test_contracts directory is empty!!!")
+        panic!("The test_data directory is empty!!!")
     }
     
 }
@@ -195,20 +198,20 @@ fn modify(contract:Contract) -> Contract {
                 timeout: timeout,
                 timeout_continuation
             },
-        Contract::If { r#if: observation, then: then_contract, r#else: else_contract } => 
+        Contract::If { x_if: observation, then: then_contract, x_else: else_contract } => 
             Contract::If { 
-                r#if: observation, 
+                x_if: observation, 
                 then: Some(modify(*then_contract.unwrap()).boxed()), 
-                r#else: Some(modify(*else_contract.unwrap()).boxed())
+                x_else: Some(modify(*else_contract.unwrap()).boxed())
             },
         Contract::Assert { assert, then } => 
             Contract::Assert { 
                 assert, 
                 then: Some(modify(*then.unwrap()).boxed()) 
             },
-        Contract::Let { r#let: let_x, be: be_value, then:continue_as } => 
+        Contract::Let { x_let: let_x, be: be_value, then:continue_as } => 
             Contract::Let { 
-                r#let: let_x, 
+                x_let: let_x, 
                 be: be_value, 
                 then: Some(Box::new(modify(*continue_as.unwrap())))  
             },
@@ -239,7 +242,7 @@ fn new_parser() {
 
 #[test]
 fn json_core_should_return_error_for_uninitialized_timeout_params() {
-    let contract_path = "test_contracts/test_uninitialized_timeout.marlowe";
+    let contract_path = "test_data/test_uninitialized_timeout.marlowe";
     let serialized_contract = read_from_file(contract_path);
     let tokens = <parsing::MarloweParser as pest::Parser<crate::parsing::Rule>>::parse(
         crate::parsing::Rule::MainContract,
@@ -270,7 +273,7 @@ fn json_core_should_return_error_for_uninitialized_timeout_params() {
 
 #[test]
 fn json_core_should_return_error_for_uninitialized_constant_params() {
-    let contract_path = "test_contracts/test_uninitialized_constants.marlowe";
+    let contract_path = "test_data/test_uninitialized_constants.marlowe";
     let serialized_contract = read_from_file(contract_path);
     let tokens = <parsing::MarloweParser as pest::Parser<crate::parsing::Rule>>::parse(
         crate::parsing::Rule::MainContract,
@@ -292,7 +295,7 @@ fn json_core_should_return_error_for_uninitialized_constant_params() {
         },
         Err(e) => {
             println!("Successfully validated that contracts with uninitialized constant parameters can not be serialized: {:?}",e)
-        },
+    },
     }
     
 }
@@ -301,7 +304,7 @@ fn json_core_should_return_error_for_uninitialized_constant_params() {
 
 #[test]
 fn json_core_should_return_output_identical_to_playground() {
-    let contract_path = "test_contracts/test_timeouts.marlowe";
+    let contract_path = "test_data/test_timeouts.marlowe";
     let serialized_contract = read_from_file(contract_path);
     let tokens = <parsing::MarloweParser as pest::Parser<crate::parsing::Rule>>::parse(
         crate::parsing::Rule::MainContract,
@@ -324,7 +327,7 @@ fn json_core_should_return_output_identical_to_playground() {
     match parsing::serialization::json::serialize(deserialized) {
         Ok(json_core) => {
 
-            let json_play = read_from_file("json_tests/test_timeouts_as_serialized_by_playground.json")
+            let json_play = read_from_file("test_data/test_timeouts_as_serialized_by_playground.json")
                 .replace(" ","")
                 .replace("\t","")
                 .replace("\n","")
@@ -348,3 +351,4 @@ fn json_core_should_return_output_identical_to_playground() {
     }
     
 }
+

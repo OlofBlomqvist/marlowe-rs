@@ -1,290 +1,262 @@
-//! Test CLI for the marlowe_lang crate.
-//! (It has no real use-case at this time!)
-//! 
-//! ## USAGE:
-//! ```text
-//! marlowe_lang_cli.exe [OPTIONS] <SUBCOMMAND>
-//!
-//! OPTIONS:
-//!     -h, --help       Print help information
-//!     -r               Return the pest.rs rule/token stream
-//!     -j               Return the contract as json
-//!     -V, --version    Print version information
-//!
-//! SUBCOMMANDS:
-//!     from-file              Read contract from .marlowe file
-//!     from-standard-input    Read raw marlowe contract from standard input
-//!     help                   Print this message or the help of the given subcommand(s)
-//! ```
-
-use pest::Parser;
-use std::collections::HashMap;
-
+mod args;
+use args::{DatumArgs, RedeemerArgs, StateArgs, ContractArgs, PlutusArgs};
+use marlowe_lang::types::marlowe::{Contract, MarloweDatum};
+use std::{collections::HashMap};
 use marlowe_lang::extras::utils::*;
+use plutus_data::ToPlutusData;
 
-use marlowe_lang::{
-    parsing::{
-        deserialization::{deserialize_with_input},
-        serialization::marlowe::serialize,
-        Rule, MarloweParser, self
+use crate::args::{ContractOutputEncoding, ContractInputEncoding, DatumInputEncoding, DatumOutputEncoding, RedeemerInputEncoding, RedeemerOutputEncoding};
+
+fn datum_handler(args:DatumArgs) {
+
+    fn decode(input:&str,e:DatumInputEncoding) -> MarloweDatum {
+        match e {
+            DatumInputEncoding::CborHex => 
+                try_decode_cborhex_marlowe_plutus_datum(&input).unwrap(),
+            DatumInputEncoding::PlutusDataDetailedJson => 
+                try_decode_json_encoded_marlowe_plutus_datum(input).unwrap()
+        }
     }
-};
 
-use clap::{
-    ArgEnum,
-    Subcommand,
-    Parser as ClapParser
-};
-
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, ArgEnum)]
-enum InputType {
-    File,
-    String
-}
-
-
-
-#[derive(Subcommand)]
-enum MyCommands {
+    fn encode(x:MarloweDatum,d:DatumOutputEncoding) -> String {
+        match d {
+            DatumOutputEncoding::SimpleText => {
+                format!("{:?}",x)
+            }
+            DatumOutputEncoding::DetailedText => {
+                let contract = 
+                    format!("Contract (Marlowe-DSL): {}",
+                        marlowe_lang::parsing::serialization::marlowe::serialize(x.contract));
+                format!("State: {:?}\n\nContinuation: {}",x.state,contract)
+            }
+        }
+    }
+    fn convert(input:&str,e:DatumInputEncoding,d:DatumOutputEncoding) -> String {
+        let decoded = decode(input,e);
+        encode(decoded,d)
+    }
     
-    /// Read a contract (marlowe-dsl) from a file
-    ContractFromFile {
-        /// Path to a file
-        path: String
-    },    
+    match args {
 
-    /// Read a cborhex encoded contract from a file (experimental feature)
-    ContractFromCborFile {
-        /// Path to a file
-        path: String
-    },
-
-    /// Read a contract (marlowe-dsl) from standard input
-    ContractFromStandardInput { 
-        contract: String
-    },
-    
-    /// Read a cborhex encoded contract from standard input (experimental feature)
-    ContractFromCborHexStandardInput { 
-        contract: String
-    },
-
-    /// Parse cborhex encoded marlowe redeemer / input (experimental feature)
-    InputFromCborHexFromFile {
-        /// Path to a file
-        path: String
-    },
-
-    /// Parse cborhex encoded marlowe redeemer / input (experimental feature)
-    InputFromCborHex {
-        /// Path to a file
-        cbor_hex: String
-    },
-
-    /// Parse marlowe datum from a file containing the cborhex (experimental feature)
-    DatumFromCborHexFile {
-        /// Path to a file
-        path: String
-    },
-
-    /// Parse marlowe datum from cbor hex (experimental feature)
-    DatumFromCborHex {
-        datum: String
-    },
-
-    /// Create a basic initial state (experimental).
-    CreateState {
-        creator_role: String,
-        initial_ada: i64
+        DatumArgs::FromFile { 
+            file_path, 
+            input_encoding, 
+            output_encoding 
+        } => println!("{}",convert(
+                    &std::fs::read_to_string(&file_path).expect("failed to read file.."),
+                    input_encoding,
+                    output_encoding )),
+        DatumArgs::FromString { input, input_encoding, output_encoding } 
+            => println!("{}",convert(&input,input_encoding,output_encoding))
     }
 
 }
-#[derive(ClapParser)]
-#[clap(author, version, about, long_about = None)]
-#[clap(propagate_version = true)]
-struct Args {
-    /// Input contract or path
-    #[clap(subcommand)] 
-    command: MyCommands,
-    /// Return the contract in json format (experimental feature)
-    #[clap(short = 'j')]
-    json: bool,
-    /// Return the pest.rs rule/token stream. This can not be used together with initial input.
-    #[clap(short = 'r')]
-    raw: bool,
-    /// Input to be used with the contract.
-    /// Example 1: -d "my_constant_parameter=123, my_other_constant_parameter_name=321, timeout_number_one=2022-03-04@15:41:31"
-    /// Example 2: -d "timeout_number_one=4128381238132"
-    #[clap(short = 'i')]
-    init: Option<String>,
 
-    #[clap(short = 'c')]
-    cbor_hex: bool,
-    
+fn input_redeemer_handler(args:RedeemerArgs) {
+
+    fn decode(s:&str,d:RedeemerInputEncoding) -> Vec<marlowe_lang::types::marlowe::InputAction> {
+        match d {
+            RedeemerInputEncoding::PlutusDataDetailedJson => try_decode_redeemer_input_json(s).unwrap(),
+            RedeemerInputEncoding::CborHex => try_decode_redeemer_input_cbor_hex(&s).unwrap()
+        }
+    }
+
+    fn encode(s:marlowe_lang::types::marlowe::InputAction,d:&RedeemerOutputEncoding) -> String {
+        match d {
+            RedeemerOutputEncoding::MarloweDSL => format!("\nRESULT:\n {:#?}",s),
+            RedeemerOutputEncoding::Json => 
+                serde_json::to_string_pretty(&s).unwrap(),
+            RedeemerOutputEncoding::CborHex => 
+                hex::encode(&s.to_plutus_data().unwrap().to_bytes()),
+            RedeemerOutputEncoding::PlutusDataDetailedJson => 
+                datum_to_json(&s.to_plutus_data().unwrap()).unwrap()
+        }
+    }
+
+    fn convert_and_print_info(s:&str,d:RedeemerInputEncoding,e:RedeemerOutputEncoding) {
+        let decoded = decode(&s,d);
+        for x in decoded {
+            let encoded = encode(x,&e);
+            println!("{}",encoded);
+        }
+        
+    }
+
+    match args {
+        RedeemerArgs::FromFile { 
+            file_path, 
+            input_encoding, 
+            output_encoding 
+        } => convert_and_print_info(
+                &std::fs::read_to_string(&file_path)
+                    .expect("failed to read file.."),input_encoding,output_encoding),
+        RedeemerArgs::FromString { 
+            input, 
+            input_encoding, 
+            output_encoding 
+        } => convert_and_print_info(&input,input_encoding,output_encoding)
+    }
 }
+
+
+fn state_handler(args:StateArgs) {
+    match args {
+        StateArgs::Create { creator_role, initial_ada } => 
+            create_state(initial_ada,&creator_role),
+    }
+}
+
+
+fn contract_handler(args:ContractArgs) {
+
+    fn serialize(c:Contract,e:ContractOutputEncoding) -> String {
+        match e {
+            ContractOutputEncoding::CborHex => 
+                hex::encode(c.to_plutus_data().unwrap().to_bytes()),
+            ContractOutputEncoding::MarloweDSL => 
+                marlowe_lang::parsing::serialization::marlowe::serialize(c),
+            ContractOutputEncoding::MarloweJSON => 
+                marlowe_lang::parsing::serialization::json::serialize(c).unwrap()
+        }
+    }
+
+    fn parse(s:&str,e:ContractInputEncoding,input_variables:Option<String>) -> Contract {
+        match e {
+            ContractInputEncoding::CborHex => {
+                if input_variables.is_some() {
+                    panic!("It is not possible to add inputs to contracts that are already encoded to cborhex/plutus data.")
+                }
+                try_decode_cborhex_marlowe_plutus_contract(&s).unwrap()
+            },
+            ContractInputEncoding::MarloweDSL => {
+                match input_variables {
+                    Some(v) => {
+                        let mut h = HashMap::new();
+                        for x in v.split(",") {
+                            let (name,value) = x.split_once("=").unwrap();
+                            let value_num = value.trim().parse::<i64>().unwrap();                        
+                            h.insert(name.trim().to_string(),value_num);
+                        }
+                        marlowe_lang::parsing::deserialization::deserialize_with_input(&s,h).unwrap()
+                    },
+                    None => marlowe_lang::parsing::deserialization::deserialize(&s).unwrap()
+                }
+            }
+        }
+    }
+
+    fn convert(input:&str,input_encoding: ContractInputEncoding,output_encoding:ContractOutputEncoding,init:Option<String>) -> String {
+        let parsed = parse(input,input_encoding,init);
+        serialize(parsed, output_encoding)
+    }
+
+    match args {
+        ContractArgs::FromFile { 
+            file_path, 
+            input_encoding, 
+            output_encoding,
+            init
+        } => {
+            let input_data = std::fs::read_to_string(&file_path).expect("failed to read file..");
+            let result = convert(&input_data,input_encoding,output_encoding,init);
+            println!("{}",result);
+        },
+        ContractArgs::FromString { 
+            input, 
+            input_encoding, 
+            output_encoding,
+            init
+        } => {
+            let result = convert(&input,input_encoding,output_encoding,init);
+            println!("{}",result);
+        }
+    }
+}
+
+fn plutus_data_handler(x:PlutusArgs) {
+    fn decode_and_print(s:&str) {
+        let hex = hex::decode(s).unwrap();
+        let item = cardano_multiplatform_lib::plutus::PlutusData::from_bytes(hex).unwrap();
+        let json = marlowe_lang::extras::utils::datum_to_json(&item).unwrap();
+        println!("{}",json);
+    }
+    match x {
+        PlutusArgs::ConvertCborHexToJson { cborhex } => 
+        decode_and_print(&cborhex),
+        PlutusArgs::ConvertCborHexFileToJson { path } => 
+        decode_and_print(&std::fs::read_to_string(path).unwrap())
+    }
+}
+
+
 
 fn main() {
+    match <args::Args as clap::Parser>::parse() {
+        args::Args::PlutusData(x) => plutus_data_handler(x),
+        args::Args::Datum(x) => datum_handler(x),
+        args::Args::State(x) => state_handler(x),
+        args::Args::Redeemer(x) => input_redeemer_handler(x),
+        args::Args::Contract(x) => contract_handler(x),
+    }
+}
 
-    let args = Args::parse();
-    
-    #[allow(unused_assignments)]
-    let mut serialized_input = String::new();
-    
-    match args.command {
+
+
+
+// This method currently just uses a basic string template for providing quick way of generating an initial state.
+// It should be replaced with an actual implementation such that the initial state can be created with more
+// precision. Format of the template is taken from here:
+// https://github.com/input-output-hk/marlowe-cardano/blob/main/marlowe-cli/lectures/03-marlowe-cli-abstract.ipynb
+
+// probably should support PK as creator as well? "pk_hash": "0a11b0c7e25dc5d9c63171bdf39d9741b901dc903e12b4e162348e07"
+fn create_state(initial_ada:i64,creator_role:&str) {
         
-        MyCommands::ContractFromFile { path } => {
-            serialized_input = read_from_file(path)
-        }, 
-        MyCommands::ContractFromStandardInput { contract} => {
-            serialized_input = contract
-        },
-        MyCommands::CreateState { creator_role, initial_ada } => {
-            
-            // This method currently just uses a basic string template for providing quick way of generating an initial state.
-            // It should be replaced with an actual implementation such that the initial state can be created with more
-            // precision. Format of the template is taken from here:
-            // https://github.com/input-output-hk/marlowe-cardano/blob/main/marlowe-cli/lectures/03-marlowe-cli-abstract.ipynb
-
-            // probably should support PK as creator as well? "pk_hash": "0a11b0c7e25dc5d9c63171bdf39d9741b901dc903e12b4e162348e07"
-
-            let template = "
+    let template = "
 {
 \"accounts\": [
-    [[{\"role_token\": \"$CREATOR_ROLE\"}, {\"currency_symbol\": \"\", \"token_name\": \"\"}], $INITIAL_LOVELACE]
+[[{\"role_token\": \"$CREATOR_ROLE\"}, {\"currency_symbol\": \"\", \"token_name\": \"\"}], $INITIAL_LOVELACE]
 ],
 \"choices\": [],
 \"boundValues\": [],
 \"minTime\": 1
 }
-            ";
-            
-            let lovelace = initial_ada*1000;
-            let result = template
-                .replace("$CREATOR_ROLE",
-                    &creator_role)
-                .replace("$INITIAL_LOVELACE",
-                    lovelace.to_string().as_str()
-                ).to_string();
-                
-            println!("{}",result);
-            return;
-            
-        }
-        MyCommands::ContractFromCborFile { path } => {
-            let cbor_hex = read_from_file(path);
-            let decoded = try_decode_cborhex_marlowe_contract(&cbor_hex).unwrap();
-            serialized_input = parsing::serialization::marlowe::serialize(decoded);
-
-        },
-        MyCommands::ContractFromCborHexStandardInput { contract } => {
-            let decoded = try_decode_cborhex_marlowe_contract(&contract).unwrap();
-            serialized_input = parsing::serialization::marlowe::serialize(decoded);
-        },
-        MyCommands::InputFromCborHex { cbor_hex } => {
-            let input = decode_input_cbor_hex(&cbor_hex);
-            println!("{}",input);
-            return;
-        },
-        MyCommands::InputFromCborHexFromFile { path } => {
-            let cbor_hex = read_from_file(path);
-            let input = decode_input_cbor_hex(&cbor_hex);
-            println!("{}",input);
-            return;
-        },
-        MyCommands::DatumFromCborHexFile { path } => {
-            let cbor_hex = read_from_file(path);
-            let datum = try_decode_cborhex_marlowe_plutus_datum(&cbor_hex).unwrap();
-            if (args.json) {
-                println!("Contract (JSON): {}",marlowe_lang::parsing::serialization::json::serialize(datum.contract).unwrap());
-            } else {
-                println!("Contract (Marlowe-DSL): {}",marlowe_lang::parsing::serialization::marlowe::serialize(datum.contract));
-            }
-            return;
-        },
-        MyCommands::DatumFromCborHex { datum } => {
-            let datum = try_decode_cborhex_marlowe_plutus_datum(&datum).unwrap();
-            println!("State (JSON): {}\n",serde_json::to_string_pretty(&datum.state).unwrap());
-            if (args.json) {
-                println!("Contract (JSON): {}",marlowe_lang::parsing::serialization::json::serialize(datum.contract).unwrap());
-            } else {
-                println!("Contract (Marlowe-DSL): {}",marlowe_lang::parsing::serialization::marlowe::serialize(datum.contract));
-            }
-            
-            return;
-        },
-    };
-
-    match args.raw {
-        true => {
-
-            if args.init.is_some() {
-                panic!("Can not use initial input data when tokenizing. Initialize the contract prior to calling this command.")
-            }
-
-            let tokens = 
-                MarloweParser::parse(
-                    Rule::MainContract,
-                    &serialized_input,                     
-                );
-
-            match tokens {
-                Ok(v) => {
-                    let json = serde_json::to_string_pretty(&v).unwrap();
-                    println!("{}",json);
-                },
-                Err(e) => {
-                    println!("{:?}",e);
-                },
-            }
-            
-            
-        },
-        _ => {  
-            
-            let contract_initial_input = match args.init {
-                Some(v) => {
-                    let mut h = HashMap::new();
-                    for x in v.split(",") {
-                        let (name,value) = x.split_once("=").unwrap();
-                        let value_num = value.trim().parse::<i64>().unwrap();                        
-                        h.insert(name.trim().to_string(),value_num);
-                    }
-                    h
-                },
-                None => HashMap::new(),
-            };
-
-            let deserialized_instance = 
-                deserialize_with_input(&serialized_input,contract_initial_input);
-
-            match deserialized_instance {
-                Ok(c) => {
-                    match args.json {
-                        true => {
-                            
-                            let json = parsing::serialization::json::serialize(c).unwrap();
-                            println!("{}",json);
-                        },
-                        false => {
-                            let serialized = serialize(c);
-                            println!("{serialized}");
-                        },
-                    }
-                },
-                Err(e) => println!("{:#}",e),
-            }
-           
-        }
-    }
-
+    ";
+    
+    let lovelace = initial_ada*1000;
+    let result = template
+        .replace("$CREATOR_ROLE",
+            &creator_role)
+        .replace("$INITIAL_LOVELACE",
+            lovelace.to_string().as_str()
+        ).to_string();
+        
+    println!("{}",result);
+    
 }
 
 
-fn read_from_file(path:String) -> String {
-    let path_exists = std::path::Path::new(&path).exists();
-    if path_exists {
-        std::fs::read_to_string(&path).expect("failed to read from file.").to_owned()
-    } else {
-        panic!("no such file exists.");
+/*
+    cargo run --bin marlowe_lang_cli --all-features contract from-string Close marlowe-dsl cbor-hex                                                         
+    cargo run --bin marlowe_lang_cli --all-features contract from-string d87980 cbor-hex marlowe-dsl                                                        
+    .\target\debug\marlowe_lang_cli.exe contract from-file .\sample.marlowe marlowe-dsl marlowe-dsl -i "Price=10,Mediation deadline=14,Complaint deadline=1,Complaint response deadline=110,Payment deadline=11111111111"
+    .\target\debug\marlowe_lang_cli.exe contract from-file .\sample.marlowe marlowe-dsl marlowe-json -i "Price=10,Mediation deadline=14,Complaint deadline=1,Complaint response deadline=110,Payment deadline=11111111111"
+    .\target\debug\marlowe_lang_cli.exe datum from-file .\plutus_tests\plutus_test_values.marlowe_cli_plutusdatadetailed.json plutus-data-detailed-json text  
+    .\target\debug\marlowe_lang_cli.exe state create kalle 100 
+    .\target\debug\marlowe_lang_cli.exe datum from-file .\plutus_tests\plutus_test_full_datum_plutus_data_detailed_json_from_marlowe_cli.json plutus-data-detailed-json text
+
+*/
+
+
+#[test]
+fn test_me() {
+    let cbor = "9fd8799fd8799fd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd8799f581c8bb3b343d8e404472337966a722150048c768d0a92a9813596c5338d45476c6f6265ff1901f4ffffff";
+    let result = try_decode_redeemer_input_cbor_hex(&cbor);
+    for x in result {
+        println!("one item: {:?}",x);
     }
 }
+
+
+
+
+

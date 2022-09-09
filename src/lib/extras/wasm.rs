@@ -3,21 +3,23 @@ use cardano_multiplatform_lib::plutus::PlutusData;
 use wasm_bindgen::prelude::*;
 use crate::types::marlowe::*;
 use crate::extras::utils::*;
-
+use plutus_data::FromPlutusData;
 
 #[wasm_bindgen]
 pub fn decode_marlowe_input_cbor_hex(redeemer_cbor_hex:&str) -> JsValue {
-    let s = super::utils::decode_input_cbor_hex(redeemer_cbor_hex);
+    let s = super::utils::try_decode_redeemer_input_cbor_hex(redeemer_cbor_hex);
+    let s = serde_json::to_string_pretty(&s).unwrap();
     JsValue::from_str(&s)
 }
-
+ 
 #[wasm_bindgen]
 pub fn decode_marlowe_input_json(redeemer_json:&str) -> JsValue {
-    let s = super::utils::decode_input_json(redeemer_json);
+    let s = super::utils::try_decode_redeemer_input_json(redeemer_json);
+    let s = serde_json::to_string_pretty(&s).unwrap();
     JsValue::from_str(&s)
 }
 
-#[wasm_bindgen(start)]
+#[wasm_bindgen(start)] 
 pub fn main() -> Result<(), JsValue> {
    console_error_panic_hook::set_once();
    wasm_log("marlowe_lang utils initialized.");
@@ -61,7 +63,7 @@ pub fn decode_cborhex_marlowe_plutus_datum(cbor_hex:&str) -> Result<JsValue,JsVa
     
     let datum = datum.unwrap();
 
-    match process_plutus_datum(datum) {
+    match MarloweDatum::from_plutus_data(datum) {
         Ok(result) => {
             Ok(marlowe_datum_to_json_type(result))    
         } 

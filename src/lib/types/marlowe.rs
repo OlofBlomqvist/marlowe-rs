@@ -1,13 +1,19 @@
-use serde::{Serialize };
 use std::collections::HashMap;
+
+use serde::Serialize;
+
+use plutus_data::ToPlutusDataDerive;
+use plutus_data::FromPlutusDataDerive;
 
 use crate::{
     Impl_From_For_Vec, 
     Impl_From_For
 };
 
+
 #[derive(Debug,Serialize)]
 pub(crate) enum AstNode {
+    MarloweValueId(crate::types::marlowe::ValueId),
     StringValue(String),
     MarloweToken(crate::types::marlowe::Token),
     MarloweParty(crate::types::marlowe::Party),
@@ -25,142 +31,256 @@ pub(crate) enum AstNode {
     MarloweNumber(i64),
     Null
 }
-
-#[derive(Debug)]
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[derive(Debug,Clone)]
 pub struct Bound(pub i64,pub i64);
 
-#[derive(Debug)]
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[derive(Debug,Hash,PartialEq,Eq,Clone)]
 pub struct ChoiceId { 
-    pub choice_owner : Option<Party>,
-    pub choice_name : String
+    pub choice_name : String, // 0
+    pub choice_owner : Option<Party> //1
 }
 
-#[derive(Debug)]
-pub enum Payee {
-    Party(Option<Party>),
-    Account(Option<Party>)
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[derive(Debug,Clone)]
+pub enum Payee { // Payee [('Account,0),('Party,1)]
+    Account(Option<Party>), // 0
+    Party(Option<Party>)    // 1
 }
 
-#[derive(Debug)]
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[derive(Debug,Clone)]
 pub enum Observation { 
-    ValueGT {
-        value: Option<Box<Value>>,
-        gt_than: Option<Box<Value>>
-    },
-    ValueGE {
-        value: Option<Box<Value>>,
-        ge_than: Option<Box<Value>>
-    },
-    ValueLT {
-        value: Option<Box<Value>>,
-        lt_than: Option<Box<Value>>
-    },
-    ValueLE {
-        value: Option<Box<Value>>,
-        le_than: Option<Box<Value>>
-    },
-    ValueEQ {
-        value: Option<Box<Value>>,
-        equal_to: Option<Box<Value>>
-    },
-    True,
-    False,
-    ChoseSomething(Option<ChoiceId>),        
-    OrObs {
-        either: Option<Box<Observation>>,
-        or: Option<Box<Observation>>
-    },
-    AndObs {
+    /*
+    makeIsDataIndexed ''Observation [
+    ('AndObs,0),
+    ('OrObs,1),
+    ('NotObs,2),
+    ('ChoseSomething,3),
+    ('ValueGE,4),
+    ('ValueGT,5),
+    ('ValueLT,6),
+    ('ValueLE,7),
+    ('ValueEQ,8),
+    ('TrueObs,9),
+    ('FalseObs,10)
+    ]
+    */
+    AndObs { // 0
         both: Option<Box<Observation>>,
         and: Option<Box<Observation>>
     },
-    NotObs {
+    OrObs { // 1
+        either: Option<Box<Observation>>,
+        or: Option<Box<Observation>>
+    },    
+    NotObs { // 2
         not: Option<Box<Observation>>
-    }
+    },
+    ChoseSomething(Option<ChoiceId>), // 3
+    ValueGE { // 4
+        value: Option<Box<Value>>,
+        ge_than: Option<Box<Value>>
+    }, 
+    ValueGT { //5
+        value: Option<Box<Value>>,
+        gt_than: Option<Box<Value>>
+    },
+    ValueLT { // 6
+        value: Option<Box<Value>>,
+        lt_than: Option<Box<Value>>
+    },
+    ValueLE { // 7
+        value: Option<Box<Value>>,
+        le_than: Option<Box<Value>>
+    },
+    ValueEQ { // 8
+        value: Option<Box<Value>>,
+        equal_to: Option<Box<Value>>
+    },
+    True, // 9
+    False // 10
 }
 
-#[derive(Debug)]
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[derive(Debug,Clone)]
 pub enum Value {
-    TimeIntervalStart,
-    TimeIntervalEnd,
-    AvailableMoney(Option<Party>,Option<Token>), 
-    ConstantValue(i64), 
-    ConstantParam(String), 
-    UseValue(String), 
-    MulValue(Option<Box<Value>>,Option<Box<Value>>), 
-    DivValue(Option<Box<Value>>,Option<Box<Value>>), 
-    SubValue(Option<Box<Value>>,Option<Box<Value>>), 
-    AddValue(Option<Box<Value>>,Option<Box<Value>>), 
-    NegValue(Option<Box<Value>>), 
-    ChoiceValue(Option<ChoiceId>), 
-    Cond(Option<Observation>,Option<Box<Value>>,Option<Box<Value>>)
+    /*
+        makeIsDataIndexed ''Value [
+        ('AvailableMoney,0),
+        ('Constant,1),
+        ('NegValue,2),
+        ('AddValue,3),
+        ('SubValue,4),
+        ('MulValue,5),
+        ('DivValue,6),
+        ('ChoiceValue,7),
+        ('TimeIntervalStart, 8),
+        ('TimeIntervalEnd,9),
+        ('UseValue,10),
+        ('Cond,11)
+        ]
+    */
+    
+    AvailableMoney(Option<Party>,Option<Token>), // 0
+    ConstantValue(i64), // 1
+    NegValue(Option<Box<Value>>), // 2
+    AddValue(Option<Box<Value>>,Option<Box<Value>>), // 3
+    SubValue(Option<Box<Value>>,Option<Box<Value>>), // 4
+    MulValue(Option<Box<Value>>,Option<Box<Value>>), // 5
+    DivValue(Option<Box<Value>>,Option<Box<Value>>), // 6   
+    ChoiceValue(Option<ChoiceId>), // 7
+    TimeIntervalStart, // 8
+    TimeIntervalEnd, // 9
+    UseValue(ValueId), // 10
+    Cond(Option<Observation>,Option<Box<Value>>,Option<Box<Value>>), // 11
+    
+    // 12: constant_param is not used on chain! 
+    //     (always parsed out prior to submitted and replaced with const val.)
+    // todo: add attribute to exclude 
+    //       from plutus_derive macro.
+    ConstantParam(String), // 11 ???
+    
 }
 
-#[derive(Serialize)]
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[derive(Debug,Serialize)]
 pub enum BoolObs{
     True,
     False
 }
 
-#[derive(Debug)]
-pub enum Token {
-    ADA,
-    Custom { token_name: String, currency_symbol: String }
+
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[derive(Debug,Hash,PartialEq,Eq,Clone)]
+pub struct Token { //  ''Token [('Token,0)]
+    #[base_16]
+    pub currency_symbol: String, // 0
+    pub token_name: String // 1
+
+    // Token <$> (Val.currencySymbol <$> (JSON.decodeByteString =<< (v .: "currency_symbol")))
+    // <*> (Val.tokenName . Text.encodeUtf8 <$> (v .: "token_name"))
+}
+impl Token {
+    pub fn ada() -> Token {
+        Token {
+            token_name : String::from(""),
+            currency_symbol: String::from("")
+        }
+    }
 }
 
-#[derive(Debug)]
-pub enum Party {
-    Role { role_token: String },
-    PK { pk_hash: String }
+
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[derive(Debug,Hash,PartialEq,Eq,Clone)]
+pub enum Party { // ''Party [('PK,0),('Role,1)]
+    PK { #[base_16] pk_hash: String }, // 0
+    Role { role_token: String } // 1   
 }
 
-#[derive(Debug)]
+
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[derive(Debug,Serialize)]
+pub enum InnerInputAction {
+    Deposit { // 0
+        into_account: Option<Party>, // 0
+        input_from_party: Option<Party>, // 1
+        of_tokens: Option<Token>, // 2
+        that_deposits: i64 // 3
+    },
+    Choice { // 1
+        for_choice_id: Option<ChoiceId>, // 0
+        input_that_chooses_num: i64 // 1 
+    },
+    Notify { // 2
+        input_notify: Option<Observation> // 0
+    }
+}
+
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[derive(Debug,Serialize)]
+pub enum InputAction {
+    Action(InnerInputAction)
+}
+
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[derive(Debug,Clone)]
 pub enum Action {
-    Deposit { party: Option<Party>, of_token: Option<Token>, into_account: Option<Party>, deposits: Option<Value> },
-    Notify { notify_if: Option<Observation> },
-    Choice { for_choice: Option<ChoiceId>, choose_between: Vec<Option<Bound>> }
+    Deposit { // 0
+        into_account: Option<Party>, // 0
+        party: Option<Party>, // 1
+        of_token: Option<Token>, // 2
+        deposits: Option<Value> // 3
+    },
+    Choice { // 1
+        for_choice: Option<ChoiceId>, // 0
+        choose_between: Vec<Option<Bound>> // 1 
+    },
+    Notify { // 2
+        notify_if: Option<Observation> // 0
+    }
 }
 
-#[derive(Debug)]
+
+// todo - when encoding this to plutus, we must wrap it inside case(Case)/merkl(String) type.. 
+// can we add an attr to specificy how do wrap it? 
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[derive(Debug,Clone)]
 pub struct Case { 
-    pub then: Option<Box<Contract>>,
-    pub case: Option<Action>
+    pub case: Option<Action>, // 0
+    pub then: Option<Box<Contract>> // 1
 }
 
-#[derive(Debug)]
+
+
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[derive(Debug,Clone)]
 pub enum Timeout {
-    TimeConstant(i64),
-    TimeParam(String)
+    #[force_variant]
+    TimeConstant(i64), // 0
+    TimeParam(String) // 1
 }
 
-#[derive(Debug)]
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[derive(Debug,Clone)]
 pub enum Contract {
-    Close,
-    When  { 
-        when: Vec<Option<Case>>, 
-        timeout_continuation: Option<Box<Contract>>,
-        timeout: Option<Timeout>
-    },
-    If  { 
-        r#if: Option<Observation>, 
-        then: Option<Box<Contract>>, 
-        r#else: Option<Box<Contract>> 
-    },
-    Assert { 
-        assert: Option<Observation>, 
-        then: Option<Box<Contract>> 
-    },
-    Let { 
-        r#let: String, 
-        be: Option<Box<Value>>, 
-        then: Option<Box<Contract>> 
-    },
-    Pay { 
+    /*
+        makeIsDataIndexed ''Contract [
+        ('Close,0),
+        ('Pay,1),
+        ('If,2),
+        ('When,3),
+        ('Let,4),
+        ('Assert,5)
+        ]
+    */
+    Close, // 0
+    Pay {  // 1
         from_account: Option<Party>, 
         to: Option<Payee>, 
         token: Option<Token>, 
         pay: Option<Value>, 
         then: Option<Box<Contract>>
+    },
+    If  {  // 2
+        x_if: Option<Observation>, 
+        then: Option<Box<Contract>>, 
+        x_else: Option<Box<Contract>> 
+    },
+    When  {  // 3
+        when: Vec<Option<Case>>, 
+        timeout: Option<Timeout>,
+        timeout_continuation: Option<Box<Contract>>
+    },
+    Let {  // 4
+        x_let: ValueId, 
+        be: Option<Box<Value>>, 
+        then: Option<Box<Contract>> 
+    },
+    Assert {  // 5
+        assert: Option<Observation>, 
+        then: Option<Box<Contract>> 
     }
 }
 
@@ -179,6 +299,7 @@ Impl_From_For!(@Timeout,MarloweTimeout);
 Impl_From_For!(@Contract,MarloweContract);
 Impl_From_For!(@i64,MarloweNumber);
 Impl_From_For!(@Observation,MarloweObservation);
+Impl_From_For!(@ValueId,MarloweValueId);
 
 
 
@@ -190,32 +311,32 @@ impl Boxer for Contract {
     fn boxed(self) -> Box<Contract> { Box::new(self) }
 }
 
-#[cfg(feature = "utils")]
-#[derive(Debug,Serialize)]
-pub struct StateAccountInfo {
-    pub account_id : Party,
-    pub token : Token,
-    pub amount : i64
+
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[derive(Debug,Serialize,Clone)]
+pub enum ValueId {
+    Name(String)
 }
 
-type ValueId = String;
 
-#[cfg(feature = "utils")]
-#[derive(Debug,Serialize)]
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[derive(Debug,Serialize)] // todo -- add plutus_data derives when we support hashmaps
 pub struct MarloweDatumState {
-    pub choices : Vec<ChoiceId> , // Map ChoiceId ChosenNum
-    pub accounts : Vec<StateAccountInfo>, // Accounts: Map (AccountId, Token) Integer
-    pub min_time : u64 , // POSIXTime 
-    pub bound_values : HashMap<ValueId,u64> // Map ValueId Integer
+    // todo , 1 -> not sure how to represent this... 
+    // type Accounts = Map (AccountId, Token) Integer
+    pub accounts : HashMap<(Party,Token),i64>, // Accounts: Map (AccountId, Token) Integer
+    // 2 , choices
+    pub choices : HashMap<ChoiceId,String> , // Map ChoiceId ChosenNum
+    // 3 , bound vals
+    pub bound_values : HashMap<String,u64>, // Map ValueId Integer
+    // 4, min time
+    pub min_time : u64 , // POSIXTime  
 }
 
-#[cfg(feature = "utils")]
-#[derive(Debug,Serialize)]
-pub struct MarloweInput {
-    pub todo : String // todo
-}
 
-#[cfg(feature = "utils")]
+ 
+
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Serialize)]
 pub struct MarloweDatum {
     pub state : MarloweDatumState,

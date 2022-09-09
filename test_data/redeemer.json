@@ -1,0 +1,44 @@
+{
+    "list": [
+        {
+            "constructor": 0,
+            "fields": [
+                {
+                    "constructor": 0,
+                    "fields": [
+                        {
+                            "constructor": 0,
+                            "fields": [
+                                {
+                                    "bytes": "1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bf"
+                                }
+                            ]
+                        },
+                        {
+                            "constructor": 0,
+                            "fields": [
+                                {
+                                    "bytes": "1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bf"
+                                }
+                            ]
+                        },
+                        {
+                            "constructor": 0,
+                            "fields": [
+                                {
+                                    "bytes": "8bb3b343d8e404472337966a722150048c768d0a92a9813596c5338d"
+                                },
+                                {
+                                    "bytes": "476c6f6265"
+                                }
+                            ]
+                        },
+                        {
+                            "int": 500
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

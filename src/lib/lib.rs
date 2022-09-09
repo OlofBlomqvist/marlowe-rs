@@ -1,3 +1,4 @@
+
 #![feature(arbitrary_enum_discriminant)]
 #![feature(generator_trait)]
 #![feature(generators)]
@@ -76,12 +77,12 @@ pub mod types;
 /// Where the parsing happens
 pub mod parsing;
 
+/// Extra features such as plutus encoding/decoding, cli tool etc.
 pub mod extras;
 
+
 #[cfg(test)]
-// Some testing yeh
 mod tests;
 
 // =============================================================
-
 

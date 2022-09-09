@@ -51,7 +51,7 @@ Value = _{
     SubValue = ${ lpar ~ WHITESPACE* ~ "SubValue" ~ WHITESPACE+ ~ Value ~ WHITESPACE+ ~ Value ~ WHITESPACE* ~ rpar}
     AddValue = ${ lpar ~ WHITESPACE* ~ "AddValue" ~ WHITESPACE+ ~ Value ~ WHITESPACE+ ~ Value ~ WHITESPACE* ~ rpar}
     NegValue = ${ lpar ~ WHITESPACE* ~ "NegValue" ~ WHITESPACE+ ~ Value ~ WHITESPACE* ~ rpar}
-    UseValue = ${ lpar ~ WHITESPACE* ~ "UseValue" ~ WHITESPACE+ ~ quoted_string ~ WHITESPACE* ~ rpar}
+    UseValue = ${ lpar ~ WHITESPACE* ~ "UseValue" ~ WHITESPACE+ ~ ValueId ~ WHITESPACE* ~ rpar}
     Constant = ${ lpar ~ WHITESPACE* ~ "Constant" ~ WHITESPACE+ ~ Number ~ WHITESPACE* ~ rpar }
     ConstantParam = ${ lpar ~ WHITESPACE* ~ "ConstantParam" ~ WHITESPACE+ ~ quoted_string ~ WHITESPACE* ~ rpar }
     AvailableMoney = ${ lpar ~ WHITESPACE* ~ "AvailableMoney" ~ WHITESPACE+ ~ Party ~ WHITESPACE+ ~ Token ~ WHITESPACE* ~ rpar}
@@ -94,11 +94,13 @@ Account = ${ "Account" ~ WHITESPACE+ ~ Party }
 
 MainContract = _{ Contract ~ EOI }
 
+ValueId = { quoted_string }
+
 Contract = { Close | When | If | Let | Assert | Pay }
     When   = ${ "When" ~ WHITESPACE+ ~ ArrayOfCases ~ WHITESPACE+ ~ Timeout ~ WHITESPACE+ ~ WrappedContract }
     Pay    = ${ "Pay"  ~ WHITESPACE+ ~ Party ~ WHITESPACE+ ~ Payee ~ WHITESPACE+ ~ Token ~ WHITESPACE+ ~ Value  ~ WHITESPACE+ ~ WrappedContract }
     If     = ${ "If"   ~ WHITESPACE+ ~ Observation ~ WHITESPACE+ ~ WrappedContract ~ WHITESPACE+ ~ WrappedContract }
-    Let    = ${ "Let"  ~ WHITESPACE+ ~ quoted_string ~ WHITESPACE+ ~ Value ~ WHITESPACE+ ~ WrappedContract }
+    Let    = ${ "Let"  ~ WHITESPACE+ ~ ValueId ~ WHITESPACE+ ~ Value ~ WHITESPACE+ ~ WrappedContract }
     Assert = ${ "Assert" ~ WHITESPACE+ ~ Observation ~ WHITESPACE+ ~ WrappedContract }
     Close  = { "Close" }
 
