@@ -2,7 +2,9 @@ use std::collections::HashMap;
 
 use serde::Serialize;
 
+#[cfg(feature = "utils")]
 use plutus_data::ToPlutusDataDerive;
+#[cfg(feature = "utils")]
 use plutus_data::FromPlutusDataDerive;
 
 use crate::{
@@ -155,7 +157,7 @@ pub enum BoolObs{
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Hash,PartialEq,Eq,Clone)]
 pub struct Token { //  ''Token [('Token,0)]
-    #[base_16]
+#[cfg_attr(feature = "utils",base_16)]
     pub currency_symbol: String, // 0
     pub token_name: String // 1
 
@@ -175,7 +177,7 @@ impl Token {
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Hash,PartialEq,Eq,Clone)]
 pub enum Party { // ''Party [('PK,0),('Role,1)]
-    PK { #[base_16] pk_hash: String }, // 0
+    PK { #[cfg_attr(feature = "utils",base_16)] pk_hash: String }, // 0
     Role { role_token: String } // 1   
 }
 
@@ -237,7 +239,7 @@ pub struct Case {
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Clone)]
 pub enum Timeout {
-    #[force_variant]
+    #[cfg_attr(feature = "utils",force_variant)]
     TimeConstant(i64), // 0
     TimeParam(String) // 1
 }
