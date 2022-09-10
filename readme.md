@@ -15,10 +15,10 @@ It is used by the MarloweLSP VSCode Extention (Syntax highlighting for Marlowe i
 - Serialize the Rust types back in to Marlowe.
 - Tokenization of Marlowe contracts.
 - Serialize marlowe-dsl to json for use with the marlowe-cli tool etc.
+- Compiles to WASM.
 
 ### Experimental features (wildly unstable)
 
-- Compiles to WASM.
 - Decode marlowe input from json.
 - Decode marlowe input from cborhex.
 - Initialization of contract variables.
