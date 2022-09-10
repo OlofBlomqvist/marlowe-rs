@@ -142,11 +142,11 @@ fn parse_raw(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<AstNode,String
                     timeout_continuation: contract_node
                 }))
             }
-            Rule::ADA => fold_back!(AstNode::MarloweToken(Token::ADA)),
+            Rule::ADA => fold_back!(AstNode::MarloweToken(Token::ada())),
             Rule::Currency => {
                 let v2 : String = get_next_into!();
                 let v1 : String = get_next_into!();
-                let token = Token::Custom { currency_symbol: v1, token_name: v2 };
+                let token = Token { currency_symbol: v1, token_name: v2 };
                 fold_back!(AstNode::MarloweToken(token))
             }
             Rule::Deposit => {
@@ -180,6 +180,11 @@ fn parse_raw(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<AstNode,String
             Rule::string => {
                 let s = option_to_result(current_operation.string_representation,"failed to parse a string.")?;
                 fold_back!(AstNode::StringValue(s))
+            }
+            Rule::ValueId => {
+                let inner_str = get_next_into!();
+                //let s = option_to_result(current_operation.string_representation,"failed to parse a valueid.")?;
+                fold_back!(AstNode::MarloweValueId(ValueId::Name(inner_str)))
             }
             Rule::TrueObs => fold_back!(AstNode::MarloweObservation(Observation::True)),
             Rule::FalseObs => fold_back!(AstNode::MarloweObservation(Observation::False)),
@@ -309,15 +314,15 @@ fn parse_raw(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<AstNode,String
                 let then_contract = get_next_into!();
                 let observation = get_next_into!();
                 fold_back!(AstNode::MarloweContract(Contract::If { 
-                    r#if: observation, then: then_contract, r#else: else_contract 
+                    x_if: observation, then: then_contract, x_else: else_contract 
                 }))
             }
             Rule::Let => {
                 let continue_as = get_next_into!();
                 let value = get_next_into!();
-                let s: Option<String> = get_next_into!();
+                let s: Option<ValueId> = get_next_into!();
                 fold_back!(AstNode::MarloweContract(Contract::Let { 
-                    r#let: option_to_result(s,"Failed to parse a 'let' contract node.")?, 
+                    x_let: option_to_result(s,"Failed to parse a 'let' contract node.")?, 
                     be: value, 
                     then: continue_as 
                 }))

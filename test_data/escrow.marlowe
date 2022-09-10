@@ -3,7 +3,7 @@ When [
      (Deposit
         (Role "Seller")
         (Role "Buyer")
-        (Token "1" "2")
+        (Token "11" "21")
         (ConstantParam "Price"))
      (When [
            (Case

@@ -92,13 +92,13 @@ pub mod json {
     where
         S: serde::Serializer {
         match self {
-            Token::ADA => {
+            x if x.currency_symbol.is_empty() && x.token_name.is_empty() => {
                 let mut s = serializer.serialize_struct("token", 2)?;
                 s.serialize_field("token_name","")?;
                 s.serialize_field("currency_symbol","")?;
                 s.end()
             }
-            Token::Custom { token_name, currency_symbol } => {
+            Token { token_name, currency_symbol } => {
                 let mut s = serializer.serialize_struct("token", 2)?;
                 s.serialize_field("token_name",token_name)?;
                 s.serialize_field("currency_symbol",currency_symbol)?;
@@ -194,15 +194,15 @@ pub mod json {
 
                 }
                 Contract::If { 
-                    r#if: Some(r#if), 
+                    x_if: Some(x_if), 
                     then: Some(then),
-                    r#else: Some(r#else) 
+                    x_else: Some(x_else) 
                 } => {
 
                     let mut what = serializer.serialize_struct("if", 3)?;
-                    what.serialize_field("if", r#if)?;
+                    what.serialize_field("if", x_if)?;
                     what.serialize_field("then", then)?;
-                    what.serialize_field("else", r#else)?;
+                    what.serialize_field("else", x_else)?;
                     what.end()
                 }
                 Contract::Assert { 
@@ -215,12 +215,12 @@ pub mod json {
                     what.end()
                 }
                 Contract::Let { 
-                    r#let,
+                    x_let,
                     be: Some(be),
                     then : Some(then)
                 } => {
                     let mut what = serializer.serialize_struct("let", 3)?;
-                    what.serialize_field("let", r#let)?;
+                    what.serialize_field("let", x_let)?;
                     what.serialize_field("be", be)?;
                     what.serialize_field("then", then)?;
                     what.end()
@@ -394,14 +394,14 @@ pub mod json {
                     s.end()
                 },
                 Value::Cond(
-                    Some(r#if),
+                    Some(x_if),
                     Some(then),
-                    Some(r#else)
+                    Some(x_else)
                 ) => {
                     let mut s = serializer.serialize_struct("value", 3)?;
                     s.serialize_field("then", then)?;
-                    s.serialize_field("if", r#if)?;
-                    s.serialize_field("else", r#else)?;
+                    s.serialize_field("if", x_if)?;
+                    s.serialize_field("else", x_else)?;
                     s.end()
                 },
                 _ => {
@@ -547,8 +547,11 @@ pub mod marlowe {
                     write!(f, "(Constant {})",a),
                 Value::ConstantParam(a) => 
                     write!(f, "(ConstantParam \"{}\")",a),
-                Value::UseValue(a) => 
-                    write!(f, "(UseValue \"{}\")",a),
+                Value::UseValue(a) => {
+                    match a {
+                        ValueId::Name(v) => write!(f, "(UseValue \"{}\")",v),
+                    }   
+                },
                 Value::MulValue(a, b) => 
                     write!(f, "(MulValue {} {})",
                         match a {None=>"?value".to_string(),Some(v)=>format!("{v}")},
@@ -591,8 +594,8 @@ pub mod marlowe {
     impl std::fmt::Display for Token {
         fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
             match self {
-                Token::ADA => write!(f,"(Token \"\" \"\")"),
-                Token::Custom { currency_symbol: a,token_name: b } => write!(f,"(Token \"{}\" \"{}\")",a,b),
+                x if x.currency_symbol.is_empty() && x.token_name.is_empty() => write!(f,"(Token \"\" \"\")"),
+                Token { currency_symbol: a,token_name: b } => write!(f,"(Token \"{}\" \"{}\")",a,b),
             }
         }
     }
@@ -662,18 +665,18 @@ pub mod marlowe {
                         )
                     }
                 }
-                Contract::If { r#if, then, r#else } => {
+                Contract::If { x_if, then, x_else } => {
                     if f.alternate() {
                         write!(f, "If {} {} {}",
-                            match r#if {None=>"?observation".to_string(),Some(v)=>format!("{v}")}, 
+                            match x_if {None=>"?observation".to_string(),Some(v)=>format!("{v}")}, 
                             match then {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
-                            match r#else {None=>"?contract".to_string(),Some(v)=>format!("{v}")}
+                            match x_else {None=>"?contract".to_string(),Some(v)=>format!("{v}")}
                         )
                     } else {
                         write!(f, "(If {} {} {})",
-                            match r#if {None=>"?observation".to_string(),Some(v)=>format!("{v}")}, 
+                            match x_if {None=>"?observation".to_string(),Some(v)=>format!("{v}")}, 
                             match then {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
-                            match r#else {None=>"?contract".to_string(),Some(v)=>format!("{v}")}
+                            match x_else {None=>"?contract".to_string(),Some(v)=>format!("{v}")}
                         )
                     }
                 },
@@ -690,16 +693,16 @@ pub mod marlowe {
                         )
                     }
                 },
-                Contract::Let { r#let: value_name, be: value, then: continue_as } => { 
+                Contract::Let { x_let: value_name, be: value, then: continue_as } => { 
                     if f.alternate() {
                         write!(f, "Let \"{}\" {} {}",
-                            value_name,
+                            match value_name { ValueId::Name(x) => x},
                             match value {None=>"?value".to_string(),Some(v)=>format!("{v}")},
                             match continue_as {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
                     )
                     } else {
                         write!(f, "(Let \"{}\" {} {})",
-                            value_name,
+                            match value_name { ValueId::Name(x) => x},
                             match value {None=>"?value".to_string(),Some(v)=>format!("{v}")},
                             match continue_as {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
                         )

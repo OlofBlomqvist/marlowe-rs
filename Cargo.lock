@@ -87,9 +87,9 @@ checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
 name = "cardano-multiplatform-lib"
-version = "2.0.0"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "beadeaeb8bb3e5b52885711e72a5a108264320c819cde2bf9f2d2f6e863273fd"
+checksum = "6ae1deb8815ed8bad95b33a33581e692a118da582747973f66841f39d7a8d44d"
 dependencies = [
  "base64",
  "bech32",
@@ -406,7 +406,7 @@ checksum = "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
 
 [[package]]
 name = "marlowe_lang"
-version = "0.1.9"
+version = "0.1.10"
 dependencies = [
  "cardano-multiplatform-lib",
  "clap",
@@ -415,6 +415,7 @@ dependencies = [
  "minicbor",
  "pest",
  "pest_derive",
+ "plutus_data",
  "serde",
  "serde_derive",
  "serde_json",
@@ -589,6 +590,30 @@ dependencies = [
  "maplit",
  "pest",
  "sha-1",
+]
+
+[[package]]
+name = "plutus_data"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2353382cb9032facd6cb899257f039b0b03cecd3ec17acb3ae2f5548e807ec8"
+dependencies = [
+ "cardano-multiplatform-lib",
+ "hex",
+ "plutus_data_derive",
+]
+
+[[package]]
+name = "plutus_data_derive"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c5285b9e60b8efa6516a94afef659bcfcf34a6d54757bce8bc7a8e45b4e30ee"
+dependencies = [
+ "cardano-multiplatform-lib",
+ "hex",
+ "quote",
+ "static_assertions",
+ "syn",
 ]
 
 [[package]]
@@ -804,6 +829,12 @@ dependencies = [
  "digest 0.9.0",
  "opaque-debug 0.3.0",
 ]
+
+[[package]]
+name = "static_assertions"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "strsim"

@@ -3,8 +3,8 @@ When [
      (Deposit
         (Role "Seller")
         (Role "Buyer")
-        (Token "" "")
-        (ConstantParam "Price"))
+        (Token "aa" "00")
+        (Constant 10))
      (When [
            (Case
               (Choice
@@ -22,7 +22,7 @@ When [
                  (Account
                     (Role "Buyer"))
                  (Token "" "")
-                 (ConstantParam "Price")
+                 (Constant 10)
                  (When [
                        (Case
                           (Choice
@@ -46,10 +46,10 @@ When [
                                       (Party
                                          (Role "Seller"))
                                       (Token "" "")
-                                      (ConstantParam "Price") Close))
+                                      (Constant 11) Close))
                                 ,
                                 (Case
                                    (Choice
                                       (ChoiceId "Confirm problem"
                                          (Role "Mediator")) [
-                                      (Bound 1 1)]) Close)] (TimeParam "Mediation deadline") Close))] (TimeParam "Complaint deadline") Close)))] (TimeParam "Complaint response deadline") Close))] (TimeParam "Payment deadline") Close
+                                      (Bound 1 1)]) Close)] 4444 Close))] 11111 Close)))] 11111 Close))] 11111 Close
