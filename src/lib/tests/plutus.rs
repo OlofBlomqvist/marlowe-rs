@@ -16,8 +16,8 @@ fn encode_decode_contract_to_plutus_data() {
 
     let serialized_contract = read_to_string(&"sample.marlowe").unwrap();
     let contract = deserialize(&serialized_contract).unwrap();
-    let encoded = contract.to_plutus_data().expect("failed to encode a contract to plutus data.");
-    let decoded = Contract::from_plutus_data(encoded).expect("failed to decode a contract from plutus data");
+    let encoded = contract.to_plutus_data(&vec![]).expect("failed to encode a contract to plutus data.");
+    let decoded = Contract::from_plutus_data(encoded,&vec![]).expect("failed to decode a contract from plutus data");
     let pre = format!("{}",crate::parsing::serialization::marlowe::serialize(contract));
     let post = format!("{}",crate::parsing::serialization::marlowe::serialize(decoded));
     
@@ -46,9 +46,9 @@ fn encode_decode_contract_to_plutus_data_all_playground_samples() {
         if !path_string.to_uppercase().ends_with(".MARLOWE") { continue; }
         let serialized_contract = read_to_string(&path_string).unwrap();
         let deserialization_result = deserialize(&serialized_contract).expect("failed to deserialize marlowe dsl..");
-        match deserialization_result.to_plutus_data() {
+        match deserialization_result.to_plutus_data(&vec![]) {
             Ok(encoded) => {
-                let decoded = Contract::from_plutus_data(encoded).expect(&format!("could not deserialize contract from our own encoded bytes.. {}",path_string));
+                let decoded = Contract::from_plutus_data(encoded,&vec![]).expect(&format!("could not deserialize contract from our own encoded bytes.. {}",path_string));
                 let pre = format!("{:#?}",deserialization_result);
                 let post = format!("{:#?}",decoded);
                 if pre != post {
@@ -102,7 +102,7 @@ fn plutus_decode_tx_datum_from_json() {
 fn encode_decode_datum_is_identical_to_original_on_chain_data() {
     let original_cbor_hex = std::fs::read_to_string("test_data/datum.cborhex").unwrap();
     let datum = try_decode_cborhex_marlowe_plutus_datum(&original_cbor_hex).expect("failed to decode cborhex");
-    let encoded_by_us = datum.to_plutus_data().expect("we failed to serialize plutus data.");
+    let encoded_by_us = datum.to_plutus_data(&vec![]).expect("we failed to serialize plutus data.");
     let our_cbor_hex = hex::encode(encoded_by_us.to_bytes());
     assert_eq!(our_cbor_hex,original_cbor_hex);
 }
@@ -117,7 +117,7 @@ fn encode_decode_redeemer_is_identical_to_original_on_chain_data() {
         try_decode_redeemer_input_cbor_hex(&original_cbor_hex)
             .expect("failed to decode redeemer from cbor hex")
             .iter()
-            .map(|x|x.to_plutus_data().expect("we failed to encode input action (redeemer) to plutus data."))
+            .map(|x|x.to_plutus_data(&vec![]).expect("we failed to encode input action (redeemer) to plutus data."))
             .collect();
 
     let mut plutus_list = cardano_multiplatform_lib::plutus::PlutusList::new();

@@ -93,6 +93,20 @@ export function hash_script_data(redeemers: Redeemers, cost_models: Costmdls, da
 */
 export function calc_script_data_hash(redeemers: Redeemers, datums: PlutusList, cost_models: Costmdls, used_langs: Languages): ScriptDataHash | undefined;
 /**
+* @param {TransactionHash} tx_body_hash
+* @param {ByronAddress} addr
+* @param {LegacyDaedalusPrivateKey} key
+* @returns {BootstrapWitness}
+*/
+export function make_daedalus_bootstrap_witness(tx_body_hash: TransactionHash, addr: ByronAddress, key: LegacyDaedalusPrivateKey): BootstrapWitness;
+/**
+* @param {TransactionHash} tx_body_hash
+* @param {ByronAddress} addr
+* @param {Bip32PrivateKey} key
+* @returns {BootstrapWitness}
+*/
+export function make_icarus_bootstrap_witness(tx_body_hash: TransactionHash, addr: ByronAddress, key: Bip32PrivateKey): BootstrapWitness;
+/**
 * @param {string} password
 * @param {string} salt
 * @param {string} nonce
@@ -107,19 +121,19 @@ export function encrypt_with_password(password: string, salt: string, nonce: str
 */
 export function decrypt_with_password(password: string, data: string): string;
 /**
-* @param {TransactionHash} tx_body_hash
-* @param {ByronAddress} addr
-* @param {LegacyDaedalusPrivateKey} key
-* @returns {BootstrapWitness}
+* Provide backwards compatibility to Alonzo by taking the max min value of both er
+* @param {TransactionOutput} output
+* @param {BigNum} coins_per_utxo_byte
+* @param {BigNum} coins_per_utxo_word
+* @returns {BigNum}
 */
-export function make_daedalus_bootstrap_witness(tx_body_hash: TransactionHash, addr: ByronAddress, key: LegacyDaedalusPrivateKey): BootstrapWitness;
+export function compatible_min_ada_required(output: TransactionOutput, coins_per_utxo_byte: BigNum, coins_per_utxo_word: BigNum): BigNum;
 /**
-* @param {TransactionHash} tx_body_hash
-* @param {ByronAddress} addr
-* @param {Bip32PrivateKey} key
-* @returns {BootstrapWitness}
+* @param {TransactionOutput} output
+* @param {BigNum} coins_per_utxo_byte
+* @returns {BigNum}
 */
-export function make_icarus_bootstrap_witness(tx_body_hash: TransactionHash, addr: ByronAddress, key: Bip32PrivateKey): BootstrapWitness;
+export function min_ada_required(output: TransactionOutput, coins_per_utxo_byte: BigNum): BigNum;
 /**
 * @param {Transaction} tx
 * @param {ExUnitPrices} ex_unit_prices
@@ -139,20 +153,6 @@ export function min_no_script_fee(tx: Transaction, linear_fee: LinearFee): BigNu
 * @returns {BigNum}
 */
 export function min_fee(tx: Transaction, linear_fee: LinearFee, ex_unit_prices: ExUnitPrices): BigNum;
-/**
-* Provide backwards compatibility to Alonzo by taking the max min value of both er
-* @param {TransactionOutput} output
-* @param {BigNum} coins_per_utxo_byte
-* @param {BigNum} coins_per_utxo_word
-* @returns {BigNum}
-*/
-export function compatible_min_ada_required(output: TransactionOutput, coins_per_utxo_byte: BigNum, coins_per_utxo_word: BigNum): BigNum;
-/**
-* @param {TransactionOutput} output
-* @param {BigNum} coins_per_utxo_byte
-* @returns {BigNum}
-*/
-export function min_ada_required(output: TransactionOutput, coins_per_utxo_byte: BigNum): BigNum;
 /**
 * Receives a script JSON string
 * and returns a NativeScript.
@@ -389,6 +389,11 @@ export enum CoinSelectionStrategyCIP2 {
 * Same as RandomImprove, but before adding ADA, will insert by random-improve for each asset type.
 */
   RandomImproveMultiAsset,
+}
+/**
+*/
+export enum ChangeSelectionAlgo {
+  Default,
 }
 /**
 */
@@ -882,23 +887,6 @@ export class Assets {
 export class AuxiliaryData {
   free(): void;
 /**
-* Add a single metadatum using TransactionMetadatum object under `key` TranscactionMetadatumLabel
-* @param {BigNum} key
-* @param {TransactionMetadatum} value
-*/
-  add_metadatum(key: BigNum, value: TransactionMetadatum): void;
-/**
-* Add a single JSON metadatum using a MetadataJsonSchema object and MetadataJsonScehma object.
-* @param {BigNum} key
-* @param {string} val
-* @param {number} schema
-*/
-  add_json_metadatum_with_schema(key: BigNum, val: string, schema: number): void;
-/**
-* @param {AuxiliaryData} other
-*/
-  add(other: AuxiliaryData): void;
-/**
 * @returns {Uint8Array}
 */
   to_bytes(): Uint8Array;
@@ -956,6 +944,23 @@ export class AuxiliaryData {
 * @param {PlutusV2Scripts} plutus_v2_scripts
 */
   set_plutus_v2_scripts(plutus_v2_scripts: PlutusV2Scripts): void;
+/**
+* Add a single metadatum using TransactionMetadatum object under `key` TranscactionMetadatumLabel
+* @param {BigNum} key
+* @param {TransactionMetadatum} value
+*/
+  add_metadatum(key: BigNum, value: TransactionMetadatum): void;
+/**
+* Add a single JSON metadatum using a MetadataJsonSchema object and MetadataJsonScehma object.
+* @param {BigNum} key
+* @param {string} val
+* @param {number} schema
+*/
+  add_json_metadatum_with_schema(key: BigNum, val: string, schema: number): void;
+/**
+* @param {AuxiliaryData} other
+*/
+  add(other: AuxiliaryData): void;
 }
 /**
 */
@@ -1656,6 +1661,47 @@ export class ByronScript {
 }
 /**
 */
+export class ByronTxout {
+  free(): void;
+/**
+* @returns {Uint8Array}
+*/
+  to_bytes(): Uint8Array;
+/**
+* @param {Uint8Array} bytes
+* @returns {ByronTxout}
+*/
+  static from_bytes(bytes: Uint8Array): ByronTxout;
+/**
+* @returns {string}
+*/
+  to_json(): string;
+/**
+* @returns {any}
+*/
+  to_js_value(): any;
+/**
+* @param {string} json
+* @returns {ByronTxout}
+*/
+  static from_json(json: string): ByronTxout;
+/**
+* @returns {ByronAddress}
+*/
+  address(): ByronAddress;
+/**
+* @returns {BigNum}
+*/
+  amount(): BigNum;
+/**
+* @param {ByronAddress} address
+* @param {BigNum} amount
+* @returns {ByronTxout}
+*/
+  static new(address: ByronAddress, amount: BigNum): ByronTxout;
+}
+/**
+*/
 export class Certificate {
   free(): void;
 /**
@@ -2319,17 +2365,6 @@ export class ExUnits {
 export class GeneralTransactionMetadata {
   free(): void;
 /**
-* @param {GeneralTransactionMetadata} other
-*/
-  add(other: GeneralTransactionMetadata): void;
-/**
-* Add a single JSON metadatum using a MetadataJsonSchema object and MetadataJsonScehma object.
-* @param {BigNum} key
-* @param {string} val
-* @param {number} schema
-*/
-  add_json_metadatum_with_schema(key: BigNum, val: string, schema: number): void;
-/**
 * @returns {Uint8Array}
 */
   to_bytes(): Uint8Array;
@@ -2374,6 +2409,17 @@ export class GeneralTransactionMetadata {
 * @returns {TransactionMetadatumLabels}
 */
   keys(): TransactionMetadatumLabels;
+/**
+* @param {GeneralTransactionMetadata} other
+*/
+  add(other: GeneralTransactionMetadata): void;
+/**
+* Add a single JSON metadatum using a MetadataJsonSchema object and MetadataJsonScehma object.
+* @param {BigNum} key
+* @param {string} val
+* @param {number} schema
+*/
+  add_json_metadatum_with_schema(key: BigNum, val: string, schema: number): void;
 }
 /**
 */
@@ -3727,15 +3773,15 @@ export class OperationalCert {
 export class PartialPlutusWitness {
   free(): void;
 /**
-* @param {PlutusScript} script
+* @param {PlutusScriptWitness} script
 * @param {PlutusData} data
 * @returns {PartialPlutusWitness}
 */
-  static new(script: PlutusScript, data: PlutusData): PartialPlutusWitness;
+  static new(script: PlutusScriptWitness, data: PlutusData): PartialPlutusWitness;
 /**
-* @returns {PlutusScript}
+* @returns {PlutusScriptWitness}
 */
-  script(): PlutusScript;
+  script(): PlutusScriptWitness;
 /**
 * @returns {PlutusData}
 */
@@ -3886,6 +3932,29 @@ export class PlutusScript {
 * @returns {PlutusScript}
 */
   static from_v2(script: PlutusV2Script): PlutusScript;
+/**
+* @returns {ScriptHash}
+*/
+  hash(): ScriptHash;
+}
+/**
+*/
+export class PlutusScriptWitness {
+  free(): void;
+/**
+* @param {PlutusScript} script
+* @returns {PlutusScriptWitness}
+*/
+  static from_script(script: PlutusScript): PlutusScriptWitness;
+/**
+* @param {ScriptHash} hash
+* @returns {PlutusScriptWitness}
+*/
+  static from_ref(hash: ScriptHash): PlutusScriptWitness;
+/**
+* @returns {PlutusScript | undefined}
+*/
+  script(): PlutusScript | undefined;
 /**
 * @returns {ScriptHash}
 */
@@ -5778,6 +5847,28 @@ export class SingleMintBuilder {
 }
 /**
 */
+export class SingleOutputBuilderResult {
+  free(): void;
+/**
+* @param {TransactionOutput} output
+* @returns {SingleOutputBuilderResult}
+*/
+  static new(output: TransactionOutput): SingleOutputBuilderResult;
+/**
+* @param {PlutusData} datum
+*/
+  set_communication_datum(datum: PlutusData): void;
+/**
+* @returns {TransactionOutput}
+*/
+  output(): TransactionOutput;
+/**
+* @returns {PlutusData | undefined}
+*/
+  communication_datum(): PlutusData | undefined;
+}
+/**
+*/
 export class SingleWithdrawalBuilder {
   free(): void;
 /**
@@ -6654,15 +6745,15 @@ export class TransactionBuilder {
   add_reference_input(utxo: TransactionUnspentOutput): void;
 /**
 * Add explicit output via a TransactionOutput object
-* @param {TransactionOutput} output
+* @param {SingleOutputBuilderResult} builder_result
 */
-  add_output(output: TransactionOutput): void;
+  add_output(builder_result: SingleOutputBuilderResult): void;
 /**
 * calculates how much the fee would increase if you added a given output
-* @param {TransactionOutput} output
+* @param {SingleOutputBuilderResult} builder
 * @returns {BigNum}
 */
-  fee_for_output(output: TransactionOutput): BigNum;
+  fee_for_output(builder: SingleOutputBuilderResult): BigNum;
 /**
 * @param {BigNum} fee
 */
@@ -6775,15 +6866,6 @@ export class TransactionBuilder {
 */
   get_fee_if_set(): BigNum | undefined;
 /**
-* Warning: this function will mutate the /fee/ field
-* Make sure to call this function last after setting all other tx-body properties
-* Editing inputs, outputs, mint, etc. after change been calculated
-* might cause a mismatch in calculated fee versus the required fee
-* @param {Address} address
-* @returns {boolean}
-*/
-  add_change_if_needed(address: Address): boolean;
-/**
 * @param {TransactionOutput} output
 */
   set_collateral_return(output: TransactionOutput): void;
@@ -6796,18 +6878,36 @@ export class TransactionBuilder {
 */
   output_sizes(): Uint32Array;
 /**
-* Builds the transaction and moves to the next step where any real witness can be added
+* Builds the transaction and moves to the next step redeemer units can be added and a draft tx can
+* be evaluated
 * NOTE: is_valid set to true
+* @param {number} algo
+* @param {Address} change_address
 * @returns {TxRedeemerBuilder}
 */
-  build(): TxRedeemerBuilder;
+  build_for_evaluation(algo: number, change_address: Address): TxRedeemerBuilder;
+/**
+* Builds the transaction and moves to the next step where any real witness can be added
+* NOTE: is_valid set to true
+* @param {number} algo
+* @param {Address} change_address
+* @returns {SignedTxBuilder}
+*/
+  build(algo: number, change_address: Address): SignedTxBuilder;
+/**
+* used to override the exunit values initially provided when adding inputs
+* @param {RedeemerWitnessKey} redeemer
+* @param {ExUnits} ex_units
+*/
+  set_exunits(redeemer: RedeemerWitnessKey, ex_units: ExUnits): void;
 /**
 * warning: sum of all parts of a transaction must equal 0. You cannot just set the fee to the min value and forget about it
 * warning: min_fee may be slightly larger than the actual minimum fee (ex: a few lovelaces)
 * this is done to simplify the library code, but can be fixed later
+* @param {boolean} script_calulation
 * @returns {BigNum}
 */
-  min_fee(): BigNum;
+  min_fee(script_calulation: boolean): BigNum;
 }
 /**
 */
@@ -7216,9 +7316,9 @@ export class TransactionOutputAmountBuilder {
 */
   with_asset_and_min_required_coin(multiasset: MultiAsset, coins_per_utxo_byte: BigNum, coins_per_utxo_word?: BigNum): TransactionOutputAmountBuilder;
 /**
-* @returns {TransactionOutput}
+* @returns {SingleOutputBuilderResult}
 */
-  build(): TransactionOutput;
+  build(): SingleOutputBuilderResult;
 }
 /**
 * We introduce a builder-pattern format for creating transaction outputs
@@ -7238,6 +7338,13 @@ export class TransactionOutputBuilder {
 * @returns {TransactionOutputBuilder}
 */
   with_address(address: Address): TransactionOutputBuilder;
+/**
+* A communication datum is one where the data hash is used in the tx output
+* Yet the full datum is included in the witness of the same transaction
+* @param {PlutusData} datum
+* @returns {TransactionOutputBuilder}
+*/
+  with_communication_data(datum: PlutusData): TransactionOutputBuilder;
 /**
 * @param {Datum} datum
 * @returns {TransactionOutputBuilder}
@@ -7583,16 +7690,10 @@ export class TxRedeemerBuilder {
 /**
 * Builds the transaction and moves to the next step where any real witness can be added
 * NOTE: is_valid set to true
-* @returns {SignedTxBuilder}
+* Will NOT require you to have set required signers & witnesses
+* @returns {Redeemers}
 */
-  build(): SignedTxBuilder;
-/**
-* Plutus script execution may have "required signers" that need to be added to calculate the exunits correctly
-* However, we don't know what the tx body hash will be until after we've calculated the exunits
-* So the signatures added here are just temporary and will have to be re-added in the SignedTxBuilder
-* @param {Vkeywitness} vkey
-*/
-  add_temporary_required_signer(vkey: Vkeywitness): void;
+  build(): Redeemers;
 /**
 * used to override the exunit values initially provided when adding inputs
 * @param {RedeemerWitnessKey} redeemer
@@ -8474,7 +8575,6 @@ export interface InitOutput {
   readonly scriptall_to_js_value: (a: number, b: number) => void;
   readonly scriptall_from_json: (a: number, b: number, c: number) => void;
   readonly scriptall_native_scripts: (a: number) => number;
-  readonly scriptall_new: (a: number) => number;
   readonly scriptany_to_bytes: (a: number, b: number) => void;
   readonly scriptany_from_bytes: (a: number, b: number, c: number) => void;
   readonly scriptany_to_json: (a: number, b: number) => void;
@@ -8773,8 +8873,6 @@ export interface InitOutput {
   readonly stakeregistration_new: (a: number) => number;
   readonly stakeregistration_stake_credential: (a: number) => number;
   readonly stakederegistration_stake_credential: (a: number) => number;
-  readonly __wbg_scriptany_free: (a: number) => void;
-  readonly __wbg_scriptall_free: (a: number) => void;
   readonly transactionoutputs_len: (a: number) => number;
   readonly transactioninputs_len: (a: number) => number;
   readonly ed25519keyhashes_len: (a: number) => number;
@@ -8805,7 +8903,6 @@ export interface InitOutput {
   readonly mintassets_new: () => number;
   readonly mint_new: () => number;
   readonly scriptpubkey_addr_keyhash: (a: number) => number;
-  readonly scriptany_new: (a: number) => number;
   readonly transactionoutputs_new: () => number;
   readonly transactioninputs_new: () => number;
   readonly stakecredentials_new: () => number;
@@ -8825,17 +8922,21 @@ export interface InitOutput {
   readonly timelockexpiry_slot: (a: number) => number;
   readonly timelockexpiry_new: (a: number) => number;
   readonly poolparams_pledge: (a: number) => number;
+  readonly scriptall_new: (a: number) => number;
+  readonly scriptany_native_scripts: (a: number) => number;
+  readonly scriptany_new: (a: number) => number;
   readonly withdrawals_len: (a: number) => number;
   readonly proposedprotocolparameterupdates_len: (a: number) => number;
   readonly mirtostakecredentials_len: (a: number) => number;
   readonly url_url: (a: number, b: number) => void;
   readonly dnsrecordsrv_record: (a: number, b: number) => void;
+  readonly __wbg_scriptany_free: (a: number) => void;
+  readonly __wbg_scriptall_free: (a: number) => void;
   readonly unitinterval_denominator: (a: number) => number;
   readonly protocolversion_minor: (a: number) => number;
   readonly moveinstantaneousrewardscert_new: (a: number) => number;
   readonly singlehostname_dns_name: (a: number) => number;
   readonly poolmetadata_url: (a: number) => number;
-  readonly scriptany_native_scripts: (a: number) => number;
   readonly timelockstart_to_json: (a: number, b: number) => void;
   readonly plutusv1script_to_bytes: (a: number, b: number) => void;
   readonly plutusv1script_from_bytes: (a: number, b: number, c: number) => void;
@@ -9025,16 +9126,61 @@ export interface InitOutput {
   readonly singleinputbuilder_payment_key: (a: number, b: number) => void;
   readonly singleinputbuilder_native_script: (a: number, b: number, c: number, d: number) => void;
   readonly singleinputbuilder_plutus_script: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly __wbg_plutusscriptwitness_free: (a: number) => void;
+  readonly plutusscriptwitness_from_script: (a: number) => number;
+  readonly plutusscriptwitness_from_ref: (a: number) => number;
+  readonly plutusscriptwitness_script: (a: number) => number;
+  readonly plutusscriptwitness_hash: (a: number) => number;
+  readonly __wbg_partialplutuswitness_free: (a: number) => void;
+  readonly partialplutuswitness_new: (a: number, b: number) => number;
+  readonly partialplutuswitness_script: (a: number) => number;
+  readonly partialplutuswitness_data: (a: number) => number;
+  readonly __wbg_requiredwitnessset_free: (a: number) => void;
+  readonly requiredwitnessset_add_vkey: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_vkey_key_hash: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_bootstrap: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_script_ref: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_native_script: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_script_hash: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_plutus_script: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_plutus_datum: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_plutus_datum_hash: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_redeemer: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_redeemer_tag: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_all: (a: number, b: number) => void;
+  readonly requiredwitnessset_new: () => number;
+  readonly __wbg_transactionwitnesssetbuilder_free: (a: number) => void;
+  readonly transactionwitnesssetbuilder_get_vkeys: (a: number) => number;
+  readonly transactionwitnesssetbuilder_add_vkey: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_add_bootstrap: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_get_bootstraps: (a: number) => number;
+  readonly transactionwitnesssetbuilder_add_script: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_add_native_script: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_get_native_script: (a: number) => number;
+  readonly transactionwitnesssetbuilder_add_plutus_v1_script: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_get_plutus_v1_script: (a: number) => number;
+  readonly transactionwitnesssetbuilder_add_plutus_v2_script: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_get_plutus_v2_script: (a: number) => number;
+  readonly transactionwitnesssetbuilder_add_plutus_datum: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_get_plutus_datum: (a: number) => number;
+  readonly transactionwitnesssetbuilder_add_redeemer: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_add_redeemers: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_get_redeemer: (a: number) => number;
+  readonly transactionwitnesssetbuilder_add_required_wits: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_new: () => number;
+  readonly transactionwitnesssetbuilder_add_existing: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_build: (a: number) => number;
+  readonly transactionwitnesssetbuilder_remaining_wits: (a: number) => number;
+  readonly transactionwitnesssetbuilder_try_build: (a: number, b: number) => void;
+  readonly __wbg_nativescriptwitnessinfo_free: (a: number) => void;
+  readonly nativescriptwitnessinfo_num_signatures: (a: number) => number;
+  readonly nativescriptwitnessinfo_vkeys: (a: number) => number;
+  readonly nativescriptwitnessinfo_assume_signature_count: () => number;
   readonly __wbg_mintbuilderresult_free: (a: number) => void;
   readonly __wbg_singlemintbuilder_free: (a: number) => void;
   readonly singlemintbuilder_new: (a: number) => number;
   readonly singlemintbuilder_native_script: (a: number, b: number, c: number) => number;
   readonly singlemintbuilder_plutus_script: (a: number, b: number, c: number) => number;
-  readonly generaltransactionmetadata_add: (a: number, b: number) => void;
-  readonly generaltransactionmetadata_add_json_metadatum_with_schema: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
-  readonly auxiliarydata_add_metadatum: (a: number, b: number, c: number) => void;
-  readonly auxiliarydata_add_json_metadatum_with_schema: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
-  readonly auxiliarydata_add: (a: number, b: number) => void;
   readonly __wbg_bignum_free: (a: number) => void;
   readonly bignum_to_bytes: (a: number, b: number) => void;
   readonly bignum_from_bytes: (a: number, b: number, c: number) => void;
@@ -9095,6 +9241,7 @@ export interface InitOutput {
   readonly crc32_from_json: (a: number, b: number, c: number) => void;
   readonly crc32_val: (a: number) => number;
   readonly crc32_from_val: (a: number) => number;
+  readonly requiredwitnessset_add_vkey_key: (a: number, b: number) => void;
   readonly int_as_i32_or_nothing: (a: number, b: number) => void;
   readonly __wbg_metadatamap_free: (a: number) => void;
   readonly metadatamap_to_bytes: (a: number, b: number) => void;
@@ -9163,67 +9310,6 @@ export interface InitOutput {
   readonly decode_arbitrary_bytes_from_metadatum: (a: number, b: number) => void;
   readonly encode_json_str_to_metadatum: (a: number, b: number, c: number, d: number) => void;
   readonly decode_metadatum_to_json_str: (a: number, b: number, c: number) => void;
-  readonly __wbg_partialplutuswitness_free: (a: number) => void;
-  readonly partialplutuswitness_new: (a: number, b: number) => number;
-  readonly partialplutuswitness_script: (a: number) => number;
-  readonly partialplutuswitness_data: (a: number) => number;
-  readonly __wbg_requiredwitnessset_free: (a: number) => void;
-  readonly requiredwitnessset_add_vkey: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_vkey_key_hash: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_bootstrap: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_script_ref: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_native_script: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_script_hash: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_plutus_script: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_plutus_datum: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_plutus_datum_hash: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_redeemer: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_redeemer_tag: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_all: (a: number, b: number) => void;
-  readonly requiredwitnessset_new: () => number;
-  readonly __wbg_transactionwitnesssetbuilder_free: (a: number) => void;
-  readonly transactionwitnesssetbuilder_get_vkeys: (a: number) => number;
-  readonly transactionwitnesssetbuilder_add_vkey: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_add_bootstrap: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_get_bootstraps: (a: number) => number;
-  readonly transactionwitnesssetbuilder_add_script: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_add_native_script: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_get_native_script: (a: number) => number;
-  readonly transactionwitnesssetbuilder_add_plutus_v1_script: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_get_plutus_v1_script: (a: number) => number;
-  readonly transactionwitnesssetbuilder_add_plutus_v2_script: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_get_plutus_v2_script: (a: number) => number;
-  readonly transactionwitnesssetbuilder_add_plutus_datum: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_get_plutus_datum: (a: number) => number;
-  readonly transactionwitnesssetbuilder_add_redeemer: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_add_redeemers: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_get_redeemer: (a: number) => number;
-  readonly transactionwitnesssetbuilder_add_required_wits: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_new: () => number;
-  readonly transactionwitnesssetbuilder_add_existing: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_build: (a: number) => number;
-  readonly transactionwitnesssetbuilder_remaining_wits: (a: number) => number;
-  readonly transactionwitnesssetbuilder_try_build: (a: number, b: number) => void;
-  readonly __wbg_nativescriptwitnessinfo_free: (a: number) => void;
-  readonly nativescriptwitnessinfo_num_signatures: (a: number) => number;
-  readonly nativescriptwitnessinfo_vkeys: (a: number) => number;
-  readonly nativescriptwitnessinfo_assume_signature_count: () => number;
-  readonly __wbg_withdrawalbuilderresult_free: (a: number) => void;
-  readonly __wbg_singlewithdrawalbuilder_free: (a: number) => void;
-  readonly singlewithdrawalbuilder_new: (a: number, b: number) => number;
-  readonly singlewithdrawalbuilder_payment_key: (a: number, b: number) => void;
-  readonly singlewithdrawalbuilder_native_script: (a: number, b: number, c: number, d: number) => void;
-  readonly singlewithdrawalbuilder_plutus_script: (a: number, b: number, c: number, d: number) => void;
-  readonly hash_auxiliary_data: (a: number) => number;
-  readonly hash_transaction: (a: number) => number;
-  readonly hash_plutus_data: (a: number) => number;
-  readonly hash_script_data: (a: number, b: number, c: number) => number;
-  readonly calc_script_data_hash: (a: number, b: number, c: number, d: number, e: number) => void;
-  readonly metadatamap_new: () => number;
-  readonly transactionmetadatumlabels_len: (a: number) => number;
-  readonly transactionmetadatumlabels_new: () => number;
-  readonly requiredwitnessset_add_vkey_key: (a: number, b: number) => void;
-  readonly metadatamap_len: (a: number) => number;
   readonly __wbg_redeemerwitnesskey_free: (a: number) => void;
   readonly redeemerwitnesskey_tag: (a: number) => number;
   readonly redeemerwitnesskey_index: (a: number) => number;
@@ -9232,6 +9318,21 @@ export interface InitOutput {
   readonly untaggedredeemer_datum: (a: number) => number;
   readonly untaggedredeemer_ex_units: (a: number) => number;
   readonly untaggedredeemer_new: (a: number, b: number) => number;
+  readonly __wbg_withdrawalbuilderresult_free: (a: number) => void;
+  readonly __wbg_singlewithdrawalbuilder_free: (a: number) => void;
+  readonly singlewithdrawalbuilder_new: (a: number, b: number) => number;
+  readonly singlewithdrawalbuilder_payment_key: (a: number, b: number) => void;
+  readonly singlewithdrawalbuilder_native_script: (a: number, b: number, c: number, d: number) => void;
+  readonly singlewithdrawalbuilder_plutus_script: (a: number, b: number, c: number, d: number) => void;
+  readonly generaltransactionmetadata_add: (a: number, b: number) => void;
+  readonly generaltransactionmetadata_add_json_metadatum_with_schema: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+  readonly auxiliarydata_add_metadatum: (a: number, b: number, c: number) => void;
+  readonly auxiliarydata_add_json_metadatum_with_schema: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+  readonly auxiliarydata_add: (a: number, b: number) => void;
+  readonly metadatamap_new: () => number;
+  readonly transactionmetadatumlabels_len: (a: number) => number;
+  readonly transactionmetadatumlabels_new: () => number;
+  readonly metadatamap_len: (a: number) => number;
   readonly __wbg_transactionunspentoutput_free: (a: number) => void;
   readonly transactionunspentoutput_to_bytes: (a: number, b: number) => void;
   readonly transactionunspentoutput_from_bytes: (a: number, b: number, c: number) => void;
@@ -9244,8 +9345,11 @@ export interface InitOutput {
   readonly transactionunspentoutputs_len: (a: number) => number;
   readonly transactionunspentoutputs_get: (a: number, b: number) => number;
   readonly transactionunspentoutputs_add: (a: number, b: number) => void;
-  readonly encrypt_with_password: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
-  readonly decrypt_with_password: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly hash_auxiliary_data: (a: number) => number;
+  readonly hash_transaction: (a: number) => number;
+  readonly hash_plutus_data: (a: number) => number;
+  readonly hash_script_data: (a: number, b: number, c: number) => number;
+  readonly calc_script_data_hash: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly make_daedalus_bootstrap_witness: (a: number, b: number, c: number) => number;
   readonly make_icarus_bootstrap_witness: (a: number, b: number, c: number) => number;
   readonly __wbg_hdaddresspayload_free: (a: number) => void;
@@ -9361,6 +9465,15 @@ export interface InitOutput {
   readonly spendingdatascriptasd_to_json: (a: number, b: number) => void;
   readonly spendingdatascriptasd_to_js_value: (a: number, b: number) => void;
   readonly spendingdatascriptasd_from_json: (a: number, b: number, c: number) => void;
+  readonly byrontxout_to_bytes: (a: number, b: number) => void;
+  readonly byrontxout_from_bytes: (a: number, b: number, c: number) => void;
+  readonly byrontxout_to_json: (a: number, b: number) => void;
+  readonly byrontxout_to_js_value: (a: number, b: number) => void;
+  readonly byrontxout_from_json: (a: number, b: number, c: number) => void;
+  readonly __wbg_byrontxout_free: (a: number) => void;
+  readonly byrontxout_address: (a: number) => number;
+  readonly byrontxout_amount: (a: number) => number;
+  readonly byrontxout_new: (a: number, b: number) => number;
   readonly __wbg_stakeholderid_free: (a: number) => void;
   readonly __wbg_protocolmagic_free: (a: number) => void;
   readonly __wbg_singlekeydistr_free: (a: number) => void;
@@ -9375,6 +9488,24 @@ export interface InitOutput {
   readonly spendingdatascriptasd_new: (a: number) => number;
   readonly __wbg_bootstraperadistr_free: (a: number) => void;
   readonly stakeholderid_to_bytes: (a: number, b: number) => void;
+  readonly __wbg_transactionoutputbuilder_free: (a: number) => void;
+  readonly transactionoutputbuilder_new: () => number;
+  readonly transactionoutputbuilder_with_address: (a: number, b: number) => number;
+  readonly transactionoutputbuilder_with_communication_data: (a: number, b: number) => number;
+  readonly transactionoutputbuilder_with_data: (a: number, b: number) => number;
+  readonly transactionoutputbuilder_with_reference_script: (a: number, b: number) => number;
+  readonly transactionoutputbuilder_next: (a: number, b: number) => void;
+  readonly __wbg_transactionoutputamountbuilder_free: (a: number) => void;
+  readonly transactionoutputamountbuilder_with_value: (a: number, b: number) => number;
+  readonly transactionoutputamountbuilder_with_coin: (a: number, b: number) => number;
+  readonly transactionoutputamountbuilder_with_coin_and_asset: (a: number, b: number, c: number) => number;
+  readonly transactionoutputamountbuilder_with_asset_and_min_required_coin: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly transactionoutputamountbuilder_build: (a: number, b: number) => void;
+  readonly __wbg_singleoutputbuilderresult_free: (a: number) => void;
+  readonly singleoutputbuilderresult_new: (a: number) => number;
+  readonly singleoutputbuilderresult_set_communication_datum: (a: number, b: number) => void;
+  readonly singleoutputbuilderresult_output: (a: number) => number;
+  readonly singleoutputbuilderresult_communication_datum: (a: number) => number;
   readonly __wbg_transactionbuilderconfig_free: (a: number) => void;
   readonly __wbg_transactionbuilderconfigbuilder_free: (a: number) => void;
   readonly transactionbuilderconfigbuilder_new: () => number;
@@ -9393,7 +9524,7 @@ export interface InitOutput {
   readonly transactionbuilderconfigbuilder_build: (a: number, b: number) => void;
   readonly __wbg_transactionbuilder_free: (a: number) => void;
   readonly transactionbuilder_select_utxos: (a: number, b: number, c: number) => void;
-  readonly transactionbuilder_add_input: (a: number, b: number) => void;
+  readonly transactionbuilder_add_input: (a: number, b: number, c: number) => void;
   readonly transactionbuilder_add_utxo: (a: number, b: number) => void;
   readonly transactionbuilder_fee_for_input: (a: number, b: number, c: number) => void;
   readonly transactionbuilder_add_reference_input: (a: number, b: number) => void;
@@ -9425,15 +9556,15 @@ export interface InitOutput {
   readonly transactionbuilder_get_explicit_output: (a: number, b: number) => void;
   readonly transactionbuilder_get_deposit: (a: number, b: number) => void;
   readonly transactionbuilder_get_fee_if_set: (a: number) => number;
-  readonly transactionbuilder_add_change_if_needed: (a: number, b: number, c: number) => void;
   readonly transactionbuilder_set_collateral_return: (a: number, b: number) => void;
   readonly transactionbuilder_full_size: (a: number, b: number) => void;
   readonly transactionbuilder_output_sizes: (a: number, b: number) => void;
-  readonly transactionbuilder_build: (a: number, b: number) => void;
-  readonly transactionbuilder_min_fee: (a: number, b: number) => void;
+  readonly transactionbuilder_build_for_evaluation: (a: number, b: number, c: number, d: number) => void;
+  readonly transactionbuilder_build: (a: number, b: number, c: number, d: number) => void;
+  readonly transactionbuilder_set_exunits: (a: number, b: number, c: number) => void;
+  readonly transactionbuilder_min_fee: (a: number, b: number, c: number) => void;
   readonly __wbg_txredeemerbuilder_free: (a: number) => void;
   readonly txredeemerbuilder_build: (a: number, b: number) => void;
-  readonly txredeemerbuilder_add_temporary_required_signer: (a: number, b: number) => void;
   readonly txredeemerbuilder_set_exunits: (a: number, b: number, c: number) => void;
   readonly txredeemerbuilder_auxiliary_data: (a: number) => number;
   readonly txredeemerbuilder_draft_tx: (a: number) => number;
@@ -9448,7 +9579,39 @@ export interface InitOutput {
   readonly signedtxbuilder_witness_set: (a: number) => number;
   readonly signedtxbuilder_is_valid: (a: number) => number;
   readonly signedtxbuilder_auxiliary_data: (a: number) => number;
+  readonly encrypt_with_password: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
+  readonly decrypt_with_password: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly txredeemerbuilder_draft_body: (a: number) => number;
+  readonly __wbg_certificatebuilderresult_free: (a: number) => void;
+  readonly __wbg_singlecertificatebuilder_free: (a: number) => void;
+  readonly singlecertificatebuilder_new: (a: number) => number;
+  readonly singlecertificatebuilder_skip_witness: (a: number) => number;
+  readonly singlecertificatebuilder_payment_key: (a: number, b: number) => void;
+  readonly singlecertificatebuilder_native_script: (a: number, b: number, c: number, d: number) => void;
+  readonly singlecertificatebuilder_plutus_script: (a: number, b: number, c: number, d: number) => void;
+  readonly compatible_min_ada_required: (a: number, b: number, c: number, d: number) => void;
+  readonly min_ada_required: (a: number, b: number, c: number) => void;
+  readonly stakedistribution_new_single_key: (a: number) => number;
+  readonly stakeholderid_new: (a: number) => number;
+  readonly addrattributes_new_bootstrap_era: (a: number, b: number) => number;
+  readonly addrattributes_new_single_key: (a: number, b: number, c: number) => number;
+  readonly addressid_new: (a: number, b: number, c: number) => number;
+  readonly addresscontent_hash_and_create: (a: number, b: number, c: number) => number;
+  readonly addresscontent_new_redeem: (a: number, b: number) => number;
+  readonly addresscontent_new_simple: (a: number, b: number) => number;
+  readonly addresscontent_to_address: (a: number) => number;
+  readonly addresscontent_byron_protocol_magic: (a: number) => number;
+  readonly addresscontent_network_id: (a: number, b: number) => void;
+  readonly addresscontent_icarus_from_key: (a: number, b: number) => number;
+  readonly addresscontent_identical_with_pubkey: (a: number, b: number) => number;
+  readonly byronaddress_to_base58: (a: number, b: number) => void;
+  readonly byronaddress_from_base58: (a: number, b: number, c: number) => void;
+  readonly byronaddress_address_content: (a: number) => number;
+  readonly byronaddress_is_valid: (a: number, b: number) => number;
+  readonly byronaddress_to_address: (a: number) => number;
+  readonly byronaddress_from_address: (a: number) => number;
+  readonly protocolmagic_new: (a: number) => number;
+  readonly protocolmagic_value: (a: number) => number;
   readonly __wbg_networkinfo_free: (a: number) => void;
   readonly networkinfo_new: (a: number, b: number) => number;
   readonly networkinfo_network_id: (a: number) => number;
@@ -9505,45 +9668,8 @@ export interface InitOutput {
   readonly pointeraddress_payment_cred: (a: number) => number;
   readonly pointeraddress_stake_pointer: (a: number) => number;
   readonly pointeraddress_to_address: (a: number) => number;
-  readonly __wbg_certificatebuilderresult_free: (a: number) => void;
-  readonly __wbg_singlecertificatebuilder_free: (a: number) => void;
-  readonly singlecertificatebuilder_new: (a: number) => number;
-  readonly singlecertificatebuilder_skip_witness: (a: number) => number;
-  readonly singlecertificatebuilder_payment_key: (a: number, b: number) => void;
-  readonly singlecertificatebuilder_native_script: (a: number, b: number, c: number, d: number) => void;
-  readonly singlecertificatebuilder_plutus_script: (a: number, b: number, c: number, d: number) => void;
-  readonly __wbg_linearfee_free: (a: number) => void;
-  readonly linearfee_constant: (a: number) => number;
-  readonly linearfee_coefficient: (a: number) => number;
-  readonly linearfee_new: (a: number, b: number) => number;
-  readonly min_script_fee: (a: number, b: number, c: number) => void;
-  readonly min_no_script_fee: (a: number, b: number, c: number) => void;
-  readonly min_fee: (a: number, b: number, c: number, d: number) => void;
-  readonly compatible_min_ada_required: (a: number, b: number, c: number, d: number) => void;
-  readonly min_ada_required: (a: number, b: number, c: number) => void;
-  readonly stakedistribution_new_single_key: (a: number) => number;
-  readonly stakeholderid_new: (a: number) => number;
-  readonly addrattributes_new_bootstrap_era: (a: number, b: number) => number;
-  readonly addrattributes_new_single_key: (a: number, b: number, c: number) => number;
-  readonly addressid_new: (a: number, b: number, c: number) => number;
-  readonly addresscontent_hash_and_create: (a: number, b: number, c: number) => number;
-  readonly addresscontent_new_redeem: (a: number, b: number) => number;
-  readonly addresscontent_new_simple: (a: number, b: number) => number;
-  readonly addresscontent_to_address: (a: number) => number;
-  readonly addresscontent_byron_protocol_magic: (a: number) => number;
-  readonly addresscontent_network_id: (a: number, b: number) => void;
-  readonly addresscontent_icarus_from_key: (a: number, b: number) => number;
-  readonly addresscontent_identical_with_pubkey: (a: number, b: number) => number;
-  readonly byronaddress_to_base58: (a: number, b: number) => void;
-  readonly byronaddress_from_base58: (a: number, b: number, c: number) => void;
-  readonly byronaddress_address_content: (a: number) => number;
-  readonly byronaddress_to_address: (a: number) => number;
-  readonly byronaddress_from_address: (a: number) => number;
-  readonly protocolmagic_new: (a: number) => number;
   readonly __wbg_stakecredential_free: (a: number) => void;
   readonly __wbg_rewardaddress_free: (a: number) => void;
-  readonly protocolmagic_value: (a: number) => number;
-  readonly byronaddress_is_valid: (a: number, b: number) => number;
   readonly baseaddress_from_address: (a: number) => number;
   readonly pointeraddress_from_address: (a: number) => number;
   readonly rewardaddress_new: (a: number, b: number) => number;
@@ -9551,18 +9677,13 @@ export interface InitOutput {
   readonly rewardaddress_payment_cred: (a: number) => number;
   readonly enterpriseaddress_from_address: (a: number) => number;
   readonly rewardaddress_from_address: (a: number) => number;
-  readonly __wbg_transactionoutputbuilder_free: (a: number) => void;
-  readonly transactionoutputbuilder_new: () => number;
-  readonly transactionoutputbuilder_with_address: (a: number, b: number) => number;
-  readonly transactionoutputbuilder_with_data: (a: number, b: number) => number;
-  readonly transactionoutputbuilder_with_reference_script: (a: number, b: number) => number;
-  readonly transactionoutputbuilder_next: (a: number, b: number) => void;
-  readonly __wbg_transactionoutputamountbuilder_free: (a: number) => void;
-  readonly transactionoutputamountbuilder_with_value: (a: number, b: number) => number;
-  readonly transactionoutputamountbuilder_with_coin: (a: number, b: number) => number;
-  readonly transactionoutputamountbuilder_with_coin_and_asset: (a: number, b: number, c: number) => number;
-  readonly transactionoutputamountbuilder_with_asset_and_min_required_coin: (a: number, b: number, c: number, d: number, e: number) => void;
-  readonly transactionoutputamountbuilder_build: (a: number, b: number) => void;
+  readonly __wbg_linearfee_free: (a: number) => void;
+  readonly linearfee_constant: (a: number) => number;
+  readonly linearfee_coefficient: (a: number) => number;
+  readonly linearfee_new: (a: number, b: number) => number;
+  readonly min_script_fee: (a: number, b: number, c: number) => void;
+  readonly min_no_script_fee: (a: number, b: number, c: number) => void;
+  readonly min_fee: (a: number, b: number, c: number, d: number) => void;
   readonly encode_json_str_to_native_script: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
   readonly get_implicit_input: (a: number, b: number, c: number, d: number) => void;
   readonly get_deposit: (a: number, b: number, c: number, d: number) => void;

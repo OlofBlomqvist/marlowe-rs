@@ -1,7 +1,7 @@
 mod args;
 use args::{DatumArgs, RedeemerArgs, StateArgs, ContractArgs, PlutusArgs};
 use marlowe_lang::types::marlowe::{Contract, MarloweDatum};
-use std::{collections::HashMap};
+use std::collections::HashMap;
 use marlowe_lang::extras::utils::*;
 use plutus_data::ToPlutusData;
 
@@ -67,9 +67,9 @@ fn input_redeemer_handler(args:RedeemerArgs) {
             RedeemerOutputEncoding::Json => 
                 serde_json::to_string_pretty(&s).unwrap(),
             RedeemerOutputEncoding::CborHex => 
-                hex::encode(&s.to_plutus_data().unwrap().to_bytes()),
+                hex::encode(&s.to_plutus_data(&vec![]).unwrap().to_bytes()),
             RedeemerOutputEncoding::PlutusDataDetailedJson => 
-                datum_to_json(&s.to_plutus_data().unwrap()).unwrap()
+                datum_to_json(&s.to_plutus_data(&vec![]).unwrap()).unwrap()
         }
     }
 
@@ -112,7 +112,7 @@ fn contract_handler(args:ContractArgs) {
     fn serialize(c:Contract,e:ContractOutputEncoding) -> String {
         match e {
             ContractOutputEncoding::CborHex => 
-                hex::encode(c.to_plutus_data().unwrap().to_bytes()),
+                hex::encode(c.to_plutus_data(&vec![]).unwrap().to_bytes()),
             ContractOutputEncoding::MarloweDSL => 
                 marlowe_lang::parsing::serialization::marlowe::serialize(c),
             ContractOutputEncoding::MarloweJSON => 
