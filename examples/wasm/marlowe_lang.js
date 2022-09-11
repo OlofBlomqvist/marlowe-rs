@@ -502,6 +502,46 @@ export function calc_script_data_hash(redeemers, datums, cost_models, used_langs
 }
 
 /**
+* @param {TransactionHash} tx_body_hash
+* @param {ByronAddress} addr
+* @param {LegacyDaedalusPrivateKey} key
+* @returns {BootstrapWitness}
+*/
+export function make_daedalus_bootstrap_witness(tx_body_hash, addr, key) {
+    _assertClass(tx_body_hash, TransactionHash);
+    _assertClass(addr, ByronAddress);
+    _assertClass(key, LegacyDaedalusPrivateKey);
+    const ret = wasm.make_daedalus_bootstrap_witness(tx_body_hash.ptr, addr.ptr, key.ptr);
+    return BootstrapWitness.__wrap(ret);
+}
+
+/**
+* @param {TransactionHash} tx_body_hash
+* @param {ByronAddress} addr
+* @param {Bip32PrivateKey} key
+* @returns {BootstrapWitness}
+*/
+export function make_icarus_bootstrap_witness(tx_body_hash, addr, key) {
+    _assertClass(tx_body_hash, TransactionHash);
+    _assertClass(addr, ByronAddress);
+    _assertClass(key, Bip32PrivateKey);
+    const ret = wasm.make_icarus_bootstrap_witness(tx_body_hash.ptr, addr.ptr, key.ptr);
+    return BootstrapWitness.__wrap(ret);
+}
+
+let cachedUint32Memory0 = new Uint32Array();
+
+function getUint32Memory0() {
+    if (cachedUint32Memory0.byteLength === 0) {
+        cachedUint32Memory0 = new Uint32Array(wasm.memory.buffer);
+    }
+    return cachedUint32Memory0;
+}
+
+function getArrayU32FromWasm0(ptr, len) {
+    return getUint32Memory0().subarray(ptr / 4, ptr / 4 + len);
+}
+/**
 * @param {string} password
 * @param {string} salt
 * @param {string} nonce
@@ -568,45 +608,54 @@ export function decrypt_with_password(password, data) {
 }
 
 /**
-* @param {TransactionHash} tx_body_hash
-* @param {ByronAddress} addr
-* @param {LegacyDaedalusPrivateKey} key
-* @returns {BootstrapWitness}
+* Provide backwards compatibility to Alonzo by taking the max min value of both er
+* @param {TransactionOutput} output
+* @param {BigNum} coins_per_utxo_byte
+* @param {BigNum} coins_per_utxo_word
+* @returns {BigNum}
 */
-export function make_daedalus_bootstrap_witness(tx_body_hash, addr, key) {
-    _assertClass(tx_body_hash, TransactionHash);
-    _assertClass(addr, ByronAddress);
-    _assertClass(key, LegacyDaedalusPrivateKey);
-    const ret = wasm.make_daedalus_bootstrap_witness(tx_body_hash.ptr, addr.ptr, key.ptr);
-    return BootstrapWitness.__wrap(ret);
+export function compatible_min_ada_required(output, coins_per_utxo_byte, coins_per_utxo_word) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        _assertClass(output, TransactionOutput);
+        _assertClass(coins_per_utxo_byte, BigNum);
+        _assertClass(coins_per_utxo_word, BigNum);
+        wasm.compatible_min_ada_required(retptr, output.ptr, coins_per_utxo_byte.ptr, coins_per_utxo_word.ptr);
+        var r0 = getInt32Memory0()[retptr / 4 + 0];
+        var r1 = getInt32Memory0()[retptr / 4 + 1];
+        var r2 = getInt32Memory0()[retptr / 4 + 2];
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return BigNum.__wrap(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
 }
 
 /**
-* @param {TransactionHash} tx_body_hash
-* @param {ByronAddress} addr
-* @param {Bip32PrivateKey} key
-* @returns {BootstrapWitness}
+* @param {TransactionOutput} output
+* @param {BigNum} coins_per_utxo_byte
+* @returns {BigNum}
 */
-export function make_icarus_bootstrap_witness(tx_body_hash, addr, key) {
-    _assertClass(tx_body_hash, TransactionHash);
-    _assertClass(addr, ByronAddress);
-    _assertClass(key, Bip32PrivateKey);
-    const ret = wasm.make_icarus_bootstrap_witness(tx_body_hash.ptr, addr.ptr, key.ptr);
-    return BootstrapWitness.__wrap(ret);
-}
-
-let cachedUint32Memory0 = new Uint32Array();
-
-function getUint32Memory0() {
-    if (cachedUint32Memory0.byteLength === 0) {
-        cachedUint32Memory0 = new Uint32Array(wasm.memory.buffer);
+export function min_ada_required(output, coins_per_utxo_byte) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        _assertClass(output, TransactionOutput);
+        _assertClass(coins_per_utxo_byte, BigNum);
+        wasm.min_ada_required(retptr, output.ptr, coins_per_utxo_byte.ptr);
+        var r0 = getInt32Memory0()[retptr / 4 + 0];
+        var r1 = getInt32Memory0()[retptr / 4 + 1];
+        var r2 = getInt32Memory0()[retptr / 4 + 2];
+        if (r2) {
+            throw takeObject(r1);
+        }
+        return BigNum.__wrap(r0);
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
     }
-    return cachedUint32Memory0;
 }
 
-function getArrayU32FromWasm0(ptr, len) {
-    return getUint32Memory0().subarray(ptr / 4, ptr / 4 + len);
-}
 /**
 * @param {Transaction} tx
 * @param {ExUnitPrices} ex_unit_prices
@@ -666,55 +715,6 @@ export function min_fee(tx, linear_fee, ex_unit_prices) {
         _assertClass(linear_fee, LinearFee);
         _assertClass(ex_unit_prices, ExUnitPrices);
         wasm.min_fee(retptr, tx.ptr, linear_fee.ptr, ex_unit_prices.ptr);
-        var r0 = getInt32Memory0()[retptr / 4 + 0];
-        var r1 = getInt32Memory0()[retptr / 4 + 1];
-        var r2 = getInt32Memory0()[retptr / 4 + 2];
-        if (r2) {
-            throw takeObject(r1);
-        }
-        return BigNum.__wrap(r0);
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-}
-
-/**
-* Provide backwards compatibility to Alonzo by taking the max min value of both er
-* @param {TransactionOutput} output
-* @param {BigNum} coins_per_utxo_byte
-* @param {BigNum} coins_per_utxo_word
-* @returns {BigNum}
-*/
-export function compatible_min_ada_required(output, coins_per_utxo_byte, coins_per_utxo_word) {
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        _assertClass(output, TransactionOutput);
-        _assertClass(coins_per_utxo_byte, BigNum);
-        _assertClass(coins_per_utxo_word, BigNum);
-        wasm.compatible_min_ada_required(retptr, output.ptr, coins_per_utxo_byte.ptr, coins_per_utxo_word.ptr);
-        var r0 = getInt32Memory0()[retptr / 4 + 0];
-        var r1 = getInt32Memory0()[retptr / 4 + 1];
-        var r2 = getInt32Memory0()[retptr / 4 + 2];
-        if (r2) {
-            throw takeObject(r1);
-        }
-        return BigNum.__wrap(r0);
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-}
-
-/**
-* @param {TransactionOutput} output
-* @param {BigNum} coins_per_utxo_byte
-* @returns {BigNum}
-*/
-export function min_ada_required(output, coins_per_utxo_byte) {
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        _assertClass(output, TransactionOutput);
-        _assertClass(coins_per_utxo_byte, BigNum);
-        wasm.min_ada_required(retptr, output.ptr, coins_per_utxo_byte.ptr);
         var r0 = getInt32Memory0()[retptr / 4 + 0];
         var r1 = getInt32Memory0()[retptr / 4 + 1];
         var r2 = getInt32Memory0()[retptr / 4 + 2];
@@ -956,6 +956,9 @@ LargestFirstMultiAsset:2,"2":"LargestFirstMultiAsset",
 * Same as RandomImprove, but before adding ADA, will insert by random-improve for each asset type.
 */
 RandomImproveMultiAsset:3,"3":"RandomImproveMultiAsset", });
+/**
+*/
+export const ChangeSelectionAlgo = Object.freeze({ Default:0,"0":"Default", });
 /**
 */
 export const StakeCredKind = Object.freeze({ Key:0,"0":"Key",Script:1,"1":"Script", });
@@ -2407,45 +2410,6 @@ export class AuxiliaryData {
         wasm.__wbg_auxiliarydata_free(ptr);
     }
     /**
-    * Add a single metadatum using TransactionMetadatum object under `key` TranscactionMetadatumLabel
-    * @param {BigNum} key
-    * @param {TransactionMetadatum} value
-    */
-    add_metadatum(key, value) {
-        _assertClass(key, BigNum);
-        _assertClass(value, TransactionMetadatum);
-        wasm.auxiliarydata_add_metadatum(this.ptr, key.ptr, value.ptr);
-    }
-    /**
-    * Add a single JSON metadatum using a MetadataJsonSchema object and MetadataJsonScehma object.
-    * @param {BigNum} key
-    * @param {string} val
-    * @param {number} schema
-    */
-    add_json_metadatum_with_schema(key, val, schema) {
-        try {
-            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            _assertClass(key, BigNum);
-            const ptr0 = passStringToWasm0(val, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-            const len0 = WASM_VECTOR_LEN;
-            wasm.auxiliarydata_add_json_metadatum_with_schema(retptr, this.ptr, key.ptr, ptr0, len0, schema);
-            var r0 = getInt32Memory0()[retptr / 4 + 0];
-            var r1 = getInt32Memory0()[retptr / 4 + 1];
-            if (r1) {
-                throw takeObject(r0);
-            }
-        } finally {
-            wasm.__wbindgen_add_to_stack_pointer(16);
-        }
-    }
-    /**
-    * @param {AuxiliaryData} other
-    */
-    add(other) {
-        _assertClass(other, AuxiliaryData);
-        wasm.auxiliarydata_add(this.ptr, other.ptr);
-    }
-    /**
     * @returns {Uint8Array}
     */
     to_bytes() {
@@ -2606,6 +2570,45 @@ export class AuxiliaryData {
     set_plutus_v2_scripts(plutus_v2_scripts) {
         _assertClass(plutus_v2_scripts, PlutusV2Scripts);
         wasm.auxiliarydata_set_plutus_v2_scripts(this.ptr, plutus_v2_scripts.ptr);
+    }
+    /**
+    * Add a single metadatum using TransactionMetadatum object under `key` TranscactionMetadatumLabel
+    * @param {BigNum} key
+    * @param {TransactionMetadatum} value
+    */
+    add_metadatum(key, value) {
+        _assertClass(key, BigNum);
+        _assertClass(value, TransactionMetadatum);
+        wasm.auxiliarydata_add_metadatum(this.ptr, key.ptr, value.ptr);
+    }
+    /**
+    * Add a single JSON metadatum using a MetadataJsonSchema object and MetadataJsonScehma object.
+    * @param {BigNum} key
+    * @param {string} val
+    * @param {number} schema
+    */
+    add_json_metadatum_with_schema(key, val, schema) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            _assertClass(key, BigNum);
+            const ptr0 = passStringToWasm0(val, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.auxiliarydata_add_json_metadatum_with_schema(retptr, this.ptr, key.ptr, ptr0, len0, schema);
+            var r0 = getInt32Memory0()[retptr / 4 + 0];
+            var r1 = getInt32Memory0()[retptr / 4 + 1];
+            if (r1) {
+                throw takeObject(r0);
+            }
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+    * @param {AuxiliaryData} other
+    */
+    add(other) {
+        _assertClass(other, AuxiliaryData);
+        wasm.auxiliarydata_add(this.ptr, other.ptr);
     }
 }
 /**
@@ -4838,7 +4841,7 @@ export class ByronAddress {
     static is_valid(s) {
         const ptr0 = passStringToWasm0(s, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.address_is_valid_byron(ptr0, len0);
+        const ret = wasm.byronaddress_is_valid(ptr0, len0);
         return ret !== 0;
     }
     /**
@@ -4916,6 +4919,153 @@ export class ByronScript {
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
         }
+    }
+}
+/**
+*/
+export class ByronTxout {
+
+    static __wrap(ptr) {
+        const obj = Object.create(ByronTxout.prototype);
+        obj.ptr = ptr;
+
+        return obj;
+    }
+
+    __destroy_into_raw() {
+        const ptr = this.ptr;
+        this.ptr = 0;
+
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_byrontxout_free(ptr);
+    }
+    /**
+    * @returns {Uint8Array}
+    */
+    to_bytes() {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.byrontxout_to_bytes(retptr, this.ptr);
+            var r0 = getInt32Memory0()[retptr / 4 + 0];
+            var r1 = getInt32Memory0()[retptr / 4 + 1];
+            var v0 = getArrayU8FromWasm0(r0, r1).slice();
+            wasm.__wbindgen_free(r0, r1 * 1);
+            return v0;
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+    * @param {Uint8Array} bytes
+    * @returns {ByronTxout}
+    */
+    static from_bytes(bytes) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passArray8ToWasm0(bytes, wasm.__wbindgen_malloc);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.byrontxout_from_bytes(retptr, ptr0, len0);
+            var r0 = getInt32Memory0()[retptr / 4 + 0];
+            var r1 = getInt32Memory0()[retptr / 4 + 1];
+            var r2 = getInt32Memory0()[retptr / 4 + 2];
+            if (r2) {
+                throw takeObject(r1);
+            }
+            return ByronTxout.__wrap(r0);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+    * @returns {string}
+    */
+    to_json() {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.byrontxout_to_json(retptr, this.ptr);
+            var r0 = getInt32Memory0()[retptr / 4 + 0];
+            var r1 = getInt32Memory0()[retptr / 4 + 1];
+            var r2 = getInt32Memory0()[retptr / 4 + 2];
+            var r3 = getInt32Memory0()[retptr / 4 + 3];
+            var ptr0 = r0;
+            var len0 = r1;
+            if (r3) {
+                ptr0 = 0; len0 = 0;
+                throw takeObject(r2);
+            }
+            return getStringFromWasm0(ptr0, len0);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+            wasm.__wbindgen_free(ptr0, len0);
+        }
+    }
+    /**
+    * @returns {any}
+    */
+    to_js_value() {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            wasm.byrontxout_to_js_value(retptr, this.ptr);
+            var r0 = getInt32Memory0()[retptr / 4 + 0];
+            var r1 = getInt32Memory0()[retptr / 4 + 1];
+            var r2 = getInt32Memory0()[retptr / 4 + 2];
+            if (r2) {
+                throw takeObject(r1);
+            }
+            return takeObject(r0);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+    * @param {string} json
+    * @returns {ByronTxout}
+    */
+    static from_json(json) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            const ptr0 = passStringToWasm0(json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.byrontxout_from_json(retptr, ptr0, len0);
+            var r0 = getInt32Memory0()[retptr / 4 + 0];
+            var r1 = getInt32Memory0()[retptr / 4 + 1];
+            var r2 = getInt32Memory0()[retptr / 4 + 2];
+            if (r2) {
+                throw takeObject(r1);
+            }
+            return ByronTxout.__wrap(r0);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+    * @returns {ByronAddress}
+    */
+    address() {
+        const ret = wasm.byrontxout_address(this.ptr);
+        return ByronAddress.__wrap(ret);
+    }
+    /**
+    * @returns {BigNum}
+    */
+    amount() {
+        const ret = wasm.byrontxout_amount(this.ptr);
+        return BigNum.__wrap(ret);
+    }
+    /**
+    * @param {ByronAddress} address
+    * @param {BigNum} amount
+    * @returns {ByronTxout}
+    */
+    static new(address, amount) {
+        _assertClass(address, ByronAddress);
+        _assertClass(amount, BigNum);
+        const ret = wasm.byrontxout_new(address.ptr, amount.ptr);
+        return ByronTxout.__wrap(ret);
     }
 }
 /**
@@ -7221,35 +7371,6 @@ export class GeneralTransactionMetadata {
         wasm.__wbg_generaltransactionmetadata_free(ptr);
     }
     /**
-    * @param {GeneralTransactionMetadata} other
-    */
-    add(other) {
-        _assertClass(other, GeneralTransactionMetadata);
-        wasm.generaltransactionmetadata_add(this.ptr, other.ptr);
-    }
-    /**
-    * Add a single JSON metadatum using a MetadataJsonSchema object and MetadataJsonScehma object.
-    * @param {BigNum} key
-    * @param {string} val
-    * @param {number} schema
-    */
-    add_json_metadatum_with_schema(key, val, schema) {
-        try {
-            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            _assertClass(key, BigNum);
-            const ptr0 = passStringToWasm0(val, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-            const len0 = WASM_VECTOR_LEN;
-            wasm.generaltransactionmetadata_add_json_metadatum_with_schema(retptr, this.ptr, key.ptr, ptr0, len0, schema);
-            var r0 = getInt32Memory0()[retptr / 4 + 0];
-            var r1 = getInt32Memory0()[retptr / 4 + 1];
-            if (r1) {
-                throw takeObject(r0);
-            }
-        } finally {
-            wasm.__wbindgen_add_to_stack_pointer(16);
-        }
-    }
-    /**
     * @returns {Uint8Array}
     */
     to_bytes() {
@@ -7388,6 +7509,35 @@ export class GeneralTransactionMetadata {
     keys() {
         const ret = wasm.generaltransactionmetadata_keys(this.ptr);
         return TransactionMetadatumLabels.__wrap(ret);
+    }
+    /**
+    * @param {GeneralTransactionMetadata} other
+    */
+    add(other) {
+        _assertClass(other, GeneralTransactionMetadata);
+        wasm.generaltransactionmetadata_add(this.ptr, other.ptr);
+    }
+    /**
+    * Add a single JSON metadatum using a MetadataJsonSchema object and MetadataJsonScehma object.
+    * @param {BigNum} key
+    * @param {string} val
+    * @param {number} schema
+    */
+    add_json_metadatum_with_schema(key, val, schema) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            _assertClass(key, BigNum);
+            const ptr0 = passStringToWasm0(val, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.generaltransactionmetadata_add_json_metadatum_with_schema(retptr, this.ptr, key.ptr, ptr0, len0, schema);
+            var r0 = getInt32Memory0()[retptr / 4 + 0];
+            var r1 = getInt32Memory0()[retptr / 4 + 1];
+            if (r1) {
+                throw takeObject(r0);
+            }
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
     }
 }
 /**
@@ -11685,22 +11835,22 @@ export class PartialPlutusWitness {
         wasm.__wbg_partialplutuswitness_free(ptr);
     }
     /**
-    * @param {PlutusScript} script
+    * @param {PlutusScriptWitness} script
     * @param {PlutusData} data
     * @returns {PartialPlutusWitness}
     */
     static new(script, data) {
-        _assertClass(script, PlutusScript);
+        _assertClass(script, PlutusScriptWitness);
         _assertClass(data, PlutusData);
         const ret = wasm.partialplutuswitness_new(script.ptr, data.ptr);
         return PartialPlutusWitness.__wrap(ret);
     }
     /**
-    * @returns {PlutusScript}
+    * @returns {PlutusScriptWitness}
     */
     script() {
         const ret = wasm.partialplutuswitness_script(this.ptr);
-        return PlutusScript.__wrap(ret);
+        return PlutusScriptWitness.__wrap(ret);
     }
     /**
     * @returns {PlutusData}
@@ -12105,6 +12255,65 @@ export class PlutusScript {
     */
     hash() {
         const ret = wasm.plutusscript_hash(this.ptr);
+        return ScriptHash.__wrap(ret);
+    }
+}
+/**
+*/
+export class PlutusScriptWitness {
+
+    static __wrap(ptr) {
+        const obj = Object.create(PlutusScriptWitness.prototype);
+        obj.ptr = ptr;
+
+        return obj;
+    }
+
+    __destroy_into_raw() {
+        const ptr = this.ptr;
+        this.ptr = 0;
+
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_plutusscriptwitness_free(ptr);
+    }
+    /**
+    * @param {PlutusScript} script
+    * @returns {PlutusScriptWitness}
+    */
+    static from_script(script) {
+        _assertClass(script, PlutusScript);
+        var ptr0 = script.ptr;
+        script.ptr = 0;
+        const ret = wasm.plutusscriptwitness_from_script(ptr0);
+        return PlutusScriptWitness.__wrap(ret);
+    }
+    /**
+    * @param {ScriptHash} hash
+    * @returns {PlutusScriptWitness}
+    */
+    static from_ref(hash) {
+        _assertClass(hash, ScriptHash);
+        var ptr0 = hash.ptr;
+        hash.ptr = 0;
+        const ret = wasm.plutusscriptwitness_from_ref(ptr0);
+        return PlutusScriptWitness.__wrap(ret);
+    }
+    /**
+    * @returns {PlutusScript | undefined}
+    */
+    script() {
+        const ret = wasm.plutusscriptwitness_script(this.ptr);
+        return ret === 0 ? undefined : PlutusScript.__wrap(ret);
+    }
+    /**
+    * @returns {ScriptHash}
+    */
+    hash() {
+        const ret = wasm.plutusscriptwitness_hash(this.ptr);
         return ScriptHash.__wrap(ret);
     }
 }
@@ -14027,7 +14236,7 @@ export class ProtocolMagic {
     * @returns {number}
     */
     value() {
-        const ret = wasm.networkinfo_protocol_magic(this.ptr);
+        const ret = wasm.protocolmagic_value(this.ptr);
         return ret >>> 0;
     }
 }
@@ -16192,7 +16401,7 @@ export class ScriptAll {
     */
     static new(native_scripts) {
         _assertClass(native_scripts, NativeScripts);
-        const ret = wasm.scriptall_new(native_scripts.ptr);
+        const ret = wasm.scriptall_native_scripts(native_scripts.ptr);
         return ScriptAll.__wrap(ret);
     }
 }
@@ -16330,7 +16539,7 @@ export class ScriptAny {
     */
     static new(native_scripts) {
         _assertClass(native_scripts, NativeScripts);
-        const ret = wasm.scriptall_new(native_scripts.ptr);
+        const ret = wasm.scriptall_native_scripts(native_scripts.ptr);
         return ScriptAny.__wrap(ret);
     }
 }
@@ -18011,6 +18220,59 @@ export class SingleMintBuilder {
         _assertClass(required_signers, Ed25519KeyHashes);
         const ret = wasm.singlemintbuilder_plutus_script(this.ptr, partial_witness.ptr, required_signers.ptr);
         return MintBuilderResult.__wrap(ret);
+    }
+}
+/**
+*/
+export class SingleOutputBuilderResult {
+
+    static __wrap(ptr) {
+        const obj = Object.create(SingleOutputBuilderResult.prototype);
+        obj.ptr = ptr;
+
+        return obj;
+    }
+
+    __destroy_into_raw() {
+        const ptr = this.ptr;
+        this.ptr = 0;
+
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_singleoutputbuilderresult_free(ptr);
+    }
+    /**
+    * @param {TransactionOutput} output
+    * @returns {SingleOutputBuilderResult}
+    */
+    static new(output) {
+        _assertClass(output, TransactionOutput);
+        const ret = wasm.singleoutputbuilderresult_new(output.ptr);
+        return SingleOutputBuilderResult.__wrap(ret);
+    }
+    /**
+    * @param {PlutusData} datum
+    */
+    set_communication_datum(datum) {
+        _assertClass(datum, PlutusData);
+        wasm.singleoutputbuilderresult_set_communication_datum(this.ptr, datum.ptr);
+    }
+    /**
+    * @returns {TransactionOutput}
+    */
+    output() {
+        const ret = wasm.singleoutputbuilderresult_output(this.ptr);
+        return TransactionOutput.__wrap(ret);
+    }
+    /**
+    * @returns {PlutusData | undefined}
+    */
+    communication_datum() {
+        const ret = wasm.singleoutputbuilderresult_communication_datum(this.ptr);
+        return ret === 0 ? undefined : PlutusData.__wrap(ret);
     }
 }
 /**
@@ -20827,8 +21089,18 @@ export class TransactionBuilder {
     * @param {InputBuilderResult} result
     */
     add_input(result) {
-        _assertClass(result, InputBuilderResult);
-        wasm.transactionbuilder_add_input(this.ptr, result.ptr);
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            _assertClass(result, InputBuilderResult);
+            wasm.transactionbuilder_add_input(retptr, this.ptr, result.ptr);
+            var r0 = getInt32Memory0()[retptr / 4 + 0];
+            var r1 = getInt32Memory0()[retptr / 4 + 1];
+            if (r1) {
+                throw takeObject(r0);
+            }
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
     }
     /**
     * @param {InputBuilderResult} result
@@ -20867,13 +21139,13 @@ export class TransactionBuilder {
     }
     /**
     * Add explicit output via a TransactionOutput object
-    * @param {TransactionOutput} output
+    * @param {SingleOutputBuilderResult} builder_result
     */
-    add_output(output) {
+    add_output(builder_result) {
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            _assertClass(output, TransactionOutput);
-            wasm.transactionbuilder_add_output(retptr, this.ptr, output.ptr);
+            _assertClass(builder_result, SingleOutputBuilderResult);
+            wasm.transactionbuilder_add_output(retptr, this.ptr, builder_result.ptr);
             var r0 = getInt32Memory0()[retptr / 4 + 0];
             var r1 = getInt32Memory0()[retptr / 4 + 1];
             if (r1) {
@@ -20885,14 +21157,14 @@ export class TransactionBuilder {
     }
     /**
     * calculates how much the fee would increase if you added a given output
-    * @param {TransactionOutput} output
+    * @param {SingleOutputBuilderResult} builder
     * @returns {BigNum}
     */
-    fee_for_output(output) {
+    fee_for_output(builder) {
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            _assertClass(output, TransactionOutput);
-            wasm.transactionbuilder_fee_for_output(retptr, this.ptr, output.ptr);
+            _assertClass(builder, SingleOutputBuilderResult);
+            wasm.transactionbuilder_fee_for_output(retptr, this.ptr, builder.ptr);
             var r0 = getInt32Memory0()[retptr / 4 + 0];
             var r1 = getInt32Memory0()[retptr / 4 + 1];
             var r2 = getInt32Memory0()[retptr / 4 + 2];
@@ -21173,30 +21445,6 @@ export class TransactionBuilder {
         return ret === 0 ? undefined : BigNum.__wrap(ret);
     }
     /**
-    * Warning: this function will mutate the /fee/ field
-    * Make sure to call this function last after setting all other tx-body properties
-    * Editing inputs, outputs, mint, etc. after change been calculated
-    * might cause a mismatch in calculated fee versus the required fee
-    * @param {Address} address
-    * @returns {boolean}
-    */
-    add_change_if_needed(address) {
-        try {
-            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            _assertClass(address, Address);
-            wasm.transactionbuilder_add_change_if_needed(retptr, this.ptr, address.ptr);
-            var r0 = getInt32Memory0()[retptr / 4 + 0];
-            var r1 = getInt32Memory0()[retptr / 4 + 1];
-            var r2 = getInt32Memory0()[retptr / 4 + 2];
-            if (r2) {
-                throw takeObject(r1);
-            }
-            return r0 !== 0;
-        } finally {
-            wasm.__wbindgen_add_to_stack_pointer(16);
-        }
-    }
-    /**
     * @param {TransactionOutput} output
     */
     set_collateral_return(output) {
@@ -21238,14 +21486,18 @@ export class TransactionBuilder {
         }
     }
     /**
-    * Builds the transaction and moves to the next step where any real witness can be added
+    * Builds the transaction and moves to the next step redeemer units can be added and a draft tx can
+    * be evaluated
     * NOTE: is_valid set to true
+    * @param {number} algo
+    * @param {Address} change_address
     * @returns {TxRedeemerBuilder}
     */
-    build() {
+    build_for_evaluation(algo, change_address) {
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            wasm.transactionbuilder_build(retptr, this.ptr);
+            _assertClass(change_address, Address);
+            wasm.transactionbuilder_build_for_evaluation(retptr, this.ptr, algo, change_address.ptr);
             var r0 = getInt32Memory0()[retptr / 4 + 0];
             var r1 = getInt32Memory0()[retptr / 4 + 1];
             var r2 = getInt32Memory0()[retptr / 4 + 2];
@@ -21258,15 +21510,49 @@ export class TransactionBuilder {
         }
     }
     /**
+    * Builds the transaction and moves to the next step where any real witness can be added
+    * NOTE: is_valid set to true
+    * @param {number} algo
+    * @param {Address} change_address
+    * @returns {SignedTxBuilder}
+    */
+    build(algo, change_address) {
+        try {
+            const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+            _assertClass(change_address, Address);
+            wasm.transactionbuilder_build(retptr, this.ptr, algo, change_address.ptr);
+            var r0 = getInt32Memory0()[retptr / 4 + 0];
+            var r1 = getInt32Memory0()[retptr / 4 + 1];
+            var r2 = getInt32Memory0()[retptr / 4 + 2];
+            if (r2) {
+                throw takeObject(r1);
+            }
+            return SignedTxBuilder.__wrap(r0);
+        } finally {
+            wasm.__wbindgen_add_to_stack_pointer(16);
+        }
+    }
+    /**
+    * used to override the exunit values initially provided when adding inputs
+    * @param {RedeemerWitnessKey} redeemer
+    * @param {ExUnits} ex_units
+    */
+    set_exunits(redeemer, ex_units) {
+        _assertClass(redeemer, RedeemerWitnessKey);
+        _assertClass(ex_units, ExUnits);
+        wasm.transactionbuilder_set_exunits(this.ptr, redeemer.ptr, ex_units.ptr);
+    }
+    /**
     * warning: sum of all parts of a transaction must equal 0. You cannot just set the fee to the min value and forget about it
     * warning: min_fee may be slightly larger than the actual minimum fee (ex: a few lovelaces)
     * this is done to simplify the library code, but can be fixed later
+    * @param {boolean} script_calulation
     * @returns {BigNum}
     */
-    min_fee() {
+    min_fee(script_calulation) {
         try {
             const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-            wasm.transactionbuilder_min_fee(retptr, this.ptr);
+            wasm.transactionbuilder_min_fee(retptr, this.ptr, script_calulation);
             var r0 = getInt32Memory0()[retptr / 4 + 0];
             var r1 = getInt32Memory0()[retptr / 4 + 1];
             var r2 = getInt32Memory0()[retptr / 4 + 2];
@@ -22563,7 +22849,7 @@ export class TransactionOutputAmountBuilder {
         }
     }
     /**
-    * @returns {TransactionOutput}
+    * @returns {SingleOutputBuilderResult}
     */
     build() {
         try {
@@ -22575,7 +22861,7 @@ export class TransactionOutputAmountBuilder {
             if (r2) {
                 throw takeObject(r1);
             }
-            return TransactionOutput.__wrap(r0);
+            return SingleOutputBuilderResult.__wrap(r0);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
         }
@@ -22622,6 +22908,17 @@ export class TransactionOutputBuilder {
     with_address(address) {
         _assertClass(address, Address);
         const ret = wasm.transactionoutputbuilder_with_address(this.ptr, address.ptr);
+        return TransactionOutputBuilder.__wrap(ret);
+    }
+    /**
+    * A communication datum is one where the data hash is used in the tx output
+    * Yet the full datum is included in the witness of the same transaction
+    * @param {PlutusData} datum
+    * @returns {TransactionOutputBuilder}
+    */
+    with_communication_data(datum) {
+        _assertClass(datum, PlutusData);
+        const ret = wasm.transactionoutputbuilder_with_communication_data(this.ptr, datum.ptr);
         return TransactionOutputBuilder.__wrap(ret);
     }
     /**
@@ -23548,7 +23845,8 @@ export class TxRedeemerBuilder {
     /**
     * Builds the transaction and moves to the next step where any real witness can be added
     * NOTE: is_valid set to true
-    * @returns {SignedTxBuilder}
+    * Will NOT require you to have set required signers & witnesses
+    * @returns {Redeemers}
     */
     build() {
         try {
@@ -23560,20 +23858,10 @@ export class TxRedeemerBuilder {
             if (r2) {
                 throw takeObject(r1);
             }
-            return SignedTxBuilder.__wrap(r0);
+            return Redeemers.__wrap(r0);
         } finally {
             wasm.__wbindgen_add_to_stack_pointer(16);
         }
-    }
-    /**
-    * Plutus script execution may have "required signers" that need to be added to calculate the exunits correctly
-    * However, we don't know what the tx body hash will be until after we've calculated the exunits
-    * So the signatures added here are just temporary and will have to be re-added in the SignedTxBuilder
-    * @param {Vkeywitness} vkey
-    */
-    add_temporary_required_signer(vkey) {
-        _assertClass(vkey, Vkeywitness);
-        wasm.txredeemerbuilder_add_temporary_required_signer(this.ptr, vkey.ptr);
     }
     /**
     * used to override the exunit values initially provided when adding inputs
@@ -25312,6 +25600,10 @@ function getImports() {
         const ret = getStringFromWasm0(arg0, arg1);
         return addHeapObject(ret);
     };
+    imports.wbg.__wbindgen_error_new = function(arg0, arg1) {
+        const ret = new Error(getStringFromWasm0(arg0, arg1));
+        return addHeapObject(ret);
+    };
     imports.wbg.__wbg_log_9a99fb1af846153b = function(arg0) {
         console.log(getObject(arg0));
     };
@@ -25345,12 +25637,6 @@ function getImports() {
         getInt32Memory0()[arg0 / 4 + 1] = len0;
         getInt32Memory0()[arg0 / 4 + 0] = ptr0;
     };
-    imports.wbg.__wbg_randomFillSync_91e2b39becca6147 = function() { return handleError(function (arg0, arg1, arg2) {
-        getObject(arg0).randomFillSync(getArrayU8FromWasm0(arg1, arg2));
-    }, arguments) };
-    imports.wbg.__wbg_getRandomValues_b14734aa289bc356 = function() { return handleError(function (arg0, arg1) {
-        getObject(arg0).getRandomValues(getObject(arg1));
-    }, arguments) };
     imports.wbg.__wbg_process_e56fd54cf6319b6c = function(arg0) {
         const ret = getObject(arg0).process;
         return addHeapObject(ret);
@@ -25387,6 +25673,12 @@ function getImports() {
     imports.wbg.__wbg_require_0db1598d9ccecb30 = function() { return handleError(function (arg0, arg1, arg2) {
         const ret = getObject(arg0).require(getStringFromWasm0(arg1, arg2));
         return addHeapObject(ret);
+    }, arguments) };
+    imports.wbg.__wbg_getRandomValues_b14734aa289bc356 = function() { return handleError(function (arg0, arg1) {
+        getObject(arg0).getRandomValues(getObject(arg1));
+    }, arguments) };
+    imports.wbg.__wbg_randomFillSync_91e2b39becca6147 = function() { return handleError(function (arg0, arg1, arg2) {
+        getObject(arg0).randomFillSync(getArrayU8FromWasm0(arg1, arg2));
     }, arguments) };
     imports.wbg.__wbg_newnoargs_971e9a5abe185139 = function(arg0, arg1) {
         const ret = new Function(getStringFromWasm0(arg0, arg1));

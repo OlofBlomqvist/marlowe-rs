@@ -38,7 +38,7 @@ pub fn try_decode_cborhex_marlowe_plutus_contract(cbor_hex:&str) -> Result<Contr
     match decode_hex(cbor_hex) {
         Ok(cbor) => {
             match PlutusData::from_bytes(cbor) {
-                Ok(x) => Contract::from_plutus_data(x),
+                Ok(x) => Contract::from_plutus_data(x,&vec![]),
                 Err(e) => 
                     Err(format!("Failed to decode plutus datum from input! Exception: {:?}",e))
                 
@@ -53,7 +53,7 @@ pub fn try_decode_cborhex_marlowe_plutus_datum(cbor_hex:&str) -> Result<MarloweD
     match decode_hex(cbor_hex) {
         Ok(cbor) => {
             match PlutusData::from_bytes(cbor) {
-                Ok(x) => MarloweDatum::from_plutus_data(x),
+                Ok(x) => MarloweDatum::from_plutus_data(x,&vec![]),
                 Err(e) => 
                     Err(format!("Failed to decode plutus datum from input! Exception: {:?}",e))
                 
@@ -67,7 +67,7 @@ pub fn try_decode_cborhex_marlowe_plutus_datum(cbor_hex:&str) -> Result<MarloweD
 
 pub fn try_decode_json_encoded_marlowe_plutus_datum(plutus_encoded_datum:&str) -> Result<MarloweDatum,String> {
     match encode_json_str_to_plutus_datum(&plutus_encoded_datum, PlutusDatumSchema::DetailedSchema) {
-        Ok(datum) => MarloweDatum::from_plutus_data(datum),
+        Ok(datum) => MarloweDatum::from_plutus_data(datum,&vec![]),
         Err(e) => Err(format!("{:?}",e))
     }
 }
@@ -75,7 +75,7 @@ pub fn try_decode_json_encoded_marlowe_plutus_datum(plutus_encoded_datum:&str) -
 pub fn datum_to_json(x:&PlutusData) -> Result<String,String> {
     match decode_plutus_datum_to_json_str(&x, PlutusDatumSchema::DetailedSchema) {
         Ok(v) => Ok(v),
-        Err(e) => Err(format!("{}",e)),
+        Err(e) => Err(format!("{:?}",e)),
     }
 }
 
@@ -100,12 +100,12 @@ pub fn try_decode_redeemer_input_cbor_hex(redeemer_cbor_hex:&str) -> Result<Vec<
         println!("Got the list");
         let mut result = vec![];
         for item in items {
-            result.push(marlowe_lang::extras::utils::InputAction::from_plutus_data(item).map_err(|_|"failed to decode action from plutus data.")?)
+            result.push(marlowe_lang::extras::utils::InputAction::from_plutus_data(item,&vec![]).map_err(|_|"failed to decode action from plutus data.")?)
         }
         return Ok(result);
     } else {
         return Ok(
-            vec![marlowe_lang::extras::utils::InputAction::from_plutus_data(jj).map_err(|_|"failed to extract a single item from plutus data")?]
+            vec![marlowe_lang::extras::utils::InputAction::from_plutus_data(jj,&vec![]).map_err(|_|"failed to extract a single item from plutus data")?]
         )
     }
 }
@@ -121,10 +121,10 @@ pub fn try_decode_redeemer_input_json(redeemer_json:&str) -> Result<Vec<InputAct
         let items = plutus_data_list_as_vec(jj)?;
         let mut result = vec![];
         for item in items {
-            result.push(marlowe_lang::extras::utils::InputAction::from_plutus_data(item)?)
+            result.push(marlowe_lang::extras::utils::InputAction::from_plutus_data(item,&vec![])?)
         }
         return Ok(result);
     } else {
-        return Ok(vec![marlowe_lang::extras::utils::InputAction::from_plutus_data(jj)?])
+        return Ok(vec![marlowe_lang::extras::utils::InputAction::from_plutus_data(jj,&vec![])?])
     }
 }

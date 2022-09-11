@@ -406,7 +406,7 @@ checksum = "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
 
 [[package]]
 name = "marlowe_lang"
-version = "0.1.10"
+version = "0.1.11"
 dependencies = [
  "cardano-multiplatform-lib",
  "clap",
@@ -594,9 +594,9 @@ dependencies = [
 
 [[package]]
 name = "plutus_data"
-version = "0.0.1"
+version = "0.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d2353382cb9032facd6cb899257f039b0b03cecd3ec17acb3ae2f5548e807ec8"
+checksum = "8779f0204dc1d25f48ce2b27f59536d514fa8bc45e1e83678f289063720d7ce7"
 dependencies = [
  "cardano-multiplatform-lib",
  "hex",
@@ -605,9 +605,9 @@ dependencies = [
 
 [[package]]
 name = "plutus_data_derive"
-version = "0.0.1"
+version = "0.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c5285b9e60b8efa6516a94afef659bcfcf34a6d54757bce8bc7a8e45b4e30ee"
+checksum = "44f70bf8963084f8ace5179cf9f0957ce398acad72faa1010546c483b542e174"
 dependencies = [
  "cardano-multiplatform-lib",
  "hex",

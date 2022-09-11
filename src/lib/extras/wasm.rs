@@ -47,40 +47,59 @@ fn marlowe_datum_to_json_type(x:MarloweDatum) -> JsValue {
 
 
 #[wasm_bindgen]
-pub fn decode_cborhex_marlowe_plutus_datum(cbor_hex:&str) -> Result<JsValue,JsValue> {
+pub fn decode_cborhex_marlowe_plutus_datum(cbor_hex:&str) -> Result<JsValue,JsError> {
     
     let cbor = decode_hex(cbor_hex);
     if cbor.is_err() {
-        return Err(JsValue::from_str("Input was not in hex format."))
+        return Err(JsError::new("Input was not in hex format."))
     }
 
     let cbor = cbor.unwrap();
 
     let datum = PlutusData::from_bytes(cbor);    
     if datum.is_err() {
-        return Err(JsValue::from_str("cbor is not in plutus data format."))
+        return Err(JsError::new("cbor is not in plutus data format."))
     }
     
     let datum = datum.unwrap();
 
-    match MarloweDatum::from_plutus_data(datum) {
+    match MarloweDatum::from_plutus_data(datum,&vec![]) {
         Ok(result) => {
             Ok(marlowe_datum_to_json_type(result))    
         } 
         Err(e) => {
-            Err(JsValue::from_str(&format!("cborhex is valid, but we failed to process contents due to this error: {}",e)))
+            Err(JsError::new(&format!("cborhex is valid, but we failed to process contents due to this error: {}",e)))
         }
     }
 }
 
 
 #[wasm_bindgen]
-pub fn decode_json_encoded_marlowe_plutus_datum(plutus_encoded_datum:&str) -> Result<JsValue,JsValue> {
+pub fn decode_json_encoded_marlowe_plutus_datum(plutus_encoded_datum:&str) -> Result<JsValue,JsError> {
     match try_decode_json_encoded_marlowe_plutus_datum(plutus_encoded_datum) {
         Ok(v) => {
             Ok(marlowe_datum_to_json_type(v))
         }
-        Err(e) => Err(JsValue::from_str(&e))
+        Err(e) => Err(JsError::new(&e))
+    }
+}
+
+
+#[wasm_bindgen]
+pub fn cbor_hex_to_json_detailed_schema(bytes:Vec<u8>) -> Result<JsValue,JsError> {
+    let plutusdata = cardano_multiplatform_lib::plutus::PlutusData::from_bytes(bytes).unwrap();
+    match cardano_multiplatform_lib::plutus::decode_plutus_datum_to_json_str(&plutusdata, cardano_multiplatform_lib::plutus::PlutusDatumSchema::DetailedSchema) {
+        Ok(v) => Ok(JsValue::from_str(&v)),
+        Err(e) => Err(JsError::new(&format!("{:?}",e)))
+    }
+}
+
+#[wasm_bindgen]
+pub fn cbor_hex_to_json_basic_schema(bytes:Vec<u8>) -> Result<JsValue,JsError> {
+    let plutusdata = cardano_multiplatform_lib::plutus::PlutusData::from_bytes(bytes).unwrap();
+    match cardano_multiplatform_lib::plutus::decode_plutus_datum_to_json_str(&plutusdata, cardano_multiplatform_lib::plutus::PlutusDatumSchema::BasicConversions) {
+        Ok(v) => Ok(JsValue::from_str(&v)),
+        Err(e) => Err(JsError::new(&format!("{:?}",e)))
     }
 }
 
