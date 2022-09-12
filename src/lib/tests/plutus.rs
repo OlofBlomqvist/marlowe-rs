@@ -112,18 +112,14 @@ fn encode_decode_datum_is_identical_to_original_on_chain_data() {
 fn encode_decode_redeemer_is_identical_to_original_on_chain_data() {
     
     let original_cbor_hex = std::fs::read_to_string("test_data/redeemer.cborhex").unwrap();
+    
+    let redeemers = try_decode_redeemer_input_cbor_hex(&original_cbor_hex)
+        .expect("failed to decode redeemer from cbor hex");
+    
+    let encoded_by_us = redeemers.to_plutus_data(&vec![])
+        .expect("we failed to encode input action (redeemer) to plutus data.");
 
-    let encoded_by_us : Vec<cardano_multiplatform_lib::plutus::PlutusData> = 
-        try_decode_redeemer_input_cbor_hex(&original_cbor_hex)
-            .expect("failed to decode redeemer from cbor hex")
-            .iter()
-            .map(|x|x.to_plutus_data(&vec![]).expect("we failed to encode input action (redeemer) to plutus data."))
-            .collect();
-
-    let mut plutus_list = cardano_multiplatform_lib::plutus::PlutusList::new();
-    let item_one = encoded_by_us.first().expect("there should be a single redeemer in the cbor input... found none");
-    plutus_list.add(&item_one);
-    let our_cbor_hex = hex::encode(plutus_list.to_bytes());
+    let our_cbor_hex = hex::encode(encoded_by_us.to_bytes());
 
     if our_cbor_hex != original_cbor_hex {
         panic!("Our serialized cborhex is different from the original. ours: {}",our_cbor_hex);

@@ -1,6 +1,6 @@
 mod args;
 use args::{DatumArgs, RedeemerArgs, StateArgs, ContractArgs, PlutusArgs};
-use marlowe_lang::types::marlowe::{Contract, MarloweDatum};
+use marlowe_lang::types::marlowe::{Contract, MarloweDatum, InnerInputAction, InputAction};
 use std::collections::HashMap;
 use marlowe_lang::extras::utils::*;
 use plutus_data::ToPlutusData;
@@ -54,14 +54,14 @@ fn datum_handler(args:DatumArgs) {
 
 fn input_redeemer_handler(args:RedeemerArgs) {
 
-    fn decode(s:&str,d:RedeemerInputEncoding) -> Vec<marlowe_lang::types::marlowe::InputAction> {
+    fn decode(s:&str,d:RedeemerInputEncoding) -> Vec<InputAction> {
         match d {
             RedeemerInputEncoding::PlutusDataDetailedJson => try_decode_redeemer_input_json(s).unwrap(),
             RedeemerInputEncoding::CborHex => try_decode_redeemer_input_cbor_hex(&s).unwrap()
         }
     }
 
-    fn encode(s:marlowe_lang::types::marlowe::InputAction,d:&RedeemerOutputEncoding) -> String {
+    fn encode(s:Vec<InputAction>,d:&RedeemerOutputEncoding) -> String {
         match d {
             RedeemerOutputEncoding::MarloweDSL => format!("\nRESULT:\n {:#?}",s),
             RedeemerOutputEncoding::Json => 
@@ -75,11 +75,8 @@ fn input_redeemer_handler(args:RedeemerArgs) {
 
     fn convert_and_print_info(s:&str,d:RedeemerInputEncoding,e:RedeemerOutputEncoding) {
         let decoded = decode(&s,d);
-        for x in decoded {
-            let encoded = encode(x,&e);
-            println!("{}",encoded);
-        }
-        
+        let encoded = encode(decoded,&e);
+        println!("{}",encoded);    
     }
 
     match args {

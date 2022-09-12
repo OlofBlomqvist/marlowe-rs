@@ -37,21 +37,21 @@ pub(crate) enum AstNode {
 #[derive(Debug,Clone)]
 pub struct Bound(pub i64,pub i64);
 
-#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive),ignore_container)]
 #[derive(Debug,Hash,PartialEq,Eq,Clone)]
 pub struct ChoiceId { 
     pub choice_name : String, // 0
     pub choice_owner : Option<Party> //1
 }
 
-#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive),ignore_container)]
 #[derive(Debug,Clone)]
 pub enum Payee { // Payee [('Account,0),('Party,1)]
     Account(Option<Party>), // 0
     Party(Option<Party>)    // 1
 }
 
-#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive),ignore_container)]
 #[derive(Debug,Clone)]
 pub enum Observation { 
     /*
@@ -182,7 +182,7 @@ pub enum Party { // ''Party [('PK,0),('Role,1)]
 }
 
 
-#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive),ignore_container)]
 #[derive(Debug,Serialize)]
 pub enum InnerInputAction {
     Deposit { // 0
@@ -200,13 +200,14 @@ pub enum InnerInputAction {
     }
 }
 
-#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive),ignore_container)]
 #[derive(Debug,Serialize)]
 pub enum InputAction {
     Action(InnerInputAction)
 }
 
-#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive),ignore_container)]
 #[derive(Debug,Clone)]
 pub enum Action {
     Deposit { // 0
@@ -227,7 +228,7 @@ pub enum Action {
 
 // todo - when encoding this to plutus, we must wrap it inside case(Case)/merkl(String) type.. 
 // can we add an attr to specificy how do wrap it? 
-#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive),ignore_container)]
 #[derive(Debug,Clone)]
 pub struct Case { 
     pub case: Option<Action>, // 0
@@ -244,7 +245,7 @@ pub enum Timeout {
     TimeParam(String) // 1
 }
 
-#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive), ignore_container)]
 #[derive(Debug,Clone)]
 pub enum Contract {
     /*
@@ -321,7 +322,7 @@ pub enum ValueId {
 }
 
 
-#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive),ignore_container)]
 #[derive(Debug,Serialize)] // todo -- add plutus_data derives when we support hashmaps
 pub struct MarloweDatumState {
     // todo , 1 -> not sure how to represent this... 
@@ -338,7 +339,7 @@ pub struct MarloweDatumState {
 
  
 
-#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive), ignore_container)]
 #[derive(Debug,Serialize)]
 pub struct MarloweDatum {
     pub state : MarloweDatumState,
