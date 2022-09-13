@@ -1,6 +1,7 @@
 mod args;
 use args::{DatumArgs, RedeemerArgs, StateArgs, ContractArgs, PlutusArgs};
-use marlowe_lang::types::marlowe::{Contract, MarloweDatum, InnerInputAction, InputAction};
+use marlowe_lang::types::marlowe::{Contract, MarloweDatum, InputAction};
+use pest::fails_with;
 use std::collections::HashMap;
 use marlowe_lang::extras::utils::*;
 use plutus_data::ToPlutusData;
@@ -248,6 +249,7 @@ fn create_state(initial_ada:i64,creator_role:&str) {
 fn test_me() {
     let cbor = "9fd8799fd8799fd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd8799f581c8bb3b343d8e404472337966a722150048c768d0a92a9813596c5338d45476c6f6265ff1901f4ffffff";
     let result = try_decode_redeemer_input_cbor_hex(&cbor);
+    
     for x in result {
         println!("one item: {:?}",x);
     }

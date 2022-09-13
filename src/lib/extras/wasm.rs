@@ -39,9 +39,14 @@ pub fn marlowe_to_json(contract:&str) -> Result<JsValue,JsValue> {
 }
 
 fn marlowe_datum_to_json_type(x:MarloweDatum) -> JsValue {
-    let state = serde_json::ser::to_string_pretty(&x.state).unwrap();
-    let contract = crate::parsing::serialization::marlowe::serialize(x.contract);
-    let result = format!("{{ state : {} , contract: {} }}",state,contract);
+    
+    let contract = format!(
+        "Contract (Marlowe-DSL): {}",
+        crate::parsing::serialization::marlowe::serialize(x.contract)
+    );
+
+    let state = format!("State: {:?}\n\nContinuation: {}",x.state,contract);
+    let result = format!("{}\n\n{}",contract,state);
     JsValue::from_str(&result)
 }
 
