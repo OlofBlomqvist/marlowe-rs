@@ -65,7 +65,7 @@ fn can_generate_contract() {
                 }),
                 then: Some(Contract::Pay { 
                     from_account: Some(Party::Role { role_token: "test".to_string() }), 
-                    to: Some(Payee::Account(Some(Party::PK { pk_hash : "00000000000000000000".into() }))), 
+                    to: Some(Payee::Account(Some(Party::Address { address : "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x".into() }))), 
                     token: Some(Token::ada()), 
                     pay: Some(Value::ConstantValue(42)), 
                     then: Some(Contract::Close.boxed())

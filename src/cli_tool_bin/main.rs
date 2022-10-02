@@ -1,6 +1,7 @@
 mod args;
 use args::{DatumArgs, RedeemerArgs, StateArgs, ContractArgs, PlutusArgs};
-use marlowe_lang::types::marlowe::{Contract, MarloweDatum, InputAction};
+use cardano_multiplatform_lib::plutus::decode_plutus_datum_to_json_str;
+use marlowe_lang::{types::marlowe::{Contract, MarloweDatum, InputAction, MarloweDatumState}};
 use pest::fails_with;
 use std::collections::HashMap;
 use marlowe_lang::extras::utils::*;
@@ -187,6 +188,72 @@ fn plutus_data_handler(x:PlutusArgs) {
 }
 
 
+// fn test() {
+
+    
+//     let contract_content = include_str!("../../test_data/datum_continuation_sample.marlowe");
+//     let contract = marlowe_lang::parsing::deserialization::deserialize(&contract_content).unwrap();
+
+    
+//     let mock_state = MarloweDatumState {
+//         accounts: HashMap::from([
+//                 (
+//                     (marlowe_lang::types::marlowe::Party::Address { 
+//                         address: "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x".into()
+//                     },
+//                     marlowe_lang::types::marlowe::Token { 
+//                         currency_symbol: "8bb3b343d8e404472337966a722150048c768d0a92a9813596c5338d".into(), 
+//                         token_name: "Globe".into()
+//                     }),
+//                     500
+//                 ),
+//                 (
+//                     (marlowe_lang::types::marlowe::Party::Address { address: "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x".into() }, 
+//                     marlowe_lang::types::marlowe::Token::ada()
+//                     ), 3000000
+//                 )
+//         ]),
+//         choices: HashMap::new(), 
+//         bound_values: HashMap::new(),  
+//         min_time: 1649988165000 
+//     };
+
+//     let datum = MarloweDatum {
+//         state: mock_state,
+//         contract,
+//     };
+
+//     let data = datum.to_plutus_data(&vec![]).unwrap();
+
+//     let redeemer_json = include_str!("../../test_data/redeemer.json");
+//     let redeemer = marlowe_lang::extras::utils::try_decode_redeemer_input_json(
+//         redeemer_json
+//     ).expect("valid redeemer json..");
+    
+//     let redeemer_plutus_data = redeemer.to_plutus_data(&vec![]).unwrap();
+    
+//     _ = std::fs::write("test_data/redeemer.cborhex",
+//             hex::encode(
+//                 redeemer_plutus_data.to_bytes()
+//             )
+//     ).unwrap();
+
+//     _ = std::fs::write("test_data/datum.json",
+//         decode_plutus_datum_to_json_str(
+//             &data, 
+//             cardano_multiplatform_lib::plutus::PlutusDatumSchema::DetailedSchema
+//         ).unwrap()
+//     ).unwrap();
+
+//     _ = std::fs::write("test_data/datum.cborhex",
+//         hex::encode(&data.to_bytes())
+//     ).unwrap();
+
+
+    
+
+// }
+
 
 fn main() {
     match <args::Args as clap::Parser>::parse() {
@@ -206,7 +273,7 @@ fn main() {
 // precision. Format of the template is taken from here:
 // https://github.com/input-output-hk/marlowe-cardano/blob/main/marlowe-cli/lectures/03-marlowe-cli-abstract.ipynb
 
-// probably should support PK as creator as well? "pk_hash": "0a11b0c7e25dc5d9c63171bdf39d9741b901dc903e12b4e162348e07"
+// probably should support Address as creator as well? "address": "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x"
 fn create_state(initial_ada:i64,creator_role:&str) {
         
     let template = "

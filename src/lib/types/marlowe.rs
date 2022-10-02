@@ -176,8 +176,8 @@ impl Token {
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Hash,PartialEq,Eq,Clone)]
-pub enum Party { // ''Party [('PK,0),('Role,1)]
-    PK { #[cfg_attr(feature = "utils",base_16)] pk_hash: String }, // 0
+pub enum Party { // ''Party [('Address,0),('Role,1)]
+    Address { address: String }, // 0
     Role { role_token: String } // 1   
 }
 

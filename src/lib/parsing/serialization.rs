@@ -55,7 +55,7 @@ pub mod json {
         }
     }
     }
-
+    use serde::ser::Error;
     impl Serialize for Party {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
@@ -66,10 +66,20 @@ pub mod json {
                     what.serialize_field("role_token", role_token)?;
                     what.end()
                 },
-                Party::PK { pk_hash } => {
-                    let mut what = serializer.serialize_struct("pk", 1)?;
-                    what.serialize_field("pk_hash", pk_hash)?;
-                    what.end()
+                Party::Address { address } => {
+
+                    match cardano_multiplatform_lib::address::Address::from_bech32(&address) {
+                        Ok(_) => {
+                            let mut what = serializer.serialize_struct("address", 1)?;
+                            what.serialize_field("address", address)?;
+                            what.end()
+                        }
+                        Err(e) => {
+                            return Err(Error::custom(format!("Cannot serialize a party instance of address as it is not valid bench32: {e:?}")))
+                        }
+                    }
+
+                    
                 },
             }
         }
@@ -415,6 +425,8 @@ pub mod json {
 
 pub mod marlowe {
     
+    use serde::ser::Error;
+
     use crate::types::marlowe::*;
 
     /// Takes an instance of a Marlowe contract and serializes
@@ -464,16 +476,22 @@ pub mod marlowe {
             }
         }
     }
-
+   
     impl std::fmt::Display for Party {
         fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
 
             match self {
                 Party::Role { role_token: s } => write!(f, "(Role \"{}\")",s),
-                Party::PK { pk_hash: s } => {
-                    // todo: we currently allow serializing any length and content string
-                    // here but we should probably not ...
-                    write!(f, "(PK \"{}\")",s)
+                Party::Address { address: s } => {
+                    match cardano_multiplatform_lib::address::Address::from_bech32(&s) {
+                        Ok(_) => {
+                            write!(f, "(Address \"{}\")",s)
+                        },
+                        Err(e) => {
+                            return Err(std::fmt::Error::custom(format!("cannot serialize an address to marlowe-dsl as it is not valid bench32: {e:?}")))
+                        },
+                    }
+                    
                 }
             }
         }

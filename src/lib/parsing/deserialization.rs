@@ -107,7 +107,16 @@ fn parse_raw(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<AstNode,String
             },
             Rule::ArrayOfCases => fold_back!(AstNode::MarloweCaseList(current_operation.extracted_child_ast_nodes)),
             Rule::ArrayOfBounds => fold_back!(AstNode::MarloweBoundList(current_operation.extracted_child_ast_nodes)),
-            Rule::PK => fold_back!(AstNode::MarloweParty(Party::PK { pk_hash : get_next_into!() })),
+            Rule::Address => {
+                let addr : String = get_next_into!();
+                match cardano_multiplatform_lib::address::Address::from_bech32(&addr) {
+                    Ok(_) => fold_back!(
+                        AstNode::MarloweParty(Party::Address { address : addr })
+                    ),
+                    Err(e) => return Err(format!("Invalid bench32 address: '{}' ({:?})",addr,e)),
+                }
+                
+            },
             Rule::TimeParam => {
                 let parameter_name : String = get_next_into!();
                 let input_parameter_value : Option<&i64> = input.get(&parameter_name);
@@ -334,12 +343,6 @@ fn parse_raw(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<AstNode,String
 
             }
 
-            Rule::PubKeyHash | Rule::PubKey => {
-                let v = option_to_result(current_operation.string_representation,"failed to parse pubkey")?;
-                let vv = v.trim_start_matches("\"").trim_end_matches("\"");
-                fold_back!(AstNode::StringValue(vv.to_string()));
-            }
-            
             Rule::ActionHole|
             Rule::ContractHole|
             Rule::TokenHole|
