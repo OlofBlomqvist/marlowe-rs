@@ -9,6 +9,16 @@ It allows you to create Marlowe contracts from Rust rather than using Marlowe di
 
 It is used by the MarloweLSP VSCode Extention (Syntax highlighting for Marlowe in VSCode).
 
+### Notes regarding marlowe version changes
+
+- The Marlowe playground 
+does not yet support using using address for parties, so if you want to parse contracts created from there, you need to use v 1.12 or convert them manually.
+
+- Not all example data for datums, redeemers or contracts in the iohk cardano-marlowe lib has been updated to use address but still uses PK for parties: if you want to parse those, use v 1.12.
+
+- Same with old marlowe instances on-chain: will not be possible to parse datum or redeemer using v 1.13+.
+
+
 ### Main Features
 
 - Deserialize Marlowe contracts in to Rust types.
