@@ -58,7 +58,7 @@ let my_contract = Contract::When {
             }), 
             contract: Some(Contract::Close.boxed()) } )
     ],
-    timeout: Some(imeout::TimeParam("test".into())),
+    timeout: Some(timeout::TimeParam("test".into())),
     timeout_continuation: Some(Contract::Close.boxed()),
 };
 
