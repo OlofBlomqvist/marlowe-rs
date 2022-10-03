@@ -18,6 +18,8 @@ does not yet support using using address for parties, so if you want to parse co
 
 - Same with old marlowe instances on-chain: will not be possible to parse datum or redeemer using v 1.13+.
 
+- The plutusdata encoding is not currently the same as used in marlowe-cardano repo for Address data. This will be updated as soon as I have time to do so.
+
 
 ### Main Features
 
