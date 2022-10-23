@@ -50,7 +50,7 @@
 //!             case: Some(Action::Notify { 
 //!                 notify_if: Some(Observation::True)
 //!             }), 
-//!             then: Some(Contract::Close.boxed()) })
+//!             then: Some(marlowe_lang::types::marlowe::PossiblyMerkleizedContract::Raw(Contract::Close.boxed())) })
 //!     ],
 //!     timeout: Some(Timeout::TimeParam("test".into())),
 //!     timeout_continuation: Some(Contract::Close.boxed()),

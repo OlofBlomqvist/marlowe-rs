@@ -1,0 +1,6 @@
+Pay
+    (Role "FROMACC")
+    (Party (Address "addr1gx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer5pnz75xxcrzqf96k"))
+    (Token "" "")
+    (Constant 1)
+    Close 

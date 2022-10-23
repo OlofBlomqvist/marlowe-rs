@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use pest::iterators::Pair;
 use crate::parsing::Rule;
-use crate::types::marlowe::*;
+use crate::types::{marlowe::*};
 
 struct Operation<'a> {
     pair_rule_type : Rule,
@@ -109,13 +109,16 @@ fn parse_raw(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<AstNode,String
             Rule::ArrayOfBounds => fold_back!(AstNode::MarloweBoundList(current_operation.extracted_child_ast_nodes)),
             Rule::Address => {
                 let addr : String = get_next_into!();
-                match cardano_multiplatform_lib::address::Address::from_bech32(&addr) {
-                    Ok(_) => fold_back!(
-                        AstNode::MarloweParty(Party::Address { address : addr })
-                    ),
-                    Err(e) => return Err(format!("Invalid bench32 address: '{}' ({:?})",addr,e)),
-                }
-                
+                fold_back!(
+                    AstNode::MarloweParty(
+                        Party::Address(
+                            match Address::from_bech32(&addr) {
+                                Ok(a) => a,
+                                Err(e) => return Err(format!("{e:?}")),
+                            }
+                        )   
+                    )
+                )
             },
             Rule::TimeParam => {
                 let parameter_name : String = get_next_into!();
@@ -134,7 +137,12 @@ fn parse_raw(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<AstNode,String
                 notify_if: get_next_node(&mut current_operation)?.try_into()? })),            
             Rule::Case => {
                 let continuation_contract = get_next!();
-                let contract_node = continuation_contract.try_into()?;
+                let contract_node : Option<Contract> = continuation_contract.try_into()?;
+                let contract_node =
+                    match contract_node {
+                        Some(c) => Some(PossiblyMerkleizedContract::Raw(Box::new(c))),
+                        None => None,
+                    };
                 let action = get_next_into!();
                 fold_back!(AstNode::MarloweCase(crate::types::marlowe::Case {
                     case: action,

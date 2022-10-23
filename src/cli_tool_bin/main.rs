@@ -1,11 +1,10 @@
 mod args;
 use args::{DatumArgs, RedeemerArgs, StateArgs, ContractArgs, PlutusArgs};
-use cardano_multiplatform_lib::plutus::decode_plutus_datum_to_json_str;
-use marlowe_lang::{types::marlowe::{Contract, MarloweDatum, InputAction, MarloweDatumState}};
-use pest::fails_with;
-use std::collections::HashMap;
+use cardano_multiplatform_lib::{plutus};
+use marlowe_lang::{types::marlowe::{Contract, MarloweDatum, InputAction}};
+use std::{collections::HashMap};
 use marlowe_lang::extras::utils::*;
-use plutus_data::ToPlutusData;
+use plutus_data::{ToPlutusData, PlutusData, FromPlutusData};
 
 use crate::args::{ContractOutputEncoding, ContractInputEncoding, DatumInputEncoding, DatumOutputEncoding, RedeemerInputEncoding, RedeemerOutputEncoding};
 
@@ -30,6 +29,14 @@ fn datum_handler(args:DatumArgs) {
                     format!("Contract (Marlowe-DSL): {}",
                         marlowe_lang::parsing::serialization::marlowe::serialize(x.contract));
                 format!("State: {:?}\n\nContinuation: {}",x.state,contract)
+            },
+            DatumOutputEncoding::PlutusDataDetailedJson => {
+                let pl = x.to_plutus_data(&vec![]).unwrap();
+                datum_to_json(&pl).unwrap()
+            },
+            DatumOutputEncoding::CborHex => {
+                let pl = x.to_plutus_data(&vec![]).unwrap();
+                hex::encode(pl.to_bytes())
             }
         }
     }
@@ -65,7 +72,10 @@ fn input_redeemer_handler(args:RedeemerArgs) {
 
     fn encode(s:Vec<InputAction>,d:&RedeemerOutputEncoding) -> String {
         match d {
-            RedeemerOutputEncoding::MarloweDSL => format!("\nRESULT:\n {:#?}",s),
+            RedeemerOutputEncoding::MarloweDSL => {
+                s.iter().map(|xx|format!("\nRESULT:\n {}",xx)).collect::<String>()
+                
+            },
             RedeemerOutputEncoding::Json => 
                 serde_json::to_string_pretty(&s).unwrap(),
             RedeemerOutputEncoding::CborHex => 
@@ -109,13 +119,17 @@ fn state_handler(args:StateArgs) {
 fn contract_handler(args:ContractArgs) {
 
     fn serialize(c:Contract,e:ContractOutputEncoding) -> String {
-        match e {
+        match e{
             ContractOutputEncoding::CborHex => 
                 hex::encode(c.to_plutus_data(&vec![]).unwrap().to_bytes()),
             ContractOutputEncoding::MarloweDSL => 
                 marlowe_lang::parsing::serialization::marlowe::serialize(c),
             ContractOutputEncoding::MarloweJSON => 
-                marlowe_lang::parsing::serialization::json::serialize(c).unwrap()
+                marlowe_lang::parsing::serialization::json::serialize(c).unwrap(),
+            ContractOutputEncoding::PlutusDataDetailedJson => {
+                let pl = c.to_plutus_data(&vec![]).unwrap();
+                datum_to_json(&pl).unwrap()
+            },
         }
     }
 
@@ -141,6 +155,10 @@ fn contract_handler(args:ContractArgs) {
                     None => marlowe_lang::parsing::deserialization::deserialize(&s).unwrap()
                 }
             }
+            ContractInputEncoding::PlutusDataDetailedJson => {
+                let pl = plutus::encode_json_str_to_plutus_datum(&s, plutus::PlutusDatumSchema::DetailedSchema).unwrap();
+                Contract::from_plutus_data(pl, &vec![]).unwrap()
+            },
         }
     }
 
@@ -175,7 +193,7 @@ fn contract_handler(args:ContractArgs) {
 fn plutus_data_handler(x:PlutusArgs) {
     fn decode_and_print(s:&str) {
         let hex = hex::decode(s).unwrap();
-        let item = cardano_multiplatform_lib::plutus::PlutusData::from_bytes(hex).unwrap();
+        let item = PlutusData::from_bytes(hex).unwrap();
         let json = marlowe_lang::extras::utils::datum_to_json(&item).unwrap();
         println!("{}",json);
     }
@@ -187,74 +205,6 @@ fn plutus_data_handler(x:PlutusArgs) {
     }
 }
 
-
-// fn test() {
-
-    
-//     let contract_content = include_str!("../../test_data/datum_continuation_sample.marlowe");
-//     let contract = marlowe_lang::parsing::deserialization::deserialize(&contract_content).unwrap();
-
-    
-//     let mock_state = MarloweDatumState {
-//         accounts: HashMap::from([
-//                 (
-//                     (marlowe_lang::types::marlowe::Party::Address { 
-//                         address: "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x".into()
-//                     },
-//                     marlowe_lang::types::marlowe::Token { 
-//                         currency_symbol: "8bb3b343d8e404472337966a722150048c768d0a92a9813596c5338d".into(), 
-//                         token_name: "Globe".into()
-//                     }),
-//                     500
-//                 ),
-//                 (
-//                     (marlowe_lang::types::marlowe::Party::Address { address: "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x".into() }, 
-//                     marlowe_lang::types::marlowe::Token::ada()
-//                     ), 3000000
-//                 )
-//         ]),
-//         choices: HashMap::new(), 
-//         bound_values: HashMap::new(),  
-//         min_time: 1649988165000 
-//     };
-
-//     let datum = MarloweDatum {
-//         state: mock_state,
-//         contract,
-//     };
-
-//     let data = datum.to_plutus_data(&vec![]).unwrap();
-
-//     let redeemer_json = include_str!("../../test_data/redeemer.json");
-//     let redeemer = marlowe_lang::extras::utils::try_decode_redeemer_input_json(
-//         redeemer_json
-//     ).expect("valid redeemer json..");
-    
-//     let redeemer_plutus_data = redeemer.to_plutus_data(&vec![]).unwrap();
-    
-//     _ = std::fs::write("test_data/redeemer.cborhex",
-//             hex::encode(
-//                 redeemer_plutus_data.to_bytes()
-//             )
-//     ).unwrap();
-
-//     _ = std::fs::write("test_data/datum.json",
-//         decode_plutus_datum_to_json_str(
-//             &data, 
-//             cardano_multiplatform_lib::plutus::PlutusDatumSchema::DetailedSchema
-//         ).unwrap()
-//     ).unwrap();
-
-//     _ = std::fs::write("test_data/datum.cborhex",
-//         hex::encode(&data.to_bytes())
-//     ).unwrap();
-
-
-    
-
-// }
-
-
 fn main() {
     match <args::Args as clap::Parser>::parse() {
         args::Args::PlutusData(x) => plutus_data_handler(x),
@@ -264,8 +214,6 @@ fn main() {
         args::Args::Contract(x) => contract_handler(x),
     }
 }
-
-
 
 
 // This method currently just uses a basic string template for providing quick way of generating an initial state.
@@ -298,30 +246,6 @@ fn create_state(initial_ada:i64,creator_role:&str) {
     println!("{}",result);
     
 }
-
-
-/*
-    cargo run --bin marlowe_lang_cli --all-features contract from-string Close marlowe-dsl cbor-hex                                                         
-    cargo run --bin marlowe_lang_cli --all-features contract from-string d87980 cbor-hex marlowe-dsl                                                        
-    .\target\debug\marlowe_lang_cli.exe contract from-file .\sample.marlowe marlowe-dsl marlowe-dsl -i "Price=10,Mediation deadline=14,Complaint deadline=1,Complaint response deadline=110,Payment deadline=11111111111"
-    .\target\debug\marlowe_lang_cli.exe contract from-file .\sample.marlowe marlowe-dsl marlowe-json -i "Price=10,Mediation deadline=14,Complaint deadline=1,Complaint response deadline=110,Payment deadline=11111111111"
-    .\target\debug\marlowe_lang_cli.exe datum from-file .\plutus_tests\plutus_test_values.marlowe_cli_plutusdatadetailed.json plutus-data-detailed-json text  
-    .\target\debug\marlowe_lang_cli.exe state create kalle 100 
-    .\target\debug\marlowe_lang_cli.exe datum from-file .\plutus_tests\plutus_test_full_datum_plutus_data_detailed_json_from_marlowe_cli.json plutus-data-detailed-json text
-
-*/
-
-
-#[test]
-fn test_me() {
-    let cbor = "9fd8799fd8799fd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd8799f581c8bb3b343d8e404472337966a722150048c768d0a92a9813596c5338d45476c6f6265ff1901f4ffffff";
-    let result = try_decode_redeemer_input_cbor_hex(&cbor);
-    
-    for x in result {
-        println!("one item: {:?}",x);
-    }
-}
-
 
 
 

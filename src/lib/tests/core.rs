@@ -1,6 +1,3 @@
-use std::collections::HashMap;
-
-use crate::parsing::deserialization::deserialize_with_input;
 #[cfg(test)]
 use crate::{
     parsing,
@@ -41,7 +38,7 @@ fn serialize_and_print() {
                 case: Some(Action::Notify { 
                     notify_if: Some(Observation::True) 
                 }), 
-                then: Some(Contract::Close.boxed()) }
+                then: Some(PossiblyMerkleizedContract::Raw(Contract::Close.boxed())) }
             )],
         timeout: Some(Timeout::TimeParam("test".into())),
         timeout_continuation: Some(Contract::Close.boxed()),
@@ -63,22 +60,25 @@ fn can_generate_contract() {
                 case: Some(Action::Notify { 
                     notify_if: Some(Observation::True)
                 }),
-                then: Some(Contract::Pay { 
+                then: Some(PossiblyMerkleizedContract::Raw(Contract::Pay { 
                     from_account: Some(Party::Role { role_token: "test".to_string() }), 
-                    to: Some(Payee::Account(Some(Party::Address { address : "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x".into() }))), 
+                    to: Some(Payee::Account(Some(Party::Address (
+                        Address::from_bech32("addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x")
+                            .expect("valid bech32 address")
+                    )))), 
                     token: Some(Token::ada()), 
                     pay: Some(Value::ConstantValue(42)), 
                     then: Some(Contract::Close.boxed())
-                }.boxed())
+                }.boxed()))
             }),
             Some(Case { 
                 case: Some(Action::Notify { 
                     notify_if: Some(Observation::True) 
                 }), 
-                then: Some(Contract::Close.boxed()) })
+                then: Some(PossiblyMerkleizedContract::Raw(Contract::Close.boxed()))})
         ],
         timeout: Some(Timeout::TimeParam("test".to_owned())),
-        timeout_continuation: Some(Contract::Close.boxed()),
+        timeout_continuation: Some( Contract::Close.boxed())
     };
 }
 
@@ -97,7 +97,7 @@ fn can_parse_playground_samples() {
         count = count + 1;
         let canonical_path = path.unwrap().path().canonicalize().unwrap();
         let path_string = canonical_path.display().to_string();
-        if !path_string.to_uppercase().ends_with(".MARLOWE") {
+        if !path_string.to_uppercase().ends_with(".MARLOWE") || path_string.contains("test_simple_addr") {
             continue
         }
         let serialized_contract = read_from_file(&path_string);
@@ -117,7 +117,7 @@ fn can_parse_playground_samples() {
                         
                 };
 
-                println!("Successfully deserialized contract: {path_string}");
+                //println!("Successfully deserialized contract: {path_string}");
 
                 let compressed_serialized_input = strep(&serialized_contract);
                 let compressed_serialized_output = strep(&serialize(x));
@@ -128,7 +128,7 @@ fn can_parse_playground_samples() {
                     _ = std::fs::write("OUT.UNCOMPRESSED.TEMP",serialized_contract);
                     panic!("the re-serialized contract {path_string} is different from the original! see in.temp and out.temp")
                 } else {
-                    println!("Successfully validated {path_string}");
+                    //println!("Successfully validated {path_string}");
                 }
             },
             Err(e) => panic!("{path_string} ::: {e:?}"),
@@ -221,7 +221,11 @@ fn modify(contract:Contract) -> Contract {
                 to: payee,
                 token: currency,
                 pay: amount,
-                then: Some(modify(*continue_as.unwrap()).boxed()) 
+                then: Some(match continue_as {
+                    Some(c) => 
+                        Box::new(modify(*c)),
+                    _ => panic!("expected a contract to exist at this point.."),
+                }) 
             },
     }
 }
@@ -264,8 +268,8 @@ fn json_core_should_return_error_for_uninitialized_timeout_params() {
         Ok(_v) => {
             panic!("Should not be possible to serialize prior to initializing all constant params")
         },
-        Err(e) => {
-            println!("Successfully validated that contracts with uninitialized timeouts can not be serialized: {:?}",e)
+        Err(_e) => {
+            //println!("Successfully validated that contracts with uninitialized timeouts can not be serialized: {:?}",e)
         },
     }
     
@@ -293,8 +297,8 @@ fn json_core_should_return_error_for_uninitialized_constant_params() {
         Ok(_v) => {
             panic!("Should not be possible to serialize prior to initializing all constant params")
         },
-        Err(e) => {
-            println!("Successfully validated that contracts with uninitialized constant parameters can not be serialized: {:?}",e)
+        Err(_e) => {
+            //println!("Successfully validated that contracts with uninitialized constant parameters can not be serialized: {:?}",e)
     },
     }
     
@@ -318,16 +322,21 @@ fn json_core_should_return_output_identical_to_playground() {
         panic!("This test is broken. There should be uninitialized constant parameters in the contract, but none were found: {:?}",contract_path);   
     }
 
-    let mut input = HashMap::new();
+    let mut input = std::collections::HashMap::new();
     input.insert("TEST_PARAMETER_ONE".to_string(),666);
     input.insert("TEST_PARAMETER_TWO".to_string(),4242);
     input.insert("TEST_PARAMETER_THREE".to_string(),1658504132546);
-    let deserialized = deserialize_with_input(&serialized_contract,input).unwrap();
+    let deserialized = parsing::deserialization::deserialize_with_input(&serialized_contract,input).unwrap();
 
     match parsing::serialization::json::serialize(deserialized) {
         Ok(json_core) => {
 
-            let json_play = read_from_file("test_data/test_timeouts_as_serialized_by_playground.json")
+            // when writing this test, playground had not yet been updated to use ADDRESS but 
+            // still used PK, so the sample data is manually updated to use address with bech32
+            // which should be pretty to safe to assume is how playground will encode it.
+            // will re-visit this and run the serialization thru playground when its updated
+            // to be on the safe side.
+            let json_play = read_from_file("test_data/test_timeouts_as_serialized_by_playground_probably_when_it_supports_addresses.json")
                 .replace(" ","")
                 .replace("\t","")
                 .replace("\n","")
@@ -340,9 +349,9 @@ fn json_core_should_return_output_identical_to_playground() {
                 .replace("\r","");
 
             if json_play == json_core {
-                println!("Successfully validated that contracts with all parameters initialized!")
+                //println!("Successfully validated re-enc test_timeouts_as_serialized_by_playground_v2 are identical!")
             } else {
-                panic!("json serialization by marlowe_lang differs from that of the playground. ")
+                panic!("json serialization by marlowe_lang differs from that of the playground. \n{}",json_core)
             }
         },
         Err(e) => {

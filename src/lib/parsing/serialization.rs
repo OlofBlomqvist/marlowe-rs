@@ -55,7 +55,7 @@ pub mod json {
         }
     }
     }
-    use serde::ser::Error;
+    
     impl Serialize for Party {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
@@ -66,24 +66,109 @@ pub mod json {
                     what.serialize_field("role_token", role_token)?;
                     what.end()
                 },
-                Party::Address { address } => {
+                Party::Address ( address ) => {
 
-                    match cardano_multiplatform_lib::address::Address::from_bech32(&address) {
-                        Ok(_) => {
-                            let mut what = serializer.serialize_struct("address", 1)?;
-                            what.serialize_field("address", address)?;
-                            what.end()
-                        }
-                        Err(e) => {
-                            return Err(Error::custom(format!("Cannot serialize a party instance of address as it is not valid bench32: {e:?}")))
-                        }
-                    }
-
+                    let mut what = serializer.serialize_struct("address", 1)?;
+                    what.serialize_field("address", &address)?;
+                    what.end()
+                
                     
                 },
             }
         }
     }
+
+
+    impl Serialize for PossiblyMerkleizedContract {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer {
+            match self {
+                PossiblyMerkleizedContract::Raw(actual_contract) => {
+                    actual_contract.serialize(serializer)
+                },
+                PossiblyMerkleizedContract::Merkleized(s) => {
+                    serializer.serialize_str(&format!("MerkleizedContinuation(\"{s}\")"))
+                },
+            }
+        }
+    }
+
+    impl Serialize for InnerInputAction {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer {
+                match self {
+                    InnerInputAction::Deposit { 
+                        input_from_party: Some(party), 
+                        of_tokens: Some(of_token), 
+                        into_account: Some(into_account), 
+                        that_deposits : deposits
+                    } => {
+                            let mut s = serializer.serialize_struct("action", 4)?;
+                            s.serialize_field("input_from_party", party)?;
+                            s.serialize_field("of_tokens", of_token)?;
+                            s.serialize_field("into_account", into_account)?;
+                            s.serialize_field("that_deposits", deposits)?;
+                            s.end()
+                    },                
+                    InnerInputAction::Notify { input_notify } => {
+                        let mut s = serializer.serialize_struct("action", 1)?;
+                        match input_notify {
+                            Some(v) => {
+                                s.serialize_field("notify_if", v)?;
+                            },
+                            None => {
+                                s.serialize_field("notify_if", "null")?;
+                            }
+                        }
+                        s.end()
+                    },
+                    InnerInputAction::Choice { for_choice_id, input_that_chooses_num } => {
+                        
+                        let mut s = serializer.serialize_struct("action", 2)?;
+                        
+                        match for_choice_id {
+                            Some(cid) => s.serialize_field("for_choice_id", cid)?,
+                            None => s.serialize_field("for_choice_id", "null")?,
+                        };
+
+                        s.serialize_field("input_that_chooses_num", input_that_chooses_num)?;
+
+                        s.end()
+                    },
+                    _ => {
+                        Err(serde::ser::Error::custom(format!("The contract contains an action with null values (holes).")))
+                    }
+                }
+                
+            }
+        }
+
+    impl Serialize for InputAction {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer {
+                match self {
+                    InputAction::Action(a) =>
+                        a.serialize(serializer),
+                    InputAction::MerkleizedInput(a,b) => 
+                        format!("MerklizedInput({a},{b})").serialize(serializer)
+                    
+                }
+            }
+        }
+
+    impl Serialize for Address {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer {
+                match &self.as_bech32() {
+                    Ok(s) => serializer.serialize_str(&s),
+                    Err(e) => Err(serde::ser::Error::custom(e)),
+                }
+            }
+        }
 
     impl Serialize for Bound {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -425,14 +510,46 @@ pub mod json {
 
 pub mod marlowe {
     
-    use serde::ser::Error;
-
     use crate::types::marlowe::*;
 
     /// Takes an instance of a Marlowe contract and serializes
     /// it into the Marlowe DSL format
     pub fn serialize(contract:Contract) -> String { 
         format!("{:#}",contract)
+    }
+
+    impl std::fmt::Display for InnerInputAction {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            match self {
+                InnerInputAction::Deposit { into_account, input_from_party, of_tokens, that_deposits } => 
+                    write!(f, "(Deposit {} {} {} {})",
+                        match into_account {None=>"?into_account".to_string(),Some(v)=>format!("{v}")},    
+                        match input_from_party {None=>"?input_from_party".to_string(),Some(v)=>format!("{v}")},
+                        match of_tokens {None=>"?of_tokens".to_string(),Some(v)=>format!("{v}")},
+                        that_deposits
+                    ),
+                InnerInputAction::Notify { input_notify } => 
+                    write!(f, "(Notify {})",
+                        match input_notify {None=>"?observation".to_string(),Some(v)=>format!("{v}")},
+                    ),
+                InnerInputAction::Choice { for_choice_id, input_that_chooses_num } => {
+                    
+                    write!(f, "(Choice {} [{}])",
+                        match for_choice_id {None=>"?for_choice_id".to_string(),Some(v)=>format!("{v}")},
+                        input_that_chooses_num
+                    )
+                },
+            }
+        }
+    }
+    impl std::fmt::Display for InputAction {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            match self {
+                InputAction::Action(a) => write!(f,"{a}"),
+                InputAction::MerkleizedInput(a,b) => 
+                    write!(f,"MerkleizedInput({a},{b})")
+            }
+        }
     }
 
     impl std::fmt::Display for Action {
@@ -476,23 +593,37 @@ pub mod marlowe {
             }
         }
     }
+
+    impl std::fmt::Display for PossiblyMerkleizedContract {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            match self {
+                PossiblyMerkleizedContract::Raw(actual_contract) => {
+                    write!(f,"{actual_contract}")
+                },
+                PossiblyMerkleizedContract::Merkleized(bytestring) => {
+                    write!(f,"MerkleizedContinuation(\"{bytestring}\")")
+                },
+            }
+        }
+    }
    
+    impl std::fmt::Display for Address {
+        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+
+            match self.as_bech32() {
+                Err(e) => Err(serde::ser::Error::custom(format!("Cannot serialize Party address as it is not valid bech32 data: {:?}",e))),
+                Ok(a) => write!(f, "(Address \"{}\")",a)
+            }
+
+        }
+    }
+
     impl std::fmt::Display for Party {
         fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
 
             match self {
                 Party::Role { role_token: s } => write!(f, "(Role \"{}\")",s),
-                Party::Address { address: s } => {
-                    match cardano_multiplatform_lib::address::Address::from_bech32(&s) {
-                        Ok(_) => {
-                            write!(f, "(Address \"{}\")",s)
-                        },
-                        Err(e) => {
-                            return Err(std::fmt::Error::custom(format!("cannot serialize an address to marlowe-dsl as it is not valid bench32: {e:?}")))
-                        },
-                    }
-                    
-                }
+                Party::Address (  s ) => write!(f,"{s}")
             }
         }
     }

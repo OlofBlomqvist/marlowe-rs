@@ -1,17 +1,11 @@
 use crate as marlowe_lang;
 use crate::types::marlowe::*;
 
+use cardano_multiplatform_lib::plutus::decode_plutus_datum_to_json_str;
+use cardano_multiplatform_lib::plutus::encode_json_str_to_plutus_datum;
+use cardano_multiplatform_lib::plutus::PlutusDatumSchema;
+use cardano_multiplatform_lib::plutus::PlutusData;
 use plutus_data::FromPlutusData;
-
-use cardano_multiplatform_lib::{
-    plutus::{
-        PlutusData,
-        PlutusDataKind,
-        decode_plutus_datum_to_json_str, 
-        encode_json_str_to_plutus_datum,
-        PlutusDatumSchema
-    }
-};
 
 pub fn decode_hex(s: &str) -> Result<Vec<u8>, String> {
     (0..s.len())
@@ -103,7 +97,7 @@ pub fn try_decode_redeemer_input_cbor_hex(redeemer_cbor_hex:&str) -> Result<Vec<
 pub fn try_decode_redeemer_input_json(redeemer_json:&str) -> Result<Vec<InputAction>,String> {
     let jj = encode_json_str_to_plutus_datum(
         redeemer_json, 
-        cardano_multiplatform_lib::plutus::PlutusDatumSchema::DetailedSchema
+        PlutusDatumSchema::DetailedSchema
     ).map_err(|e|format!("failed to encode json string to plutus data: {:?}",e))?;
 
     Vec::<InputAction>::from_plutus_data(jj,&vec![])

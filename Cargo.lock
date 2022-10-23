@@ -32,6 +32,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2dabbe35f96fb9507f7330793dc490461b2962659ac5d427181e451a623751d1"
 
 [[package]]
+name = "bech32"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d86b93f97252c47b41663388e6d155714a9d0c398b99f1005cbc5f978b29f445"
+
+[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -87,12 +93,12 @@ checksum = "14c189c53d098945499cdfa7ecc63567cf3886b3332b312a5b4585d8d3a6a610"
 
 [[package]]
 name = "cardano-multiplatform-lib"
-version = "3.0.0"
+version = "3.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ae1deb8815ed8bad95b33a33581e692a118da582747973f66841f39d7a8d44d"
+checksum = "f15b9bb02e2c0d67994cc6e9d01830ea7248fd0b7645ef27a55c6cfa939d10e3"
 dependencies = [
  "base64",
- "bech32",
+ "bech32 0.7.3",
  "cbor_event",
  "cfg-if",
  "clear_on_drop",
@@ -406,8 +412,9 @@ checksum = "3e2e65a1a2e43cfcb47a895c4c8b10d1f4a61097f9f254f183aee60cad9c651d"
 
 [[package]]
 name = "marlowe_lang"
-version = "0.1.13"
+version = "0.1.14"
 dependencies = [
+ "bech32 0.9.1",
  "cardano-multiplatform-lib",
  "clap",
  "console_error_panic_hook",
@@ -594,9 +601,9 @@ dependencies = [
 
 [[package]]
 name = "plutus_data"
-version = "0.0.3"
+version = "0.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c4bcd633f84e563547223e2ffd7b7a3700e9e309eb973f898cc8c98386a696fa"
+checksum = "7b33479ba343e4dde3561babe8ddd2998f932a2a7fc3fab1b7b46fb5a89fbc80"
 dependencies = [
  "cardano-multiplatform-lib",
  "hex",
@@ -605,11 +612,10 @@ dependencies = [
 
 [[package]]
 name = "plutus_data_derive"
-version = "0.0.3"
+version = "0.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73fd51f40c2faa8687d23f7c38c5dde93d46cc9750e319eb58af132b60153d2f"
+checksum = "6d7128a9351aef8fc8b166ec3b042025ee94de9d85388fddc48b47b9fcb1a157"
 dependencies = [
- "cardano-multiplatform-lib",
  "hex",
  "quote",
  "static_assertions",

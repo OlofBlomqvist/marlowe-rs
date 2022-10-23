@@ -46,12 +46,14 @@ pub enum ContractOutputEncoding {
     CborHex, // plutus data
     MarloweDSL, // plain marlowe text
     MarloweJSON, // json format as used in marlowe-cli (haskell impl)
+    PlutusDataDetailedJson
 }
 
 #[derive(clap::ValueEnum, Clone)]
 pub enum ContractInputEncoding {
     CborHex, // plutus data
     MarloweDSL, // plain marlowe text
+    PlutusDataDetailedJson
 }
 
 #[derive(clap::ValueEnum, Clone)]
@@ -80,8 +82,8 @@ pub enum DatumInputEncoding {
 #[derive(clap::ValueEnum, Clone)]
 pub enum DatumOutputEncoding {
     // Json,
-    // CborHex,
-    // PlutusDataDetailedJson
+    CborHex,
+    PlutusDataDetailedJson,
     DetailedText,
     SimpleText
 }

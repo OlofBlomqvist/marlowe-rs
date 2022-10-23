@@ -9,7 +9,7 @@ mod macros {
                     let expected = stringify!($x); 
                     match x {
                         AstNode::$y(xx) => Ok(xx),
-                        hmm => Err(format!("Expected {}, received: {:?}....",expected,hmm).to_string())
+                        hmm => Err(format!("Expected {} (result), received: {:?}....",expected,hmm).to_string())
                     }
                 }
             }
@@ -30,7 +30,7 @@ mod macros {
                     match a {
                         AstNode::$y(xx) => Ok(Some(xx)),
                         AstNode::Null => Ok(None),
-                        hmm => Err(format!("Expected {}, received: {:?}..",expected,hmm).to_string())
+                        hmm => Err(format!("Expected {} (option), received: {:?}..",expected,hmm).to_string())
                     }
                 }
             }
@@ -41,7 +41,7 @@ mod macros {
                     match a {
                         AstNode::$y(b) => Ok(Some(Box::new(b))),
                         AstNode::Null => Ok(None),
-                        hmm => Err(format!("Expected {}, received: {:?}.",expected,hmm).to_string())
+                        hmm => Err(format!("Expected {} (option,boxed), received: {:?}.",expected,hmm).to_string())
                     }
                 }
             }
