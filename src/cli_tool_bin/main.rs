@@ -28,7 +28,7 @@ fn datum_handler(args:DatumArgs) {
                 let contract = 
                     format!("Contract (Marlowe-DSL): {}",
                         marlowe_lang::parsing::serialization::marlowe::serialize(x.contract));
-                format!("State: {:?}\n\nContinuation: {}",x.state,contract)
+                format!("State: {}\n\nContinuation: {}",x.state,contract)
             },
             DatumOutputEncoding::PlutusDataDetailedJson => {
                 let pl = x.to_plutus_data(&vec![]).unwrap();

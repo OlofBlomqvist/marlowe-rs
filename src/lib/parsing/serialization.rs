@@ -552,6 +552,7 @@ pub mod marlowe {
         }
     }
 
+    
     impl std::fmt::Display for Action {
         fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
             match self {
@@ -606,10 +607,18 @@ pub mod marlowe {
             }
         }
     }
-   
+    
+    impl std::fmt::Display for MarloweDatumState {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            let accs = &self.accounts.iter().map(|a|{
+                format!("{{ {},{},{} }},",a.0.0,a.0.1,a.1)
+            }).collect::<String>();
+            write!(f, "(MarloweDatumState Accounts([{}]) Bound_Values({:?}) Choices({:?}) MinTime({}))",accs,&self.bound_values,&self.choices,&self.min_time)
+        }
+    }
+
     impl std::fmt::Display for Address {
         fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-
             match self.as_bech32() {
                 Err(e) => Err(serde::ser::Error::custom(format!("Cannot serialize Party address as it is not valid bech32 data: {:?}",e))),
                 Ok(a) => write!(f, "(Address \"{}\")",a)
@@ -620,7 +629,6 @@ pub mod marlowe {
 
     impl std::fmt::Display for Party {
         fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-
             match self {
                 Party::Role { role_token: s } => write!(f, "(Role \"{}\")",s),
                 Party::Address (  s ) => write!(f,"{s}")
