@@ -35,7 +35,7 @@ pub(crate) enum AstNode {
     Null
 }
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,PartialEq)]
 pub struct Bound(pub i64,pub i64);
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
@@ -46,14 +46,14 @@ pub struct ChoiceId {
 }
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,PartialEq)]
 pub enum Payee { // Payee [('Account,0),('Party,1)]
     #[ignore_option_container] Account(Option<Party>), // 0
     #[ignore_option_container] Party(Option<Party>)    // 1
 }
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,PartialEq)]
 pub enum Observation { 
     /*
     makeIsDataIndexed ''Observation [
@@ -112,7 +112,7 @@ pub enum Observation {
 }
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,PartialEq)]
 pub enum Value {
     /*
         makeIsDataIndexed ''Value [
@@ -258,7 +258,7 @@ pub enum Party { // ''Party [('Address,0),('Role,1)]
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug)]
-pub enum InnerInputAction {
+pub enum InputAction {
     Deposit { // 0
         #[ignore_option_container]
         into_account: Option<Party>, // 0
@@ -273,23 +273,21 @@ pub enum InnerInputAction {
         for_choice_id: Option<ChoiceId>, // 0
         input_that_chooses_num: i64 // 1 
     },
-    Notify { // 2
-        #[ignore_option_container]
-        input_notify: Option<Observation> // 0
-    }
+    Notify // 2
+     
 }
 
 // aka redeemer
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug)]
-pub enum InputAction {
-    Action(InnerInputAction),
-    MerkleizedInput(InnerInputAction, #[base_16] String)
+pub enum PossibleMerkleizedInput {
+    Action(InputAction),
+    MerkleizedInput(InputAction, #[base_16] String)
 }
 
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,PartialEq)]
 pub enum Action {
     Deposit { // 0
         #[ignore_option_container]into_account: Option<Party>, // 0
@@ -310,7 +308,7 @@ pub enum Action {
 // todo - when encoding this to plutus, we must wrap it inside case(Case)/merkl(String) type.. 
 // can we add an attr to specificy how do wrap it? 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,PartialEq)]
 pub struct Case { 
     #[ignore_option_container]
     pub case: Option<Action>, // 0
@@ -321,7 +319,7 @@ pub struct Case {
 
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,PartialEq)]
 pub enum Timeout {
     #[cfg_attr(feature = "utils",force_variant)]
     TimeConstant(i64), // 0
@@ -329,7 +327,7 @@ pub enum Timeout {
 }
 
 
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,PartialEq)]
 pub enum PossiblyMerkleizedContract {
     Raw(Box<Contract>),
     Merkleized(String)
@@ -437,7 +435,7 @@ impl FromPlutusData<PossiblyMerkleizedContract> for PossiblyMerkleizedContract {
 }
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Clone)]
+#[derive(Debug,Clone,PartialEq)]
 pub enum Contract {
     /*
         makeIsDataIndexed ''Contract [
@@ -507,14 +505,14 @@ impl Boxer for Contract {
 
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Serialize,Clone)]
+#[derive(Debug,Serialize,Clone,PartialEq)]
 pub enum ValueId {
     Name(String)
 }
 
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Serialize)] // todo -- add plutus_data derives when we support hashmaps
+#[derive(Debug,Serialize,Clone)] // todo -- add plutus_data derives when we support hashmaps
 pub struct MarloweDatumState {
     // todo , 1 -> not sure how to represent this... 
     // type Accounts = Map (AccountId, Token) Integer
@@ -522,26 +520,28 @@ pub struct MarloweDatumState {
     // 2 , choices
     pub choices : HashMap<ChoiceId,String> , // Map ChoiceId ChosenNum
     // 3 , bound vals
-    pub bound_values : HashMap<String,u64>, // Map ValueId Integer
+    pub bound_values : HashMap<String,i64>, // Map ValueId Integer
     // 4, min time
     pub min_time : u64 , // POSIXTime  
 }
 
 
- 
+// #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+// #[derive(Debug,Serialize)]
+// pub struct MarloweParams {
+//     #[base_16]pub role_payout_validator_hash : String
+// }
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Serialize)]
+#[derive(Debug,Serialize,Clone)]
+pub struct MarloweParams(#[base_16]pub String); 
+
+#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[derive(Debug,Serialize,Clone)]
 pub struct MarloweDatum {
-    
-    // note: not sure if this will be on chain or only for marlowe-cli stuff
-    #[base_16]pub marlowe_params : Option<String>, // rolePayoutValidator  ?
+    #[base_16]pub marlowe_params : MarloweParams,
     pub state : MarloweDatumState,
     pub contract : Contract,
-    
-    
-    
-    
     
 }
 

@@ -80,6 +80,8 @@ pub mod parsing;
 /// Extra features such as plutus encoding/decoding, cli tool etc.
 pub mod extras;
 
+// Simulation of contracts
+mod simulation;
 
 #[cfg(test)]
 mod tests;

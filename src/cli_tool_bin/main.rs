@@ -1,12 +1,12 @@
 mod args;
 use args::{DatumArgs, RedeemerArgs, StateArgs, ContractArgs, PlutusArgs};
 use cardano_multiplatform_lib::{plutus};
-use marlowe_lang::{types::marlowe::{Contract, MarloweDatum, InputAction}};
+use marlowe_lang::{types::marlowe::{Contract, MarloweDatum, PossibleMerkleizedInput}};
 use std::{collections::HashMap};
 use marlowe_lang::extras::utils::*;
 use plutus_data::{ToPlutusData, PlutusData, FromPlutusData};
 
-use crate::args::{ContractOutputEncoding, ContractInputEncoding, DatumInputEncoding, DatumOutputEncoding, RedeemerInputEncoding, RedeemerOutputEncoding};
+use crate::args::{ContractOutputInfoType, ContractInputEncoding, DatumInputEncoding, DatumOutputEncoding, RedeemerInputEncoding, RedeemerOutputEncoding};
 
 fn datum_handler(args:DatumArgs) {
 
@@ -25,10 +25,12 @@ fn datum_handler(args:DatumArgs) {
                 format!("{:?}",x)
             }
             DatumOutputEncoding::DetailedText => {
+                let validator_hash = x.marlowe_params.0;
+
                 let contract = 
                     format!("Contract (Marlowe-DSL): {}",
                         marlowe_lang::parsing::serialization::marlowe::serialize(x.contract));
-                format!("State: {}\n\nContinuation: {}",x.state,contract)
+                format!("Validator hash: {validator_hash}\n\nState: {}\n\nContinuation: {}",x.state,contract)
             },
             DatumOutputEncoding::PlutusDataDetailedJson => {
                 let pl = x.to_plutus_data(&vec![]).unwrap();
@@ -63,14 +65,14 @@ fn datum_handler(args:DatumArgs) {
 
 fn input_redeemer_handler(args:RedeemerArgs) {
 
-    fn decode(s:&str,d:RedeemerInputEncoding) -> Vec<InputAction> {
+    fn decode(s:&str,d:RedeemerInputEncoding) -> Vec<PossibleMerkleizedInput> {
         match d {
             RedeemerInputEncoding::PlutusDataDetailedJson => try_decode_redeemer_input_json(s).unwrap(),
             RedeemerInputEncoding::CborHex => try_decode_redeemer_input_cbor_hex(&s).unwrap()
         }
     }
 
-    fn encode(s:Vec<InputAction>,d:&RedeemerOutputEncoding) -> String {
+    fn encode(s:Vec<PossibleMerkleizedInput>,d:&RedeemerOutputEncoding) -> String {
         match d {
             RedeemerOutputEncoding::MarloweDSL => {
                 s.iter().map(|xx|format!("\nRESULT:\n {}",xx)).collect::<String>()
@@ -118,15 +120,21 @@ fn state_handler(args:StateArgs) {
 
 fn contract_handler(args:ContractArgs) {
 
-    fn serialize(c:Contract,e:ContractOutputEncoding) -> String {
+    fn serialize(c:Contract,e:ContractOutputInfoType) -> String {
         match e{
-            ContractOutputEncoding::CborHex => 
+            ContractOutputInfoType::ExpectedActions => 
+                match c {
+                    Contract::Close => String::from("None"),
+                    _ => todo!()
+                }
+            ,
+            ContractOutputInfoType::CborHex => 
                 hex::encode(c.to_plutus_data(&vec![]).unwrap().to_bytes()),
-            ContractOutputEncoding::MarloweDSL => 
+            ContractOutputInfoType::MarloweDSL => 
                 marlowe_lang::parsing::serialization::marlowe::serialize(c),
-            ContractOutputEncoding::MarloweJSON => 
+            ContractOutputInfoType::MarloweJSON => 
                 marlowe_lang::parsing::serialization::json::serialize(c).unwrap(),
-            ContractOutputEncoding::PlutusDataDetailedJson => {
+            ContractOutputInfoType::PlutusDataDetailedJson => {
                 let pl = c.to_plutus_data(&vec![]).unwrap();
                 datum_to_json(&pl).unwrap()
             },
@@ -162,7 +170,7 @@ fn contract_handler(args:ContractArgs) {
         }
     }
 
-    fn convert(input:&str,input_encoding: ContractInputEncoding,output_encoding:ContractOutputEncoding,init:Option<String>) -> String {
+    fn convert(input:&str,input_encoding: ContractInputEncoding,output_encoding:ContractOutputInfoType,init:Option<String>) -> String {
         let parsed = parse(input,input_encoding,init);
         serialize(parsed, output_encoding)
     }
@@ -171,7 +179,7 @@ fn contract_handler(args:ContractArgs) {
         ContractArgs::FromFile { 
             file_path, 
             input_encoding, 
-            output_encoding,
+            output_type: output_encoding,
             init
         } => {
             let input_data = std::fs::read_to_string(&file_path).expect("failed to read file..");
@@ -181,7 +189,7 @@ fn contract_handler(args:ContractArgs) {
         ContractArgs::FromString { 
             input, 
             input_encoding, 
-            output_encoding,
+            output_type: output_encoding,
             init
         } => {
             let result = convert(&input,input_encoding,output_encoding,init);

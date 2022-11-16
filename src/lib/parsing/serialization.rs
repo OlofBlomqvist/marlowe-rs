@@ -94,12 +94,12 @@ pub mod json {
         }
     }
 
-    impl Serialize for InnerInputAction {
+    impl Serialize for InputAction {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: serde::Serializer {
                 match self {
-                    InnerInputAction::Deposit { 
+                    InputAction::Deposit { 
                         input_from_party: Some(party), 
                         of_tokens: Some(of_token), 
                         into_account: Some(into_account), 
@@ -112,19 +112,10 @@ pub mod json {
                             s.serialize_field("that_deposits", deposits)?;
                             s.end()
                     },                
-                    InnerInputAction::Notify { input_notify } => {
-                        let mut s = serializer.serialize_struct("action", 1)?;
-                        match input_notify {
-                            Some(v) => {
-                                s.serialize_field("notify_if", v)?;
-                            },
-                            None => {
-                                s.serialize_field("notify_if", "null")?;
-                            }
-                        }
-                        s.end()
-                    },
-                    InnerInputAction::Choice { for_choice_id, input_that_chooses_num } => {
+                    InputAction::Notify => 
+                        serializer.serialize_str(&format!("input_notify"))
+                    ,
+                    InputAction::Choice { for_choice_id, input_that_chooses_num } => {
                         
                         let mut s = serializer.serialize_struct("action", 2)?;
                         
@@ -145,14 +136,14 @@ pub mod json {
             }
         }
 
-    impl Serialize for InputAction {
+    impl Serialize for PossibleMerkleizedInput {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
             S: serde::Serializer {
                 match self {
-                    InputAction::Action(a) =>
+                    PossibleMerkleizedInput::Action(a) =>
                         a.serialize(serializer),
-                    InputAction::MerkleizedInput(a,b) => 
+                    PossibleMerkleizedInput::MerkleizedInput(a,b) => 
                         format!("MerklizedInput({a},{b})").serialize(serializer)
                     
                 }
@@ -518,21 +509,19 @@ pub mod marlowe {
         format!("{:#}",contract)
     }
 
-    impl std::fmt::Display for InnerInputAction {
+    impl std::fmt::Display for InputAction {
         fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
             match self {
-                InnerInputAction::Deposit { into_account, input_from_party, of_tokens, that_deposits } => 
+                InputAction::Deposit { into_account, input_from_party, of_tokens, that_deposits } => 
                     write!(f, "(Deposit {} {} {} {})",
                         match into_account {None=>"?into_account".to_string(),Some(v)=>format!("{v}")},    
                         match input_from_party {None=>"?input_from_party".to_string(),Some(v)=>format!("{v}")},
                         match of_tokens {None=>"?of_tokens".to_string(),Some(v)=>format!("{v}")},
                         that_deposits
                     ),
-                InnerInputAction::Notify { input_notify } => 
-                    write!(f, "(Notify {})",
-                        match input_notify {None=>"?observation".to_string(),Some(v)=>format!("{v}")},
-                    ),
-                InnerInputAction::Choice { for_choice_id, input_that_chooses_num } => {
+                InputAction::Notify => 
+                    write!(f, "Notify"),
+                InputAction::Choice { for_choice_id, input_that_chooses_num } => {
                     
                     write!(f, "(Choice {} [{}])",
                         match for_choice_id {None=>"?for_choice_id".to_string(),Some(v)=>format!("{v}")},
@@ -542,11 +531,11 @@ pub mod marlowe {
             }
         }
     }
-    impl std::fmt::Display for InputAction {
+    impl std::fmt::Display for PossibleMerkleizedInput {
         fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
             match self {
-                InputAction::Action(a) => write!(f,"{a}"),
-                InputAction::MerkleizedInput(a,b) => 
+                PossibleMerkleizedInput::Action(a) => write!(f,"{a}"),
+                PossibleMerkleizedInput::MerkleizedInput(a,b) => 
                     write!(f,"MerkleizedInput({a},{b})")
             }
         }

@@ -42,11 +42,12 @@ pub enum PlutusArgs {
 
 
 #[derive(clap::ValueEnum, Clone)]
-pub enum ContractOutputEncoding {
+pub enum ContractOutputInfoType {
     CborHex, // plutus data
     MarloweDSL, // plain marlowe text
     MarloweJSON, // json format as used in marlowe-cli (haskell impl)
-    PlutusDataDetailedJson
+    PlutusDataDetailedJson,
+    ExpectedActions
 }
 
 #[derive(clap::ValueEnum, Clone)]
@@ -133,7 +134,7 @@ pub enum ContractArgs {
         #[clap(value_enum)]
         input_encoding: ContractInputEncoding,
         #[clap(value_enum)]
-        output_encoding: ContractOutputEncoding,
+        output_type: ContractOutputInfoType,
         /// Input to be used with the contract.
         /// Example 1: -d "my_constant_parameter=123, my_other_constant_parameter_name=321, timeout_number_one=2022-03-04@15:41:31"
         /// Example 2: -d "timeout_number_one=4128381238132"
@@ -146,7 +147,7 @@ pub enum ContractArgs {
         #[clap(value_enum)]
         input_encoding: ContractInputEncoding,
         #[clap(value_enum)]
-        output_encoding: ContractOutputEncoding,
+        output_type: ContractOutputInfoType,
         /// Input to be used with the contract.
         /// Example 1: -d "my_constant_parameter=123, my_other_constant_parameter_name=321, timeout_number_one=2022-03-04@15:41:31"
         /// Example 2: -d "timeout_number_one=4128381238132"
@@ -161,9 +162,7 @@ pub enum StateArgs {
     Create {
         creator_role: String,
         initial_ada: i64
-    },
-    // todo - add command for parsing this as well
-    // as we already have support for it in the lib.
+    }
 }
 
 impl Default for Args {
