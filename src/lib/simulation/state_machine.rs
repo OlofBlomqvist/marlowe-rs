@@ -1,6 +1,6 @@
 use std::{collections::HashMap, ops::Neg};
 
-use crate::types::marlowe::*;
+use crate::{types::marlowe::*, parsing::serialization::marlowe::{self, serialize}};
 
 
 #[derive(Debug,PartialEq)]
@@ -208,16 +208,6 @@ impl ContractInstance {
         now.unwrap().as_millis() as u64
     }
     
-    // TODO
-    pub fn pay(&self,from_account:Party, to: Payee, token:Token, pay:Value, then:Contract) -> Result<(ContractInstance,MachineState),String> {
-        // todo: add to payout.
-        // validate that we have enough in the from account to actually do the payment.
-        // validate that we have a payout address to use?
-        // log that we sent a payment and what the tx would look like to unlock the utxo from the payoutvalidator script.
-        Self::process(&self)        
-    }
-
-    // TODO: this can only be applied if we are inside of a WHEN and is below timeout.
     pub fn apply_input_choice(&self,applied_choice_name:String, applied_choice_owner:Party, applied_chosen_value: i64) -> Result<ContractInstance,String> {
         
         let (mut new_instance,machine_state) = self.process()?;
@@ -277,16 +267,34 @@ impl ContractInstance {
                             expected_amount, 
                             expected_target_account, 
                             continuation 
-                        } => 
+                        } => {
+
+                            let reduced_value = self.reduce_num_value(&quantity)?;
+                            let reduced_expected_value = self.reduce_num_value(&expected_amount)?;
+
                             if who_is_expected_to_pay == &from   // here we make
                                 && &asset == expected_asset_type  // sure that
-                                && expected_amount == &quantity   // everything that is being applied
+                                && reduced_value == reduced_expected_value
                                 && expected_target_account == &to 
                             {
+                                
+                                let reduced_value = self.reduce_num_value(&quantity)?;
+                                
+                                // Add or update amount for the party that is depositing value to their account.
+                                if let Some(existing_amount) = new_instance.datum.state.accounts.get_mut(&(from.clone(),asset.clone())) {
+                                    *existing_amount = *existing_amount + reduced_value;
+                                } else {
+                                    new_instance.datum.state.accounts.insert(
+                                        (from.clone(),asset.clone()), 
+                                        reduced_value
+                                    );
+                                }
+                                
                                 new_instance.datum.contract = continuation.clone();
                                 new_instance.logs.push(format!("Deposit was successfully applied: '{x:?}' has been applied."));
                                 return Ok(new_instance)
                             }
+                        }
                         _ => {}
                     }
                 }
@@ -324,14 +332,34 @@ impl ContractInstance {
                 return Ok((new_instance,MachineState::Closed))
             },
 
-            // TODO!!!
-            Contract::Pay { from_account, to, token, pay, then } => {
+            Contract::Pay { 
+                from_account:Some(from), 
+                to:Some(to_acc), 
+                token:Some(tok), 
+                pay:Some(pay_amount), 
+                then:Some(continuation)
+            } => {
                 
                 let mut new_instance = self.clone();
                 new_instance.logs.push("Processing Pay contract".into());
-                todo!();
-                // TODO -> UPDATE STATE HERE
-                //Ok((new_instance,MachineState::ReadyForNextStep))
+                new_instance.datum.contract = *continuation.clone();
+
+                let acc_val = new_instance.datum.state.accounts.get_mut(&(from.clone(),tok.clone()));
+                let reduced_amount = self.reduce_num_value(pay_amount)?;
+                
+                if let Some(available_amount) = acc_val {
+                    
+                    if *available_amount < reduced_amount {
+                        return Err(format!("Unable to perform payout as the account ({from}) does not have enough tokens. Contract attempted to send '{reduced_amount}' when the account only contains '{available_amount}'."))
+                    } else {
+                        *available_amount =  *available_amount - reduced_amount;
+                    }
+
+                    new_instance.payouts.push(format!("A payout was made! '{from}' sent '{reduced_amount}' of '{tok}' from '{from}' to: '{to_acc}' "));
+                    Ok((new_instance,MachineState::ReadyForNextStep))
+                } else {
+                    Err(format!("Unable to perform payout since the from account ({from}) does not have any such token in his account state."))
+                }
             },
 
             Contract::If { x_if:Some(obs), then:Some(A), x_else:Some(B) } => {
@@ -463,7 +491,7 @@ impl ContractInstance {
 }
 
 #[test]
-pub fn state_machine_basic_example() {
+pub fn state_machine_basic_example2() {
 
     let iffy = Contract::If { 
         x_if: Some(Observation::AndObs { both: Some(Box::new(Observation::True)), and:Some(Box::new(Observation::True)) }), 
@@ -559,7 +587,27 @@ pub fn state_machine_basic_example() {
                                                     )
                                                 )
                                             ), 
-                                            then: Some(Contract::Close.boxed()) , 
+                                            then: Some(Contract::When { 
+                                                when: vec![
+                                                    Some(Case { 
+                                                        case: Some(Action::Deposit { 
+                                                            into_account: Some(Party::Role { role_token: "NISSE".into() }), 
+                                                            party: Some(Party::Role { role_token: "NISSE".into() }), 
+                                                            of_token: Some(Token::ada()), 
+                                                            deposits: Some(Value::ConstantValue(42))
+                                                        }), 
+                                                        then: Some(PossiblyMerkleizedContract::Raw(Contract::Pay { 
+                                                            from_account: Some(Party::Role { role_token: "NISSE".into() }), 
+                                                            to: Some(Payee::Party(Some(Party::Role {role_token: "NISSE".into()}))), 
+                                                            token: Some(Token::ada()), 
+                                                            pay: Some(Value::ConstantValue(42)), 
+                                                            then: Some(Contract::Close.boxed()) 
+                                                        }.boxed()))
+                                                    })
+                                                ], 
+                                                timeout: Some(Timeout::TimeConstant((ContractInstance::get_current_time()+(2000*60*60)).try_into().unwrap())), 
+                                                timeout_continuation: Some(Contract::Close.boxed()) 
+                                            }.boxed()) , 
                                             x_else: Some(Contract::Close.boxed()) 
                                         }.boxed()
                                     ))
@@ -601,6 +649,11 @@ pub fn state_machine_basic_example() {
             "nisses_second_choice".into(),
             Party::Role { role_token: "NISSE".into() }, 
             3
+        ).unwrap().process().unwrap().0.apply_input_deposit(
+            Party::Role { role_token: "NISSE".into() },
+            Token::ada(), 
+            Value::MulValue(Some(Box::new(Value::ConstantValue(42/2))),Some(Box::new(Value::ConstantValue(2)))), 
+            Party::Role { role_token: "NISSE".into() }
         ).unwrap().process().unwrap();
 
     for x in &machine_of_first_kind.0.logs {
