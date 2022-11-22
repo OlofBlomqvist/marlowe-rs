@@ -82,12 +82,12 @@ Case = ${
 }
 
 Payee = _{ PayeeHole | PayeeAccount | PayeeParty }
-PayeeAccount = ${ lpar ~ "Account" ~ WHITESPACE+ ~ Party ~ rpar }
-PayeeParty = ${ lpar ~ "Party" ~ WHITESPACE+ ~ Party ~ rpar }
+PayeeAccount = ${ lpar ~ WHITESPACE* ~ "Account" ~ WHITESPACE+ ~ Party ~ WHITESPACE* ~ rpar }
+PayeeParty = ${ lpar ~ WHITESPACE* ~ "Party" ~ WHITESPACE+ ~ Party ~ WHITESPACE* ~ rpar }
 Party = _{ PartyHole | Role | Address }
 FromParty = _{ FromPartyHole | Role | Address }
-Role = ${ lpar ~ "Role" ~ WHITESPACE+ ~ quoted_string ~ rpar }
-Address = ${ lpar ~ "Address" ~ WHITESPACE+ ~ quoted_string ~ rpar }
+Role = ${ lpar ~ WHITESPACE* ~ "Role" ~ WHITESPACE+ ~ quoted_string ~ WHITESPACE* ~ rpar }
+Address = ${ lpar ~ WHITESPACE* ~ "Address" ~ WHITESPACE+ ~ quoted_string ~ WHITESPACE* ~ rpar }
 Account = ${ "Account" ~ WHITESPACE+ ~ Party }
 
 MainContract = _{ Contract ~ EOI }

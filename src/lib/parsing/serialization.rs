@@ -506,7 +506,7 @@ pub mod marlowe {
     /// Takes an instance of a Marlowe contract and serializes
     /// it into the Marlowe DSL format
     pub fn serialize(contract:Contract) -> String { 
-        crate::parsing::fmt::fmt(&format!("{:#}",contract))
+        format!("{:#}",contract)
     }
 
     impl std::fmt::Display for InputAction {

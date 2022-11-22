@@ -1,7 +1,7 @@
 mod args;
 use args::{DatumArgs, RedeemerArgs, StateArgs, ContractArgs, PlutusArgs};
 use cardano_multiplatform_lib::{plutus};
-use marlowe_lang::{types::marlowe::{Contract, MarloweDatum, PossibleMerkleizedInput}};
+use marlowe_lang::{types::marlowe::{Contract, MarloweDatum, PossibleMerkleizedInput}, parsing::serialization::marlowe};
 use std::{collections::HashMap};
 use marlowe_lang::extras::utils::*;
 use plutus_data::{ToPlutusData, PlutusData, FromPlutusData};
@@ -30,6 +30,7 @@ fn datum_handler(args:DatumArgs) {
                 let contract = 
                     format!("Contract (Marlowe-DSL): {}",
                         marlowe_lang::parsing::serialization::marlowe::serialize(x.contract));
+                
                 format!("Validator hash: {validator_hash}\n\nState: {}\n\nContinuation: {}",x.state,contract)
             },
             DatumOutputEncoding::PlutusDataDetailedJson => {
@@ -131,7 +132,8 @@ fn contract_handler(args:ContractArgs) {
             ContractOutputInfoType::CborHex => 
                 hex::encode(c.to_plutus_data(&vec![]).unwrap().to_bytes()),
             ContractOutputInfoType::MarloweDSL => 
-                marlowe_lang::parsing::serialization::marlowe::serialize(c),
+                marlowe_lang::parsing::fmt::fmt(&
+                    marlowe_lang::parsing::serialization::marlowe::serialize(c)),
             ContractOutputInfoType::MarloweJSON => 
                 marlowe_lang::parsing::serialization::json::serialize(c).unwrap(),
             ContractOutputInfoType::PlutusDataDetailedJson => {
