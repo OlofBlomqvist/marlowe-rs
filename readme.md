@@ -20,8 +20,7 @@ does not yet support using using address for parties, so if you want to parse co
 
 
 ### Features
-- Serialize/Deserialize between: MarloweDSL <-> Rust <-> Json <-> Rust <-> PlutusData
-- Serialize Marlowe-DSL (-> Rust) -> Json
+- Encode/Decode contracts between: MarloweDSL/Rust/Json/CborHex
 - Encode/Decode marlowe datums and redeemers to/from marlowe-dsl/cborhex/json.
 - List contract parameters used in a contract (extended marlowe)
 - Initialization of contract variables (extended-marlowe).
