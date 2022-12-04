@@ -20,22 +20,18 @@ does not yet support using using address for parties, so if you want to parse co
 
 
 ### Features
-- Deserialize Marlowe contracts in to Rust types.
-- Serialize the Rust types back in to Marlowe.
-- Tokenization of Marlowe contracts.
-- Serialize marlowe-dsl to json for use with the marlowe-cli tool etc.
-- Decode marlowe datum (state + continuation contract) from cborhex/json
-- Decode marlowe input (spend|redeemer) from cborhex/json.
-- Encode marlowe datum (state + continuation contract) to cborhex/json/marlowe.
-- Encode marlowe input (spend|redeemer) to cborhex/json/marlowe.
-- Initialization of contract variables.
+- Serialize/Deserialize between: MarloweDSL <-> Rust <-> Json <-> Rust <-> PlutusData
+- Serialize Marlowe-DSL (-> Rust) -> Json
+- Encode/Decode marlowe datums and redeemers to/from marlowe-dsl/cborhex/json.
+- List contract parameters used in a contract (extended marlowe)
+- Initialization of contract variables (extended-marlowe).
 
 ### Planned features
-- Generate contract inputs
-- Generate contract history
-- View contract state and valid next inputs
-- Generate transaction from state and inputs
-- Basic contract simulation
+- [wip] Basic contract simulation
+- [wip] View valid next inputs to a contract
+- [wip] Generate contract inputs
+- [todo] Generate contract history
+- [todo] Generate transaction from state and inputs
 
 ### Disclaimers
 
@@ -47,35 +43,46 @@ does not yet support using using address for parties, so if you want to parse co
   It will likely have to be rebuilt from the ground up when Marlowe v3 is official.
 
 
-### Example usage
+### Example usages
 
+
+// Describing a contract in Rust
 ```rust
-use marlowe_lang::types::marlowe::*;
-use marlowe_lang::parsing::{
- deserialization::deserialize,
- serialization::serialize,
-};
+pub fn basic_example() {
 
-let my_contract = Contract::When {
-    cases: vec![
-        Some(Case { 
-            action: Some(Action::Notify { 
-                notify_if: Some(Observation::TrueObs) 
-            }), 
-            contract: Some(Contract::Close.boxed()) } )
-    ],
-    timeout: Some(timeout::TimeParam("test".into())),
-    timeout_continuation: Some(Contract::Close.boxed()),
-};
+    use crate::types::marlowe_without_holes::*;
+    
+    let p1 = Party::Role { role_token: "P1".into() };
+    let p2 = Party::Role { role_token: "P2".into() };
+    let tok = Token::ada();
+    let quantity = Value::ConstantValue(42000000);
 
-let serialized = serialize(my_contract);
-let deserialized : Contract = deserialize(&serialized).unwrap();
-println!("{serialized}");
-```
+    let contract = Contract::When { 
+        when: vec![
+            Case { 
+                case: Action::Deposit { 
+                    into_account: p2.clone(), 
+                    party: p1.clone(), 
+                    of_token: tok, 
+                    deposits: quantity
+                }, 
+                then: 
+                    Contract::Pay { 
+                        from_account: p1, 
+                        to: Payee::Party(p2), 
+                        token: Token::ada(), 
+                        pay: Value::ConstantValue(42), 
+                        then: Contract::Close.into()
+                    } 
+            }
+        ], 
+        timeout: Timeout::TimeConstant(999999999), 
+        timeout_continuation: Contract::Close.into()
+    };
 
-#### Where 'println!("{serialized}")' would output this:
-```text
-When [ Case (Notify (TrueObs)) Close ] (TimeParam "test") Close
+    println!("{}",crate::parsing::serialization::marlowe::serialize(contract.into()));
+    
+}
 ```
 
 ## CLI Tool:
@@ -84,7 +91,9 @@ When [ Case (Notify (TrueObs)) Close ] (TimeParam "test") Close
 - Encoding/Decoding contracts, datums and inputs
 between MarloweDSL,Json,PlutusJson,CborHex
 - Generate very basic state structure
-- Add inputs to marlowe contracts (replace variables with consts etc)
+- List contract input parameters (marlowe extended)
+- Add inputs to marlowe contracts (replace marlowe extended variables with consts etc)
+- View expected actions/inputs to a contract.
 
 
 ### How to install marlowe_lang_cli:
@@ -93,20 +102,35 @@ rustup default nightly
 cargo install marlowe_lang
 ```
 
-### marlowe_lang -h
+### marlowe_lang_cli -h
 ```text
-USAGE:
-    marlowe_lang_cli.exe <SUBCOMMAND>
+Usage: marlowe_lang_cli <COMMAND>
 
-OPTIONS:
-    -h, --help       Print help information
-    -V, --version    Print version information
+Commands:
+  datum        Tools for working with datums
+  state        Tools for working with state
+  redeemer     Tools for working with inputs/redeemers (marlowe actions)
+  contract     Tools for working with contracts
+  plutus-data  Tools for working with unknown plutus data
+  help         Print this message or the help of the given subcommand(s)
 
-SUBCOMMANDS:
-    contract       Tools for working with contracts
-    datum          Tools for working with datums
-    help           Print this message or the help of the given subcommand(s)
-    plutus-data    Tools for working with unknown plutus data
-    redeemer       Tools for working with inputs/redeemers (marlowe actions)
-    state          Tools for working with state
+Options:
+  -h, --help     Print help information
+  -V, --version  Print version information
+```
+
+### marlowe_lang_cli decoding a datum
+```text
+./marlowe_lang datum from-string d8799fd8799f40ffd8799fa1d8799fd8799fd87a80d8799fd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd87a80ffffd8799f4040ffff1a002dc6c0a0a001ffd87c9f9fd8799fd8799fd8799fd87a80d8799fd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd87a80ffffd8799fd87a80d8799fd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd87a80ffffd8799f581ca7f7e57db27c9e2f80c205ccb30f73e57f0ee8fc21aff7b86b5daf7845476c6f6265ffd87a9f19012cffffd87c9f9fd8799fd8799fd8799fd87a80d8799fd8799f581cfd37884bbd044c72e5f29de1b777a9c1c1d531773535cd5b55e2f6ffffd87a80ffffd8799fd87a80d8799fd8799f581cfd37884bbd044c72e5f29de1b777a9c1c1d531773535cd5b55e2f6ffffd87a80ffffd8799f581cecc8ad61b973946ee1cc666b259acabb3edf38a73f1b8779d93ba28a445377616effd87a9f1901f4ffffd87a9fd8799fd87a80d8799fd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd87a80ffffd87a9fd8799fd87a80d8799fd8799f581cfd37884bbd044c72e5f29de1b777a9c1c1d531773535cd5b55e2f6ffffd87a80ffffffd8799f581ca7f7e57db27c9e2f80c205ccb30f73e57f0ee8fc21aff7b86b5daf7845476c6f6265ffd87a9f19012cffd87a9fd8799fd87a80d8799fd8799f581cfd37884bbd044c72e5f29de1b777a9c1c1d531773535cd5b55e2f6ffffd87a80ffffd87a9fd8799fd87a80d8799fd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd87a80ffffffd8799f581cecc8ad61b973946ee1cc666b259acabb3edf38a73f1b8779d93ba28a445377616effd87a9f1901f4ffd87980ffffffff1b0000018386dd2358d87980ffffff1b000001838449f558d87980ffff cbor-hex detailed-text`
+
+State: (MarloweDatumState Accounts([{ (Address "addr1vywt2xlr4d8yk4qws675exlqy6pdhq2s76wrehkjggkvr0czta9gx"),(Token "" ""),3000000 },]) Bound_Values({}) Choices({}) MinTime(1))    
+
+Continuation: Contract (Marlowe-DSL): When [ (Case (Deposit (Address "addr1vywt2xlr4d8yk4qws675exlqy6pdhq2s76wrehkjggkvr0czta9gx") (Address "addr1vywt2xlr4d8yk4qws675exlqy6pdhq2s76wrehkjggkvr0czta9gx") (Token "a7f7e57db27c9e2f80c205ccb30f73e57f0ee8fc21aff7b86b5daf78" "Globe") (Constant 300)) (When [ (Case (Deposit (Address "addr1v87n0zzth5zycuh972w7rdmh48qur4f3wu6ntn2m2h30dlchhlqt3") (Address "addr1v87n0zzth5zycuh972w7rdmh48qur4f3wu6ntn2m2h30dlchhlqt3") (Token "ecc8ad61b973946ee1cc666b259acabb3edf38a73f1b8779d93ba28a" "Swan") (Constant 500)) (Pay (Address "addr1vywt2xlr4d8yk4qws675exlqy6pdhq2s76wrehkjggkvr0czta9gx") (Party (Address "addr1v87n0zzth5zycuh972w7rdmh48qur4f3wu6ntn2m2h30dlchhlqt3")) (Token "a7f7e57db27c9e2f80c205ccb30f73e57f0ee8fc21aff7b86b5daf78" "Globe") (Constant 300) (Pay (Address "addr1v87n0zzth5zycuh972w7rdmh48qur4f3wu6ntn2m2h30dlchhlqt3") (Party (Address "addr1vywt2xlr4d8yk4qws675exlqy6pdhq2s76wrehkjggkvr0czta9gx")) (Token "ecc8ad61b973946ee1cc666b259acabb3edf38a73f1b8779d93ba28a" "Swan") (Constant 500) Close))) ] 1664414983000 Close)) ] 1664371783000 Close
+```
+### marlowe_lang_cli decoding redeemer / input actions
+```text 
+./marlowe_lang redeemer from-string 9fd8799fd8799fd8799fd87a80d8799fd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd87a80ffffd8799fd87a80d8799fd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd87a80ffffd8799f581ca7f7e57db27c9e2f80c205ccb30f73e57f0ee8fc21aff7b86b5daf7845476c6f6265ff19012cffffff cbor-hex marlowe-dsl
+
+RESULT:
+ (Deposit (Address "addr1vywt2xlr4d8yk4qws675exlqy6pdhq2s76wrehkjggkvr0czta9gx") (Address "addr1vywt2xlr4d8yk4qws675exlqy6pdhq2s76wrehkjggkvr0czta9gx") (Token "a7f7e57db27c9e2f80c205ccb30f73e57f0ee8fc21aff7b86b5daf78" "Globe") 300)
 ```
