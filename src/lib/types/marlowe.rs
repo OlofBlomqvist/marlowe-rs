@@ -650,14 +650,17 @@ impl Contract {
                 };
 
             match &x.then {
-                Some(PossiblyMerkleizedContract::Raw(c)) => inner(&c,action_fields),
+                Some(PossiblyMerkleizedContract::Raw(c)) => get_from_contract(&c,action_fields),
                 _ => action_fields                
             }   
         }
-        fn get_from_timeout(_x:&Timeout) -> Vec<RequiredContractInputField> {
-            vec![]
+        fn get_from_timeout(x:&Timeout) -> Vec<RequiredContractInputField> {
+            match x {
+                Timeout::TimeConstant(_) => vec![],
+                Timeout::TimeParam(p) => vec![RequiredContractInputField::TimeParam(p.into())],
+            }
         }
-        fn inner(contract:&Contract,acc:Vec<RequiredContractInputField>) -> Vec<RequiredContractInputField> {
+        fn get_from_contract(contract:&Contract,acc:Vec<RequiredContractInputField>) -> Vec<RequiredContractInputField> {
             match contract {
                 Contract::Close => acc,
                 Contract::Pay { 
@@ -674,7 +677,7 @@ impl Contract {
                         [ pay_value_fields, acc ].concat();
 
                     if let Some(continuation) = then {
-                        inner(continuation,updated_acc)
+                        get_from_contract(continuation,updated_acc)
                     } else {
                         updated_acc
                     }
@@ -690,7 +693,7 @@ impl Contract {
 
                     let else_contract_fields = match x_else {
                         Some(c) => {
-                            inner(c,vec![])
+                            get_from_contract(c,vec![])
                         },
                         _ => vec![]
                     };
@@ -698,7 +701,7 @@ impl Contract {
                     let updated_acc = [else_contract_fields,if_fields].concat();
 
                     match then {
-                        Some(c) => inner(c,updated_acc),
+                        Some(c) => get_from_contract(c,updated_acc),
                         _ => updated_acc
                     }
 
@@ -725,7 +728,7 @@ impl Contract {
                     let updated_acc = [timeout_fields,acc,when_fields].concat();
 
                     match timeout_continuation {
-                        Some(c) => inner(c,updated_acc),
+                        Some(c) => get_from_contract(c,updated_acc),
                         None => updated_acc,
                     }
                 },
@@ -738,7 +741,7 @@ impl Contract {
                     let be_value_fields = get_from_value_box(be);
                     match then {
                         Some(c) => {
-                            inner(c,[be_value_fields,acc].concat())
+                            get_from_contract(c,[be_value_fields,acc].concat())
                         },
                         _ => [be_value_fields,acc].concat()
                     }
@@ -752,7 +755,7 @@ impl Contract {
 
                     match then {
                         Some(c) => {
-                            inner(c,[assert_fields,acc].concat())
+                            get_from_contract(c,[assert_fields,acc].concat())
                         },
                         _ => [assert_fields,acc].concat()
                     }
@@ -761,7 +764,7 @@ impl Contract {
             }
         }
 
-        let mut result = inner(self,vec![]);
+        let mut result = get_from_contract(self,vec![]);
         result.sort_by_key(|x|format!("{x:?}"));
         result.dedup();
         result

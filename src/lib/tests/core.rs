@@ -391,6 +391,13 @@ pub fn can_find_uninitialized_inputs() -> Result<(),String> {
     if found_inputs.is_empty() {
         return Err(String::from("Did not find any inputs in the contract."))
     }
+
+    if found_inputs.len() != (result.uninitialized_const_params.len() + result.uninitialized_time_params.len()) {
+        println!("parser found these consts: {:?}",result.uninitialized_const_params);
+        println!("parser found these times: {:?}",result.uninitialized_time_params);
+        println!("contract impl found these: {:?}",found_inputs);
+        return Err(format!("PARSE AND STRUCT IMPL DIFF!"))
+    }
     
     for x in found_inputs {
         match x {

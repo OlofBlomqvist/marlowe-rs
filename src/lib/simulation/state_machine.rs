@@ -391,7 +391,7 @@ impl ContractInstance {
                     Timeout::TimeParam(p) => {
                         match self.datum.state.bound_values.get(p) {
                             Some(v) => v.to_owned() as u64,
-                            None => return Err(format!("Invalid timeout parameter: {p}")),
+                            None => return Err(format!("Uninitialized timeout parameter: {p}")),
                         }
                     },
                 };
@@ -491,7 +491,7 @@ impl ContractInstance {
 }
 
 #[test]
-pub fn state_machine_basic_example2() {
+fn state_machine_basic_example2() {
 
     let iffy = Contract::If { 
         x_if: Some(Observation::AndObs { both: Some(Box::new(Observation::True)), and:Some(Box::new(Observation::True)) }), 

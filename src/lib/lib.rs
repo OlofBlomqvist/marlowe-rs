@@ -82,7 +82,7 @@ pub mod parsing;
 pub mod extras;
 
 // Simulation of contracts
-mod simulation;
+pub mod simulation;
 
 #[cfg(test)]
 mod tests;

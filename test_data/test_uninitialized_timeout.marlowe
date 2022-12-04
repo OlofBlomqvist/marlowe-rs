@@ -16,4 +16,4 @@ When
             )
             Close 
         ))]
-    (TimeParam "Kalle") Close 
+    (TimeParam "MyTimeoutParam") Close 

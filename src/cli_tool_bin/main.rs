@@ -1,7 +1,7 @@
 mod args;
 use args::{DatumArgs, RedeemerArgs, StateArgs, ContractArgs, PlutusArgs};
 use cardano_multiplatform_lib::{plutus};
-use marlowe_lang::{types::marlowe::{Contract, MarloweDatum, PossibleMerkleizedInput}, parsing::serialization::marlowe};
+use marlowe_lang::{types::marlowe::{Contract, MarloweDatum, PossibleMerkleizedInput}, parsing::serialization::marlowe, simulation::state_machine::MachineState};
 use std::{collections::HashMap};
 use marlowe_lang::extras::utils::*;
 use plutus_data::{ToPlutusData, PlutusData, FromPlutusData};
@@ -119,16 +119,43 @@ fn state_handler(args:StateArgs) {
 }
 
 
+// TODO:::::    
+// cargo run --bin marlowe_lang_cli contract from-file .\test_data\test_uninitialized_timeout.marlowe  marlowe-dsl extended-marlowe-inputs
+// does not seem to return any inputs??? should return the timrout param?
+
+// this works:  cargo run --bin marlowe_lang_cli contract from-file .\test_data\Coupon_Bond_Guaranteed.marlowe marlowe-dsl extended-marlowe-inputs
+
+// This seems to work : expected actions with input init
+//cargo run --bin marlowe_lang_cli contract from-file -i "MyTimeoutParam=9999999999999" .\test_data\test_uninitialized_timeout.marlowe  marlowe-dsl expected-actions
+
+// ... seems its just timeout that did not work?
+
 fn contract_handler(args:ContractArgs) {
 
     fn serialize(c:Contract,e:ContractOutputInfoType) -> String {
-        match e{
-            ContractOutputInfoType::ExpectedActions => 
-                match c {
-                    Contract::Close => String::from("None"),
-                    _ => todo!()
+        match e {
+            ContractOutputInfoType::ExtendedMarloweInputs => {
+                let ext_vars = c.list_input_params();
+                let mut result_string = String::new();
+                for x in ext_vars {
+                    match x {
+                        marlowe_lang::types::marlowe::RequiredContractInputField::TimeParam(v) => 
+                            result_string.push_str(&format!("Time param: {v}\n")),
+                        marlowe_lang::types::marlowe::RequiredContractInputField::ConstantParam(v) => 
+                            result_string.push_str(&format!("Const param: {v}\n")),
+                    }                    
                 }
-            ,
+                result_string
+            }
+            ContractOutputInfoType::ExpectedActions => {
+                let machine = marlowe_lang::simulation::state_machine::ContractInstance::new(&c, None);
+                let result = machine.process().unwrap();
+                let state: MachineState = result.1;
+                for x in result.0.logs {
+                    println!("--> {x}")
+                }
+                format!("Contract state:\n{:?}",state)
+            },
             ContractOutputInfoType::CborHex => 
                 hex::encode(c.to_plutus_data(&vec![]).unwrap().to_bytes()),
             ContractOutputInfoType::MarloweDSL => 
