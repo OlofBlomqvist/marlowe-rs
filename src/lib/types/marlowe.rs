@@ -542,6 +542,229 @@ pub struct MarloweDatum {
     #[base_16]pub marlowe_params : MarloweParams,
     pub state : MarloweDatumState,
     pub contract : Contract,
-    
 }
 
+
+
+#[derive(Clone,Debug,PartialEq)]
+pub enum RequiredContractInputField {
+    TimeParam(String),
+    ConstantParam(String)
+}
+
+
+impl Contract {
+
+    // It is possible to get this information during parsing
+    // but if you already have an instance of a contract, using this method 
+    // will be more performant, which is why we dont just serialize and re-parse here.
+    pub fn list_input_params(&self) -> Vec<RequiredContractInputField> {
+        
+        fn get_from_action(x:&Action) -> Vec<RequiredContractInputField> { 
+
+            match x {
+                Action::Deposit { 
+                    into_account:_, 
+                    party:_, 
+                    of_token:_, 
+                    deposits 
+                } => get_from_value(deposits),
+                Action::Choice { for_choice:_, choose_between:_ } => vec![],
+                Action::Notify { notify_if } => get_from_obs(notify_if),
+            }
+
+        }
+
+        fn get_from_value_box(x:&Option<Box<Value>>) -> Vec<RequiredContractInputField> {
+            match x {
+                Some(v) => get_from_value(&Some(*v.clone())),
+                None => vec![],
+            }
+        }
+        fn get_from_obs_box(x:&Option<Box<Observation>>) -> Vec<RequiredContractInputField> {
+            match x {
+                Some(v) => get_from_obs(&Some(*v.clone())),
+                None => vec![],
+            }
+        }
+        fn get_from_value(x:&Option<Value>) -> Vec<RequiredContractInputField> {
+            if let Some(x) = x {
+                match x {
+                    Value::AvailableMoney(_,_) => vec![],
+                    Value::ConstantValue(_) => vec![],
+                    Value::NegValue(v) => get_from_value_box(v),
+                    Value::AddValue(a, b) => 
+                        vec![get_from_value_box(a),get_from_value_box(b)].concat(),
+                    Value::SubValue(a, b) => 
+                        vec![get_from_value_box(a),get_from_value_box(b)].concat(),
+                    Value::MulValue(a, b) => 
+                        vec![get_from_value_box(a),get_from_value_box(b)].concat(),
+                    Value::DivValue(a, b) => 
+                        vec![get_from_value_box(a),get_from_value_box(b)].concat(),
+                    Value::ChoiceValue(_) => vec![],
+                    Value::TimeIntervalStart => vec![],
+                    Value::TimeIntervalEnd =>vec![],
+                    Value::UseValue(_) => vec![],
+                    Value::Cond(obs, v1, v2) => {
+                        [   get_from_obs(obs),
+                            get_from_value_box(v1),
+                            get_from_value_box(v2)
+                        ].concat()
+                    },
+                    Value::ConstantParam(name) => {
+                        vec![RequiredContractInputField::ConstantParam(name.into())]
+                    }
+                }
+            } else {vec![]}
+        }
+        fn get_from_obs(x:&Option<Observation>) -> Vec<RequiredContractInputField> {
+            if let Some(x) = x {
+                match x {
+                    Observation::AndObs { both, and } => 
+                        [get_from_obs_box(both),get_from_obs_box(and)].concat(),
+                    Observation::OrObs { either, or } => 
+                        [get_from_obs_box(either),get_from_obs_box(or)].concat(),
+                    Observation::NotObs { not } => get_from_obs_box(not),
+                    Observation::ChoseSomething(_) => vec![],
+                    Observation::ValueGE { value, ge_than } => 
+                        [get_from_value_box(value),get_from_value_box(ge_than)].concat(),
+                    Observation::ValueGT { value, gt_than } => 
+                        [get_from_value_box(value),get_from_value_box(gt_than)].concat(),
+                    Observation::ValueLT { value, lt_than } => 
+                        [get_from_value_box(value),get_from_value_box(lt_than)].concat(),
+                    Observation::ValueLE { value, le_than } => 
+                        [get_from_value_box(value),get_from_value_box(le_than)].concat(),
+                    Observation::ValueEQ { value, equal_to } => 
+                        [get_from_value_box(value),get_from_value_box(equal_to)].concat(),
+                    Observation::True => vec![],
+                    Observation::False => vec![]
+                }
+            } else {vec![]}
+        }
+        fn get_from_case(x:&Case) -> Vec<RequiredContractInputField> {
+            let action_fields = 
+                if let Some(a) = &x.case { 
+                    get_from_action(&a)          
+                } else {
+                    vec![]
+                };
+
+            match &x.then {
+                Some(PossiblyMerkleizedContract::Raw(c)) => inner(&c,action_fields),
+                _ => action_fields                
+            }   
+        }
+        fn get_from_timeout(_x:&Timeout) -> Vec<RequiredContractInputField> {
+            vec![]
+        }
+        fn inner(contract:&Contract,acc:Vec<RequiredContractInputField>) -> Vec<RequiredContractInputField> {
+            match contract {
+                Contract::Close => acc,
+                Contract::Pay { 
+                    from_account:_, 
+                    to:_, 
+                    token:_, 
+                    pay, 
+                    then 
+                } => {
+                    
+                    let pay_value_fields = get_from_value(pay);
+
+                    let updated_acc = 
+                        [ pay_value_fields, acc ].concat();
+
+                    if let Some(continuation) = then {
+                        inner(continuation,updated_acc)
+                    } else {
+                        updated_acc
+                    }
+
+                },
+                Contract::If { 
+                    x_if, 
+                    then, 
+                    x_else 
+                } => {
+
+                    let if_fields = get_from_obs(x_if);
+
+                    let else_contract_fields = match x_else {
+                        Some(c) => {
+                            inner(c,vec![])
+                        },
+                        _ => vec![]
+                    };
+
+                    let updated_acc = [else_contract_fields,if_fields].concat();
+
+                    match then {
+                        Some(c) => inner(c,updated_acc),
+                        _ => updated_acc
+                    }
+
+                    
+                },
+                Contract::When { 
+                    when, 
+                    timeout, 
+                    timeout_continuation 
+                } => {
+
+                    let when_fields : Vec<RequiredContractInputField> = 
+                        when
+                        .iter()
+                        .filter_map(|x|x.as_ref())
+                        .flat_map(get_from_case)
+                        .collect();
+
+                    let timeout_fields = 
+                        if let Some(t) = timeout {
+                            get_from_timeout(t)
+                        } else {vec![]};
+
+                    let updated_acc = [timeout_fields,acc,when_fields].concat();
+
+                    match timeout_continuation {
+                        Some(c) => inner(c,updated_acc),
+                        None => updated_acc,
+                    }
+                },
+                Contract::Let { 
+                    x_let :_, // value_id is a string so cant contain any field
+                    be, 
+                    then 
+                } => {
+
+                    let be_value_fields = get_from_value_box(be);
+                    match then {
+                        Some(c) => {
+                            inner(c,[be_value_fields,acc].concat())
+                        },
+                        _ => [be_value_fields,acc].concat()
+                    }
+                },
+                Contract::Assert { 
+                    assert, 
+                    then 
+                } => {
+
+                    let assert_fields = get_from_obs(assert);
+
+                    match then {
+                        Some(c) => {
+                            inner(c,[assert_fields,acc].concat())
+                        },
+                        _ => [assert_fields,acc].concat()
+                    }
+
+                },
+            }
+        }
+
+        let mut result = inner(self,vec![]);
+        result.sort_by_key(|x|format!("{x:?}"));
+        result.dedup();
+        result
+
+    }
+}

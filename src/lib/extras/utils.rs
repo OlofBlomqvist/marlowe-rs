@@ -19,7 +19,7 @@ pub fn decode_hex(s: &str) -> Result<Vec<u8>, String> {
 pub fn try_marlowe_to_json(contract:&str) -> Result<String,String> {
     match marlowe_lang::parsing::deserialization::deserialize(&contract) {
         Ok(c) => {
-            match marlowe_lang::parsing::serialization::json::serialize(c) {
+            match marlowe_lang::parsing::serialization::json::serialize(c.contract) {
                 Ok(j) => Ok(j),
                 Err(e) => Err(format!("Failed to serialize the contract! {:?}",e))
             }

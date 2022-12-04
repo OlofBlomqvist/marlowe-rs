@@ -16,7 +16,8 @@ fn encode_decode_contract_to_plutus_data() {
     _ = std::fs::remove_file("FAILING_TEST_PLUTUS_ERROR_dectpd_pre.marlowe");
 
     let serialized_contract = read_to_string(&"sample.marlowe").unwrap();
-    let contract = deserialize(&serialized_contract).unwrap();
+    let parse_result = deserialize(&serialized_contract).unwrap();
+    let contract = parse_result.contract;
     let encoded = contract.to_plutus_data(&vec![]).expect("failed to encode a contract to plutus data.");
     let encoded_json_plutus = datum_to_json(&encoded).unwrap();
     _ = std::fs::write("SAMPLE_ENCODED_AS_JSON_PLUTUS.json",encoded_json_plutus);
@@ -49,10 +50,10 @@ fn encode_decode_contract_to_plutus_data_all_playground_samples() {
         if !path_string.to_uppercase().ends_with(".MARLOWE") || path_string.contains("test_simple_addr") { continue; }
         let serialized_contract = read_to_string(&path_string).unwrap();
         let deserialization_result = deserialize(&serialized_contract).expect(&format!("failed to deserialize marlowe dsl {}",path_string));
-        match deserialization_result.to_plutus_data(&vec![]) {
+        match deserialization_result.contract.to_plutus_data(&vec![]) {
             Ok(encoded) => {
                 let decoded = Contract::from_plutus_data(encoded,&vec![]).expect(&format!("could not deserialize contract from our own encoded bytes.. {}",path_string));
-                let pre = format!("{:#?}",deserialization_result);
+                let pre = format!("{:#?}",deserialization_result.contract);
                 let post = format!("{:#?}",decoded);
                 if pre != post {
                     _ = std::fs::write("FAILING_TEST_pre.marlowe", pre);

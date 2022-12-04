@@ -58,7 +58,7 @@
 //! };
 //! 
 //! let serialized = serialize(my_contract);
-//! let deserialized : Contract = deserialize(&serialized).unwrap();
+//! let deserialized : Contract = deserialize(&serialized).unwrap().contract;
 //! println!("{serialized}");
 //! ```
 //! 

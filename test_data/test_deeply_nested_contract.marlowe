@@ -634,7 +634,7 @@ When  [
                                                                                                                                                                     (Cond
                                                                                                                                                                         (ValueLT
                                                                                                                                                                             (UseValue "Decrease in price")
-                                                                                                                                                                            (ConstantParam "Amount paid by counterparty")
+                                                                                                                                                                            (ConstantParam "Very deep constant parameter for test")
                                                                                                                                                                         )
                                                                                                                                                                         (UseValue "Decrease in price")
                                                                                                                                                                         (ConstantParam "Amount paid by counterparty")
@@ -804,7 +804,7 @@ When  [
 
                                                                                                                                                                                                                                     (UseValue "Increase in price")
 
-                                                                                                                                                                                                                                    (ConstantParam "Amount paid by party")
+                                                                                                                                                                                                                                    (ConstantParam "Even deeper constant param for test")
                                                                                                                                                                                                                                     
                                                                                                                                                                                                                                 )
                                                                                                                                                                                                                                 Close 
@@ -813,7 +813,7 @@ When  [
                                                                                                                                                                                                                         Close 
                                                                                                                                                                                                                     )
                                                                                                                                                                                                                 ))]
-                                                                                                                                                                                                            (TimeParam "Second window deadline")
+                                                                                                                                                                                                            (TimeParam "Deeply nested time param for test")
                                                                                                                                                                                                             Close 
                                                                                                                                                                                                         )
                                                                                                                                                                                                     ))]

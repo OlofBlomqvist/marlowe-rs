@@ -1,3 +1,6 @@
+// This file is used for exporting helper methods that would otherwise
+// be hard to use from js/ts.
+
 use console_error_panic_hook;
 use cardano_multiplatform_lib::plutus::PlutusData;
 use wasm_bindgen::prelude::*;
@@ -6,17 +9,17 @@ use crate::extras::utils::*;
 use plutus_data::FromPlutusData;
 
 #[wasm_bindgen]
-pub fn decode_marlowe_input_cbor_hex(redeemer_cbor_hex:&str) -> JsValue {
+pub fn decode_marlowe_input_cbor_hex(redeemer_cbor_hex:&str) -> String {
     let s = super::utils::try_decode_redeemer_input_cbor_hex(redeemer_cbor_hex);
     let s = serde_json::to_string_pretty(&s).unwrap();
-    JsValue::from_str(&s)
+    s
 }
  
 #[wasm_bindgen]
-pub fn decode_marlowe_input_json(redeemer_json:&str) -> JsValue {
+pub fn decode_marlowe_input_json(redeemer_json:&str) -> String {
     let s = super::utils::try_decode_redeemer_input_json(redeemer_json);
     let s = serde_json::to_string_pretty(&s).unwrap();
-    JsValue::from_str(&s)
+    s
 }
 
 #[wasm_bindgen(start)] 
@@ -31,14 +34,14 @@ fn wasm_log(x:&str) {
 }
 
 #[wasm_bindgen]
-pub fn marlowe_to_json(contract:&str) -> Result<JsValue,JsValue> {
+pub fn marlowe_to_json(contract:&str) -> Result<String,String> {
     match super::utils::try_marlowe_to_json(&contract) {
-        Ok(j) => Ok(JsValue::from_str(&j)),
-        Err(e) => Err(JsValue::from_str(&format!("{:?}",e)))
+        Ok(j) => Ok(j),
+        Err(e) => Err(e)
     }
 }
 
-fn marlowe_datum_to_json_type(x:MarloweDatum) -> JsValue {
+fn marlowe_datum_to_json_type(x:MarloweDatum) -> String {
     
     let contract = format!(
         "Contract (Marlowe-DSL): {}",
@@ -47,12 +50,12 @@ fn marlowe_datum_to_json_type(x:MarloweDatum) -> JsValue {
 
     let state = format!("State: {:?}\n\nContinuation: {}",x.state,contract);
     let result = format!("{}\n\n{}",contract,state);
-    JsValue::from_str(&result)
+    result
 }
 
 
 #[wasm_bindgen]
-pub fn decode_cborhex_marlowe_plutus_datum(cbor_hex:&str) -> Result<JsValue,JsError> {
+pub fn decode_cborhex_marlowe_plutus_datum(cbor_hex:&str) -> Result<String,JsError> {
     
     let cbor = decode_hex(cbor_hex);
     if cbor.is_err() {
@@ -80,7 +83,7 @@ pub fn decode_cborhex_marlowe_plutus_datum(cbor_hex:&str) -> Result<JsValue,JsEr
 
 
 #[wasm_bindgen]
-pub fn decode_json_encoded_marlowe_plutus_datum(plutus_encoded_datum:&str) -> Result<JsValue,JsError> {
+pub fn decode_json_encoded_marlowe_plutus_datum(plutus_encoded_datum:&str) -> Result<String,JsError> {
     match try_decode_json_encoded_marlowe_plutus_datum(plutus_encoded_datum) {
         Ok(v) => {
             Ok(marlowe_datum_to_json_type(v))
@@ -107,25 +110,3 @@ pub fn cbor_hex_to_json_basic_schema(bytes:Vec<u8>) -> Result<JsValue,JsError> {
         Err(e) => Err(JsError::new(&format!("{:?}",e)))
     }
 }
-
-
-
-
-
-
-// TODO - IMPLEMENT THIS ?
-
-// //#[wasm_bindgen]
-// struct MarloweMachine {
-//     #[allow(dead_code)]
-//     data : Vec<String>
-// }
-
-// //#[wasm_bindgen]
-// impl MarloweMachine {
-//     #[wasm_bindgen(constructor)]
-//     fn new() -> MarloweMachine {
-//         console_error_panic_hook::set_once();
-//         MarloweMachine { data: vec![] }
-//     }
-// }

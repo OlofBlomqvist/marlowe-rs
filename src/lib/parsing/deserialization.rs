@@ -28,11 +28,18 @@ fn option_to_result<T>(maybe_ast_node:Option<T>,msg:&str) -> Result<T,&str> {
     }
 }
 
-fn parse_with_input<T>(pair:Pair<Rule>,input:HashMap<String,i64>) -> std::result::Result<T,String>
-    where Result<T, String>: From<AstNode> { 
-        parse_raw(pair,input)?.into() }
 
-fn parse_raw(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<AstNode,String> {
+struct RawContractParseResult {
+    pub uninitialized_time_params : Vec<String>,
+    pub uninitialized_const_params : Vec<String>,
+    pub node : AstNode
+}
+pub struct ContractParseResult {
+    pub uninitialized_time_params : Vec<String>,
+    pub uninitialized_const_params : Vec<String>,
+    pub contract : Contract
+}
+fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<RawContractParseResult,String> {
     
     let mut keys : Vec<String> = input.keys().map(|x|x.to_owned()).collect();
     keys.dedup();
@@ -54,6 +61,10 @@ fn parse_raw(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<AstNode,String
         }];
 
     let mut result_stack : Vec<AstNode> = vec![];
+    
+    let mut uninitialized_time_params: Vec<String> = vec![];
+    let mut uninitialized_const_params :  Vec<String> = vec![];
+
 
     while let Some(mut current_operation) = call_stack.pop() {
 
@@ -86,6 +97,7 @@ fn parse_raw(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<AstNode,String
             };
         }
 
+
         macro_rules! try_get_next { () => { (get_next_node(&mut current_operation))};}
         macro_rules! get_next { () => { try_get_next!()? } }
         macro_rules! get_next_into { () => { get_next!().try_into()? };}
@@ -101,6 +113,7 @@ fn parse_raw(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<AstNode,String
                         fold_back!(AstNode::MarloweValue(Value::ConstantValue(*value_from_input)))
                     },
                     None => {
+                        uninitialized_const_params.push(parameter_name.clone());
                         fold_back!(AstNode::MarloweValue(Value::ConstantParam(parameter_name)))
                     },
                 }
@@ -127,7 +140,10 @@ fn parse_raw(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<AstNode,String
                     Some(value_from_input) => {
                         fold_back!(AstNode::MarloweTimeout(Timeout::TimeConstant(*value_from_input)))
                     },
-                    None => fold_back!(AstNode::MarloweTimeout(Timeout::TimeParam(parameter_name))),
+                    None => {
+                        uninitialized_time_params.push(parameter_name.clone());
+                        fold_back!(AstNode::MarloweTimeout(Timeout::TimeParam(parameter_name)))
+                    },
                 }
             },
             Rule::PayeeAccount => fold_back!(AstNode::MarlowePayee(Payee::Account(get_next_into!()))),
@@ -372,9 +388,19 @@ fn parse_raw(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<AstNode,String
     if result_stack.len() != 1 {
         return Err(format!("Marlowe_Lang::ErrorCode(1) : {:?}",result_stack).to_string())
     };
+    
+    uninitialized_const_params.sort();
+    uninitialized_const_params.dedup();
+    uninitialized_time_params.sort();
+    uninitialized_time_params.dedup();
+
     match result_stack.pop() {
         Some(v) => {
-            Ok(v)
+            Ok(RawContractParseResult { 
+                node: v, 
+                uninitialized_const_params: uninitialized_const_params,
+                uninitialized_time_params: uninitialized_time_params
+            })
         }
         _ => Err("Marlowe_Lang::ErrorCode(2)".to_string())
     }
@@ -383,12 +409,11 @@ fn parse_raw(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<AstNode,String
 
 
 /// Parses a string into an instance of a Marlowe contract
-pub fn deserialize(content:&str) -> Result<Contract,String>  { 
+pub fn deserialize(content:&str) -> Result<ContractParseResult,String>  { 
     deserialize_with_input(content,Default::default())
 }
-/// Parses a string into an instance of a Marlowe contract using the input data 
-/// to populate constant and timeout parameters.
-pub fn deserialize_with_input(content:&str,input:HashMap<String,i64>) -> Result<Contract,String>  {
+
+pub fn deserialize_with_input(content:&str,input:HashMap<String,i64>) -> Result<ContractParseResult,String>  {
     match <super::MarloweParser as pest::Parser::<Rule>>::parse(
         Rule::MainContract, 
         content
@@ -397,8 +422,12 @@ pub fn deserialize_with_input(content:&str,input:HashMap<String,i64>) -> Result<
             match pairs.next() {
                 None => Result::Err("it doesn't look like anything to me.".to_string()),
                 Some(root) => {
-                    match parse_with_input::<Contract>(root,input) {
-                        Ok(v) => Ok(v),
+                    match parse_raw_inner(root,input) {
+                        Ok(v) => Ok(ContractParseResult { 
+                            uninitialized_time_params: v.uninitialized_time_params, 
+                            uninitialized_const_params: v.uninitialized_const_params, 
+                            contract: v.node.try_into()?
+                        }),
                         Err(e) => Err(e),
                     }
                 }
@@ -407,4 +436,3 @@ pub fn deserialize_with_input(content:&str,input:HashMap<String,i64>) -> Result<
         Result::Err(e) => Err(format!("{e:#}"))
     }
 }
-

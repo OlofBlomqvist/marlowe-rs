@@ -1,6 +1,6 @@
 use std::{collections::HashMap, ops::Neg};
 
-use crate::{types::marlowe::*, parsing::serialization::marlowe::{self, serialize}};
+use crate::types::marlowe::*;
 
 
 #[derive(Debug,PartialEq)]
@@ -33,7 +33,7 @@ pub enum MachineState {
 }
 
 
-#[derive(Clone,Debug,plutus_data::ToPlutusDataDerive,plutus_data::FromPlutusDataDerive)]
+#[derive(Clone,Debug)]
 pub struct ContractInstance {
     pub datum : MarloweDatum,
     pub payouts : Vec<String>,
@@ -362,7 +362,7 @@ impl ContractInstance {
                 }
             },
 
-            Contract::If { x_if:Some(obs), then:Some(A), x_else:Some(B) } => {
+            Contract::If { x_if:Some(obs), then:Some(a), x_else:Some(b) } => {
                 let mut new_instance = self.clone();
                 new_instance.logs.push("Processing IF contract".into());
                 let obs_is_true = 
@@ -373,10 +373,10 @@ impl ContractInstance {
                 
                 new_instance.datum.contract = if obs_is_true {
                     new_instance.logs.push("IF Contract observation resolved to true. Will enter the THEN continuation".into());
-                    *A.clone()
+                    *a.clone()
                 } else {
                     new_instance.logs.push("IF Contract observation resolved to false. Will enter the ELSE continuation".into());
-                    *B.clone()
+                    *b.clone()
                 };
                 Ok((new_instance,MachineState::ReadyForNextStep))
             },

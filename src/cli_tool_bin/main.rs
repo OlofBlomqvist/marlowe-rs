@@ -160,9 +160,9 @@ fn contract_handler(args:ContractArgs) {
                             let value_num = value.trim().parse::<i64>().unwrap();                        
                             h.insert(name.trim().to_string(),value_num);
                         }
-                        marlowe_lang::parsing::deserialization::deserialize_with_input(&s,h).unwrap()
+                        marlowe_lang::parsing::deserialization::deserialize_with_input(&s,h).unwrap().contract
                     },
-                    None => marlowe_lang::parsing::deserialization::deserialize(&s).unwrap()
+                    None => marlowe_lang::parsing::deserialization::deserialize(&s).unwrap().contract
                 }
             }
             ContractInputEncoding::PlutusDataDetailedJson => {
