@@ -32,18 +32,7 @@ does not yet support using using address for parties, so if you want to parse co
 - [todo] Generate contract history
 - [todo] Generate transaction from state and inputs
 
-### Disclaimers
-
-- This crate was created as a learning exercise and should not be trusted anywhere near a production environment at this time.
-
-- It is a side-project and might be dropped completely at any time (it may already be dead!)
-
-- The pest.rs grammar file is just an initial attempt to make sense of the language from a high level. 
-  It will likely have to be rebuilt from the ground up when Marlowe v3 is official.
-
-
 ### Example usages
-
 
 // Describing a contract in Rust
 ```rust
