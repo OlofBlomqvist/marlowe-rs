@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate as marlowe_lang;
 use crate::types::marlowe::*;
 
@@ -16,8 +18,8 @@ pub fn decode_hex(s: &str) -> Result<Vec<u8>, String> {
         .collect()
 }
 
-pub fn try_marlowe_to_json(contract:&str) -> Result<String,String> {
-    match marlowe_lang::parsing::deserialization::deserialize(&contract) {
+pub fn try_marlowe_to_json(contract:&str,inputs:&HashMap::<String,i64>) -> Result<String,String> {
+    match marlowe_lang::parsing::deserialization::deserialize_with_input(&contract,inputs.clone()) {
         Ok(c) => {
             match marlowe_lang::parsing::serialization::json::serialize(c.contract) {
                 Ok(j) => Ok(j),

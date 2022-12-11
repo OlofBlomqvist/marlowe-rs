@@ -10,10 +10,11 @@ pub fn fmt(text:&str) -> String {
     let mut previous_non_space_char : Option<char> = None;
     for x in text.chars() {
         match x {
+            '\r'|'\n'|'\t' => {},
             '"' => {
                 is_inside_strlit = !is_inside_strlit;
                 s.push(x)
-            },
+            },            
             '[' if !is_inside_strlit => {
                 s.push('\n');
                 s.push_str("\t".repeat(depth).as_str());
@@ -54,8 +55,6 @@ pub fn fmt(text:&str) -> String {
             ']' if !is_inside_strlit => {
                 depth = depth - 1;
                 s.push(x);
-            },
-            '\r'|'\n'|'\t' => {
             }
             _ => s.push(x)
             

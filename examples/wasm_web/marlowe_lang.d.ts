@@ -2,32 +2,45 @@
 /* eslint-disable */
 /**
 * @param {string} redeemer_cbor_hex
-* @returns {any}
+* @returns {string}
 */
-export function decode_marlowe_input_cbor_hex(redeemer_cbor_hex: string): any;
+export function decode_marlowe_input_cbor_hex(redeemer_cbor_hex: string): string;
 /**
 * @param {string} redeemer_json
-* @returns {any}
+* @returns {string}
 */
-export function decode_marlowe_input_json(redeemer_json: string): any;
+export function decode_marlowe_input_json(redeemer_json: string): string;
 /**
 */
 export function main(): void;
 /**
 * @param {string} contract
-* @returns {any}
+* @returns {string}
 */
-export function marlowe_to_json(contract: string): any;
+export function marlowe_to_json(contract: string): string;
+/**
+* params_str format by example:
+* "variable_one_name=12345,variable_two_name=6789"
+* @param {string} contract
+* @param {string} params_str
+* @returns {string}
+*/
+export function marlowe_to_json_with_inputs(contract: string, params_str: string): string;
+/**
+* @param {string} contract
+* @returns {string}
+*/
+export function format_marlowe(contract: string): string;
 /**
 * @param {string} cbor_hex
-* @returns {any}
+* @returns {string}
 */
-export function decode_cborhex_marlowe_plutus_datum(cbor_hex: string): any;
+export function decode_cborhex_marlowe_plutus_datum(cbor_hex: string): string;
 /**
 * @param {string} plutus_encoded_datum
-* @returns {any}
+* @returns {string}
 */
-export function decode_json_encoded_marlowe_plutus_datum(plutus_encoded_datum: string): any;
+export function decode_json_encoded_marlowe_plutus_datum(plutus_encoded_datum: string): string;
 /**
 * @param {Uint8Array} bytes
 * @returns {any}
@@ -38,6 +51,21 @@ export function cbor_hex_to_json_detailed_schema(bytes: Uint8Array): any;
 * @returns {any}
 */
 export function cbor_hex_to_json_basic_schema(bytes: Uint8Array): any;
+/**
+* @param {string} marlowe_dsl
+* @returns {any[]}
+*/
+export function get_input_params_for_contract(marlowe_dsl: string): any[];
+/**
+* @param {string} marlowe_dsl
+* @returns {any[]}
+*/
+export function list_inputs_params(marlowe_dsl: string): any[];
+/**
+* @param {string} marlowe_dsl
+* @returns {string}
+*/
+export function get_expected_input_action(marlowe_dsl: string): string;
 /**
 * @param {string} json
 * @param {number} schema
@@ -8212,14 +8240,19 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
-  readonly decode_marlowe_input_cbor_hex: (a: number, b: number) => number;
-  readonly decode_marlowe_input_json: (a: number, b: number) => number;
+  readonly decode_marlowe_input_cbor_hex: (a: number, b: number, c: number) => void;
+  readonly decode_marlowe_input_json: (a: number, b: number, c: number) => void;
   readonly main: () => void;
   readonly marlowe_to_json: (a: number, b: number, c: number) => void;
+  readonly marlowe_to_json_with_inputs: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly format_marlowe: (a: number, b: number, c: number) => void;
   readonly decode_cborhex_marlowe_plutus_datum: (a: number, b: number, c: number) => void;
   readonly decode_json_encoded_marlowe_plutus_datum: (a: number, b: number, c: number) => void;
   readonly cbor_hex_to_json_detailed_schema: (a: number, b: number, c: number) => void;
   readonly cbor_hex_to_json_basic_schema: (a: number, b: number, c: number) => void;
+  readonly get_input_params_for_contract: (a: number, b: number, c: number) => void;
+  readonly list_inputs_params: (a: number, b: number, c: number) => void;
+  readonly get_expected_input_action: (a: number, b: number, c: number) => void;
   readonly __wbg_unitinterval_free: (a: number) => void;
   readonly unitinterval_to_bytes: (a: number, b: number) => void;
   readonly unitinterval_from_bytes: (a: number, b: number, c: number) => void;

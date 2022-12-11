@@ -1,9 +1,11 @@
 use std::{collections::HashMap, ops::Neg};
 
+use serde::Serialize;
+
 use crate::types::marlowe::*;
 
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug,PartialEq,Serialize)]
 pub enum InputType {
 
     Deposit { 
@@ -24,7 +26,7 @@ pub enum InputType {
     Notify
 }
 
-#[derive(Debug)]
+#[derive(Debug,Serialize)]
 pub enum MachineState {
     Closed,
     Faulted(String),
@@ -45,6 +47,7 @@ pub struct ContractInstance {
 impl ContractInstance {
 
     // TODO - handle params and state
+    // TODO - Enum so that we can either use a contract or a datum since datum contains and overrides the contract.
     pub fn new(contract:&Contract,datum:Option<MarloweDatum>) -> Self {
         ContractInstance {
             datum: if let Some(d) = datum {d} else { MarloweDatum { 

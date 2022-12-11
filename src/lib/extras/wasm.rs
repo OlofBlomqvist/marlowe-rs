@@ -1,6 +1,8 @@
 // This file is used for exporting helper methods that would otherwise
 // be hard to use from js/ts.
 
+use std::collections::HashMap;
+
 use console_error_panic_hook;
 use cardano_multiplatform_lib::plutus::PlutusData;
 use wasm_bindgen::prelude::*;
@@ -35,10 +37,53 @@ fn wasm_log(x:&str) {
 
 #[wasm_bindgen]
 pub fn marlowe_to_json(contract:&str) -> Result<String,String> {
-    match super::utils::try_marlowe_to_json(&contract) {
+    match super::utils::try_marlowe_to_json(&contract,&std::collections::HashMap::new()) {
         Ok(j) => Ok(j),
         Err(e) => Err(e)
     }
+}
+
+
+/// params_str format by example:
+/// "variable_one_name=12345,variable_two_name=6789"
+#[wasm_bindgen(catch,method)]
+pub fn marlowe_to_json_with_variables(contract:&str,params_str:&str) -> Result<String,String> {
+    let mut h = HashMap::new();
+    if params_str.contains("=") {
+        for x in params_str.split(",") {
+            let (name,value) = x.split_once("=").unwrap();
+            let value_num = value.trim().parse::<i64>().unwrap();                        
+            h.insert(name.trim().to_string(),value_num);
+        }
+    }
+    match super::utils::try_marlowe_to_json(&contract,&h) {
+        Ok(j) => Ok(j),
+        Err(e) => Err(e)
+    }
+}
+
+/// params_str format by example:
+/// "variable_one_name=12345,variable_two_name=6789"
+#[wasm_bindgen(catch,method)]
+pub fn parse_marlowe_with_variables(contract:&str,params_str:&str) -> Result<String,String> {
+    let mut h = HashMap::new();
+    if params_str.contains("=") {
+        for x in params_str.split(",") {
+            let (name,value) = x.split_once("=").unwrap();
+            let value_num = value.trim().parse::<i64>().unwrap();                        
+            h.insert(name.trim().to_string(),value_num);
+        }
+    }
+    let result = crate::parsing::deserialization::deserialize_with_input(contract, h);
+    match result{
+        Ok(j) => Ok(crate::parsing::serialization::marlowe::serialize(j.contract)),
+        Err(e) => Err(e)
+    }
+}
+
+#[wasm_bindgen(catch)]
+pub fn format_marlowe(contract:&str) -> String {
+    crate::parsing::fmt::fmt(contract)
 }
 
 fn marlowe_datum_to_json_type(x:MarloweDatum) -> String {
@@ -47,14 +92,13 @@ fn marlowe_datum_to_json_type(x:MarloweDatum) -> String {
         "Contract (Marlowe-DSL): {}",
         crate::parsing::serialization::marlowe::serialize(x.contract)
     );
-
     let state = format!("State: {:?}\n\nContinuation: {}",x.state,contract);
     let result = format!("{}\n\n{}",contract,state);
     result
 }
 
 
-#[wasm_bindgen]
+#[wasm_bindgen(catch)]
 pub fn decode_cborhex_marlowe_plutus_datum(cbor_hex:&str) -> Result<String,JsError> {
     
     let cbor = decode_hex(cbor_hex);
@@ -109,4 +153,83 @@ pub fn cbor_hex_to_json_basic_schema(bytes:Vec<u8>) -> Result<JsValue,JsError> {
         Ok(v) => Ok(JsValue::from_str(&v)),
         Err(e) => Err(JsError::new(&format!("{:?}",e)))
     }
+}
+
+#[wasm_bindgen(method,catch)]
+pub fn get_input_params_for_contract(marlowe_dsl:&str) -> Result<Vec<JsValue>,String> {
+    let contract = 
+        crate::parsing::deserialization::deserialize(marlowe_dsl)?;
+    Ok([
+        contract.uninitialized_const_params.iter().map(|x| 
+            JsValue::from_str(&format!("CONST_PARAM:{x}"))).collect::<Vec<JsValue>>(),
+
+        contract.uninitialized_time_params.iter().map(|x| 
+            JsValue::from_str(&format!("TIME_PARAM:{x}"))).collect::<Vec<JsValue>>()
+
+    ].concat())
+}
+
+#[wasm_bindgen(method,catch)]
+pub fn list_inputs_params(marlowe_dsl:&str) -> Result<Vec<JsValue>,String> {
+    
+    let contract = 
+        crate::parsing::deserialization::deserialize(marlowe_dsl)?;
+    
+    Ok([
+
+        contract.uninitialized_const_params.iter().map(|x| 
+            JsValue::from_str(&format!("CONST_PARAM:{x}"))).collect::<Vec<JsValue>>(),
+
+        contract.uninitialized_time_params.iter().map(|x| 
+            JsValue::from_str(&format!("TIME_PARAM:{x}"))).collect::<Vec<JsValue>>()
+
+    ].concat())
+}
+
+
+#[wasm_bindgen(method,catch)]
+pub fn get_expected_input_action(marlowe_dsl:&str) -> Result<String,String> {
+    
+    let contract = 
+        crate::parsing::deserialization::deserialize(marlowe_dsl)?;
+    
+    let machine = crate::simulation::state_machine::ContractInstance::new(&contract.contract,None);
+    let result = machine.process().unwrap();
+
+    let result = serde_json::to_string(&result.1).unwrap();
+
+    Ok(result)
+}
+
+
+
+#[wasm_bindgen]
+pub struct WASMMarloweStateMachine {
+    internal_instance : crate::simulation::state_machine::ContractInstance    
+}
+
+#[wasm_bindgen]
+impl WASMMarloweStateMachine {
+    
+    #[wasm_bindgen(catch,constructor)]
+    
+    /// Takes an initialized (non-marlowe-extended) MarloweDSL contract as input.
+    pub fn create(contract:&str) -> Result<WASMMarloweStateMachine,String> {
+        // todo : should we take datum here instead?
+        let c = crate::parsing::deserialization::deserialize(&contract)?;
+        Ok(Self {
+            internal_instance : crate::simulation::state_machine::ContractInstance::new(&c.contract,None)
+        })
+    }
+
+    #[wasm_bindgen(catch,method)]
+    pub fn get_next_expected_input(&self) -> Result<String,String> {
+        let (_,state)= self.internal_instance.process()?;
+        // todo: need to impl serialize/deserialize for machine state
+        // so that we can send it to javascript
+        Ok(format!("{:?}",state))
+        
+    }
+
+
 }

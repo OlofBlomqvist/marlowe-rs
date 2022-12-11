@@ -1,14 +1,19 @@
 /* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
-export function decode_marlowe_input_cbor_hex(a: number, b: number): number;
-export function decode_marlowe_input_json(a: number, b: number): number;
+export function decode_marlowe_input_cbor_hex(a: number, b: number, c: number): void;
+export function decode_marlowe_input_json(a: number, b: number, c: number): void;
 export function main(): void;
 export function marlowe_to_json(a: number, b: number, c: number): void;
+export function marlowe_to_json_with_inputs(a: number, b: number, c: number, d: number, e: number): void;
+export function format_marlowe(a: number, b: number, c: number): void;
 export function decode_cborhex_marlowe_plutus_datum(a: number, b: number, c: number): void;
 export function decode_json_encoded_marlowe_plutus_datum(a: number, b: number, c: number): void;
 export function cbor_hex_to_json_detailed_schema(a: number, b: number, c: number): void;
 export function cbor_hex_to_json_basic_schema(a: number, b: number, c: number): void;
+export function get_input_params_for_contract(a: number, b: number, c: number): void;
+export function list_inputs_params(a: number, b: number, c: number): void;
+export function get_expected_input_action(a: number, b: number, c: number): void;
 export function __wbg_unitinterval_free(a: number): void;
 export function unitinterval_to_bytes(a: number, b: number): void;
 export function unitinterval_from_bytes(a: number, b: number, c: number): void;
