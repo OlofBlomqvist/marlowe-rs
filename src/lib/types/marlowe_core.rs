@@ -1,130 +1,158 @@
+use serde::Deserialize;
+use serde::Serialize;
+
 use crate::types::marlowe::Address;
-use crate::types::marlowe::Timeout;
 use crate::types::marlowe::Bound;
 use crate::types::marlowe::Token;
 use crate::types::marlowe::PossiblyMerkleizedContract;
 
-#[derive(Clone)]
+
+
+pub type Timeout = i64;
+
+
+#[derive(Clone,Serialize,Deserialize,Debug)]
 pub struct Case { 
     pub case: Action,
     pub then: Contract
 }
 
-impl From<Contract> for crate::types::marlowe::Contract {
-    fn from(x: Contract) -> Self {
-        match x {
+impl TryFrom<Contract> for crate::types::marlowe::Contract {
+    type Error = String;
+    fn try_from(x: Contract) -> Result<Self,Self::Error> {
+        Ok(match x {
             Contract::Close => crate::types::marlowe::Contract::Close,
             Contract::Pay { from_account, to, token, pay, then } => 
                 crate::types::marlowe::Contract::Pay { 
-                    from_account: Some(from_account.into()), 
-                    to: Some(to.into()), 
+                    from_account: Some(from_account.try_into()?), 
+                    to: Some(to.try_into()?), 
                     token: Some(token.into()), 
-                    pay: Some(pay.into()), 
-                    then: Some(Box::new((*then).into()))
+                    pay: Some(pay.try_into()?), 
+                    then: Some(Box::new((*then).try_into()?))
                 },
             Contract::If { x_if, then, x_else } => 
                 crate::types::marlowe::Contract::If {
-                    x_if: Some(x_if.into()),
-                    then: Some(Box::new((*then).into())),
-                    x_else: Some(Box::new((*x_else).into())),
+                    x_if: Some(x_if.try_into()?),
+                    then: Some(Box::new((*then).try_into()?)),
+                    x_else: Some(Box::new((*x_else).try_into()?)),
                 },
-            Contract::When { when, timeout, timeout_continuation } => 
+            Contract::When { when, timeout, timeout_continuation } => {
+                let mut whens = vec![];
+                for x in when {
+                    let y : crate::types::marlowe::Case = x.try_into()?; 
+                    whens.push(Some(y))
+                }
                 crate::types::marlowe::Contract::When { 
-                    when: when.iter().map(|x|Some(x.into())).collect(),
-                    timeout: Some(timeout), 
-                    timeout_continuation: Some(Box::new((*timeout_continuation).into())),
-                },
+                    when: whens,
+                    timeout: Some(super::marlowe::Timeout::TimeConstant(timeout)), 
+                    timeout_continuation: Some(Box::new((*timeout_continuation).try_into()?)),
+                }
+            },
             Contract::Let { x_let, be, then } => 
                 crate::types::marlowe::Contract::Let { 
                     x_let: x_let.into(), 
-                    be: Some(Box::new((*be).into())),
-                    then: Some(Box::new((*then).into())),
+                    be: Some(Box::new((*be).try_into()?)),
+                    then: Some(Box::new((*then).try_into()?)),
                 },
             Contract::Assert { assert, then } => 
                 crate::types::marlowe::Contract::Assert { 
-                    assert: Some(assert.into()), 
-                    then: Some(Box::new((*then).into())),
+                    assert: Some(assert.try_into()?), 
+                    then: Some(Box::new((*then).try_into()?)),
                 },
-        }
+        })
     }
 }
 
-impl From<Observation> for crate::types::marlowe::Observation {
-    fn from(x: Observation) -> Self {
-        match x {
+impl TryFrom<Observation> for crate::types::marlowe::Observation {
+    
+    type Error = String;
+
+    fn try_from(x: Observation) -> Result<Self,Self::Error> {
+        Ok(match x {
             Observation::AndObs { both, and } => 
-                crate::types::marlowe::Observation::AndObs { both: Some(Box::new((*both).into())), and: Some(Box::new((*and).into())) },
+                crate::types::marlowe::Observation::AndObs { both: Some(Box::new((*both).try_into()?)), and: Some(Box::new((*and).try_into()?)) },
 
             Observation::OrObs { either, or } => 
-                crate::types::marlowe::Observation::OrObs { either: Some(Box::new((*either).into())), or: Some(Box::new((*or).into())) },
+                crate::types::marlowe::Observation::OrObs { either: Some(Box::new((*either).try_into()?)), or: Some(Box::new((*or).try_into()?)) },
                 
             Observation::NotObs { not } => 
-                crate::types::marlowe::Observation::NotObs { not: Some(Box::new((*not).into())) },
+                crate::types::marlowe::Observation::NotObs { not: Some(Box::new((*not).try_into()?)) },
 
             Observation::ChoseSomething(v) => 
-                crate::types::marlowe::Observation::ChoseSomething(Some(v.into())),
+                crate::types::marlowe::Observation::ChoseSomething(Some(v.try_into()?)),
 
             Observation::ValueGE { value, ge_than } => 
-                crate::types::marlowe::Observation::ValueGE { value: Some(Box::new((*value).into())), ge_than: Some(Box::new((*ge_than).into())) },
+                crate::types::marlowe::Observation::ValueGE { value: Some(Box::new((*value).try_into()?)), ge_than: Some(Box::new((*ge_than).try_into()?)) },
 
             Observation::ValueGT { value, gt_than } => 
-                crate::types::marlowe::Observation::ValueGT { value:  Some(Box::new((*value).into())), gt_than: Some(Box::new((*gt_than).into())) },
+                crate::types::marlowe::Observation::ValueGT { value:  Some(Box::new((*value).try_into()?)), gt_than: Some(Box::new((*gt_than).try_into()?)) },
 
             Observation::ValueLT { value, lt_than } => 
-                crate::types::marlowe::Observation::ValueLT { value:  Some(Box::new((*value).into())), lt_than: Some(Box::new((*lt_than).into())) },
+                crate::types::marlowe::Observation::ValueLT { value:  Some(Box::new((*value).try_into()?)), lt_than: Some(Box::new((*lt_than).try_into()?)) },
 
             Observation::ValueLE { value, le_than } => 
-                crate::types::marlowe::Observation::ValueLE { value:  Some(Box::new((*value).into())), le_than: Some(Box::new((*le_than).into())) },
+                crate::types::marlowe::Observation::ValueLE { value:  Some(Box::new((*value).try_into()?)), le_than: Some(Box::new((*le_than).try_into()?)) },
 
             Observation::ValueEQ { value, equal_to } => 
-                crate::types::marlowe::Observation::ValueEQ { value:  Some(Box::new((*value).into())), equal_to: Some(Box::new((*equal_to).into())) },
+                crate::types::marlowe::Observation::ValueEQ { value:  Some(Box::new((*value).try_into()?)), equal_to: Some(Box::new((*equal_to).try_into()?)) },
 
             Observation::True => crate::types::marlowe::Observation::True,
 
             Observation::False => crate::types::marlowe::Observation::False
-        }
+        })
     }
 }
 
-impl From<Payee> for crate::types::marlowe::Payee {
-    fn from(x: Payee) -> Self {
-        match x {
-            Payee::Account(acc) => crate::types::marlowe::Payee::Account(Some(acc.into())),
-            Payee::Party(p) => crate::types::marlowe::Payee::Party(Some(p.into())),
-        }
+impl TryFrom<Payee> for crate::types::marlowe::Payee {
+    type Error = String;
+    fn try_from(x: Payee) -> Result<Self,Self::Error> {
+        Ok(match x {
+            Payee::Account(acc) => crate::types::marlowe::Payee::Account(Some(acc.try_into()?)),
+            Payee::Party(p) => crate::types::marlowe::Payee::Party(Some(p.try_into()?)),
+        })
     }
 }
 
-impl From<&Case> for crate::types::marlowe::Case {
-    fn from(x: &Case) -> Self {
+
+impl TryFrom<&Case> for crate::types::marlowe::Case {
+    type Error = String;
+    fn try_from(x: &Case) -> Result<Self,Self::Error> {
         let actual = x.clone();
-        actual.into()
+        actual.try_into()
     }
 } 
-impl From<Case> for crate::types::marlowe::Case {
-    fn from(x: Case) -> Self {
-        Self {
-            case: Some(x.case.into()),
-            then: Some(PossiblyMerkleizedContract::Raw(Box::new(x.then.into()))),
-        }
+
+impl TryFrom<Case> for crate::types::marlowe::Case {
+    type Error = String;
+    fn try_from(x: Case) -> Result<Self,Self::Error> {
+        Ok(Self {
+            case: Some(x.case.try_into()?),
+            then: Some(PossiblyMerkleizedContract::Raw(Box::new(x.then.try_into()?))),
+        })
     }
 }
 
-impl From<Party> for crate::types::marlowe::Party {
-    fn from(x: Party) -> Self {
+
+impl TryFrom<Party> for crate::types::marlowe::Party {
+    type Error = String;
+    fn try_from(x: Party) -> Result<Self, Self::Error> {
         match x {
-            Party::Address(a) => crate::types::marlowe::Party::Address(a),
-            Party::Role { role_token } => crate::types::marlowe::Party::Role {role_token},
+            Party::Address(bech32_address) => match Address::from_bech32(&bech32_address) {
+                Ok(a) => Ok(crate::types::marlowe::Party::Address(a)),
+                Err(e) => Err(format!("{e:?}")),
+            },
+            Party::Role(role_token) => Ok(crate::types::marlowe::Party::Role {role_token}),
         }
     }
 }
 
-impl From<ChoiceId> for crate::types::marlowe::ChoiceId {
-    fn from(x: ChoiceId) -> Self {
-        crate::types::marlowe::ChoiceId {
+impl TryFrom<ChoiceId> for crate::types::marlowe::ChoiceId {
+    type Error = String;
+    fn try_from(x: ChoiceId) -> Result<Self,Self::Error> {
+        Ok(crate::types::marlowe::ChoiceId {
             choice_name: x.choice_name,
-            choice_owner: Some(x.choice_owner.into()),
-        }
+            choice_owner: Some(x.choice_owner.try_into()?),
+        })
     }
 }
 
@@ -136,50 +164,52 @@ impl From<ValueId> for crate::types::marlowe::ValueId {
     }
 }
 
-impl From<Value> for crate::types::marlowe::Value {
-    fn from(x: Value) -> Self {
-        match x {
-            Value::AvailableMoney(a, b) => crate::types::marlowe::Value::AvailableMoney(Some(a.into()), Some(b)),
+impl TryFrom<Value> for crate::types::marlowe::Value {
+    type Error = String;
+    fn try_from(x: Value) -> Result<Self,Self::Error> {
+        Ok(match x {
+            Value::AvailableMoney(a, b) => crate::types::marlowe::Value::AvailableMoney(Some(a.try_into()?), Some(b)),
             Value::ConstantValue(a) => crate::types::marlowe::Value::ConstantValue(a),
-            Value::NegValue(a) => crate::types::marlowe::Value::NegValue(Some(Box::new((*a).into()))),
-            Value::AddValue(a,b) => crate::types::marlowe::Value::AddValue(Some(Box::new((*a).into())),Some(Box::new((*b).into()))),
-            Value::SubValue(a,b) => crate::types::marlowe::Value::SubValue(Some(Box::new((*a).into())),Some(Box::new((*b).into()))),
-            Value::MulValue(a,b) => crate::types::marlowe::Value::MulValue(Some(Box::new((*a).into())),Some(Box::new((*b).into()))),
-            Value::DivValue(a,b) => crate::types::marlowe::Value::DivValue(Some(Box::new((*a).into())),Some(Box::new((*b).into()))),
-            Value::ChoiceValue(a) => crate::types::marlowe::Value::ChoiceValue(Some(a.into())),
+            Value::NegValue(a) => crate::types::marlowe::Value::NegValue(Some(Box::new((*a).try_into()?))),
+            Value::AddValue(a,b) => crate::types::marlowe::Value::AddValue(Some(Box::new((*a).try_into()?)),Some(Box::new((*b).try_into()?))),
+            Value::SubValue(a,b) => crate::types::marlowe::Value::SubValue(Some(Box::new((*a).try_into()?)),Some(Box::new((*b).try_into()?))),
+            Value::MulValue(a,b) => crate::types::marlowe::Value::MulValue(Some(Box::new((*a).try_into()?)),Some(Box::new((*b).try_into()?))),
+            Value::DivValue(a,b) => crate::types::marlowe::Value::DivValue(Some(Box::new((*a).try_into()?)),Some(Box::new((*b).try_into()?))),
+            Value::ChoiceValue(a) => crate::types::marlowe::Value::ChoiceValue(Some(a.try_into()?)),
             Value::TimeIntervalStart => crate::types::marlowe::Value::TimeIntervalStart,
             Value::TimeIntervalEnd => crate::types::marlowe::Value::TimeIntervalEnd,
             Value::UseValue(a) => crate::types::marlowe::Value::UseValue(a.into()),
             Value::Cond(a, b, c) => crate::types::marlowe::Value::Cond(
-                Some(a.into()),Some(Box::new((*b).into())),Some(Box::new((*c).into()))
+                Some(a.try_into()?),Some(Box::new((*b).try_into()?)),Some(Box::new((*c).try_into()?))
             ),
             Value::ConstantParam(a) => crate::types::marlowe::Value::ConstantParam(a),
-        }
+        })
     }
 }
 
-impl From<Action> for crate::types::marlowe::Action {
-    fn from(x: Action) -> Self {
-        match x {
+impl TryFrom<Action> for crate::types::marlowe::Action {
+    type Error = String;
+    fn try_from(x: Action) -> Result<Self,Self::Error> {
+        Ok(match x {
             Action::Deposit { into_account, party, of_token, deposits } => 
                 crate::types::marlowe::Action::Deposit { 
-                    into_account: Some(into_account.into()), 
-                    party: Some(party.into()), 
+                    into_account: Some(into_account.try_into()?), 
+                    party: Some(party.try_into()?), 
                     of_token:Some(of_token.into()), 
-                    deposits: Some(deposits.into()) 
+                    deposits: Some(deposits.try_into()?) 
                 },
             Action::Choice { for_choice, choose_between } => 
                 crate::types::marlowe::Action::Choice { 
-                    for_choice: Some(for_choice.into()), 
+                    for_choice: Some(for_choice.try_into()?), 
                     choose_between: choose_between.iter().map(|x|Some(x.clone().into())).collect()
                 },
-            Action::Notify { notify_if } => crate::types::marlowe::Action::Notify { notify_if: Some(notify_if.into()) },
-        }
+            Action::Notify { notify_if } => crate::types::marlowe::Action::Notify { notify_if: Some(notify_if.try_into()?) },
+        })
     }
 }
 
 
-#[derive(Clone)]
+#[derive(Clone,Serialize,Deserialize,Debug)]
 pub enum Action {
     Deposit { 
         into_account: Party, 
@@ -196,22 +226,24 @@ pub enum Action {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone,Serialize,Deserialize,Debug,PartialEq,Eq,Hash)]
 pub struct ChoiceId { 
     pub choice_name : String, 
     pub choice_owner : Party 
 }
-#[derive(Clone)]
+
+
+#[derive(Clone,Serialize,Deserialize,Debug,PartialEq,Eq,Hash)]
 pub enum Party {
-    Address (Address),
-    Role { role_token: String } 
+    Address (String),
+    Role (String)
 }
-#[derive(Clone)]
+#[derive(Clone,Serialize,Deserialize,Debug)]
 pub enum Payee {
     Account(Party),
     Party(Party) 
 }
-#[derive(Clone)]
+#[derive(Clone,Serialize,Deserialize,Debug)]
 pub enum Value {
     AvailableMoney(Party,Token),
     ConstantValue(i64),
@@ -228,12 +260,12 @@ pub enum Value {
     ConstantParam(String)    
 }
 
-#[derive(Clone)]
+#[derive(Clone,Serialize,Deserialize,Debug)]
 pub enum ValueId {
     Name(String)
 }
 
-#[derive(Clone)]
+#[derive(Clone,Serialize,Deserialize,Debug)]
 pub enum Contract {
     Close,
     Pay {
@@ -264,18 +296,21 @@ pub enum Contract {
     }
 }
 
-#[derive(Clone)]
+
+
+
+#[derive(Clone,Serialize,Deserialize,Debug)]
 pub enum Observation { 
     AndObs { 
         both: Box<Observation>,
         and: Box<Observation>
     },
     OrObs { 
-        either: Box<Observation>,
-        or: Box<Observation>
+        either:  Box<Observation>,
+        or:  Box<Observation>
     },    
     NotObs {
-        not: Box<Observation>
+        not:  Box<Observation>
     },
     ChoseSomething(ChoiceId), 
     ValueGE { 
@@ -304,7 +339,7 @@ pub enum Observation {
 
 
 #[test]
-pub fn marlowe_without_holes() {
+pub fn marlowe_without_holes() -> Result<(),String> {
     
     let simple = Contract::When { 
         when: vec![
@@ -327,7 +362,7 @@ pub fn marlowe_without_holes() {
                                         then: Contract::Close.into() 
                                     }.into()
                                 ], 
-                                timeout: Timeout::TimeConstant(42), 
+                                timeout: 42, 
                                 timeout_continuation: Contract::When { 
                                     when: vec![
                                         Case { 
@@ -337,13 +372,13 @@ pub fn marlowe_without_holes() {
                                             then: Contract::Close.into() 
                                         }.into()
                                     ], 
-                                    timeout: Timeout::TimeConstant(42), 
+                                    timeout: 42, 
                                     timeout_continuation: Contract::Close.into()
                                 }.into()
                             }
                         }.into()
                     ], 
-                    timeout: Timeout::TimeConstant(42), 
+                    timeout: 42, 
                     timeout_continuation: Contract::When { 
                         when: vec![
                             Case { 
@@ -353,13 +388,13 @@ pub fn marlowe_without_holes() {
                                 then: Contract::Close.into() 
                             }.into()
                         ], 
-                        timeout: Timeout::TimeConstant(42), 
+                        timeout: 42, 
                         timeout_continuation: Contract::Close.into()
                     }.into()
                 } 
             }.into()
         ], 
-        timeout: Timeout::TimeConstant(42), 
+        timeout: 42, 
         timeout_continuation: Contract::When { 
             when: vec![
                 Case { 
@@ -369,35 +404,27 @@ pub fn marlowe_without_holes() {
                     then: Contract::Close.into() 
                 }.into()
             ], 
-            timeout: Timeout::TimeConstant(42), 
+            timeout: 42, 
             timeout_continuation: Contract::Close.into()
         }.into()
     };
 
-    let extended : crate::types::marlowe::Contract = simple.into();
+    let _ : crate::types::marlowe::Contract = simple.try_into()?;
+    Ok(())
 
-    println!("{extended}")
 }
-
-
-
-
-
-
-
-
 
 #[test]
 pub fn basic_example() {
 
-    use crate::types::marlowe_without_holes::*;
+    use crate::types::marlowe_core::*;
     
-    let p1 = Party::Role { role_token: "P1".into() };
-    let p2 = Party::Role { role_token: "P2".into() };
+    let p1 = Party::Role("P1".into());
+    let p2 = Party::Role("P2".into());
     let tok = Token::ada();
     let quantity = Value::ConstantValue(42000000);
 
-    let contract = Contract::When { 
+    let _ = Contract::When { 
         when: vec![
             Case { 
                 case: Action::Deposit { 
@@ -416,11 +443,11 @@ pub fn basic_example() {
                     } 
             }
         ], 
-        timeout: Timeout::TimeConstant(999999999), 
+        timeout: 999999999, 
         timeout_continuation: Contract::Close.into()
     };
 
-    println!("{}",crate::parsing::serialization::marlowe::serialize(contract.into()));
+    //println!("{}",crate::serialization::marlowe::serialize(contract.into()));
 
 
 }

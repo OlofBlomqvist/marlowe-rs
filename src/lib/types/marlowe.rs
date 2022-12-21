@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use serde::Deserialize;
 use serde::Serialize;
 
 #[cfg(feature = "utils")]
@@ -34,9 +35,12 @@ pub(crate) enum AstNode {
     //MarlowePossiblyMerkleizedContract(PossiblyMerkleizedContract),    
     Null
 }
+
+#[cfg_attr(feature="wasm",wasm_bindgen::prelude::wasm_bindgen)]
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Clone,PartialEq)]
 pub struct Bound(pub i64,pub i64);
+
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Hash,PartialEq,Eq,Clone)]
@@ -51,6 +55,7 @@ pub enum Payee { // Payee [('Account,0),('Party,1)]
     #[ignore_option_container] Account(Option<Party>), // 0
     #[ignore_option_container] Party(Option<Party>)    // 1
 }
+
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Clone,PartialEq)]
@@ -114,23 +119,6 @@ pub enum Observation {
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Clone,PartialEq)]
 pub enum Value {
-    /*
-        makeIsDataIndexed ''Value [
-        ('AvailableMoney,0),
-        ('Constant,1),
-        ('NegValue,2),
-        ('AddValue,3),
-        ('SubValue,4),
-        ('MulValue,5),
-        ('DivValue,6),
-        ('ChoiceValue,7),
-        ('TimeIntervalStart, 8),
-        ('TimeIntervalEnd,9),
-        ('UseValue,10),
-        ('Cond,11)
-        ]
-    */
-    
     AvailableMoney(#[ignore_option_container]Option<Party>,#[ignore_option_container]Option<Token>), // 0
     ConstantValue(i64), // 1
     NegValue(#[ignore_option_container]Option<Box<Value>>), // 2
@@ -143,17 +131,12 @@ pub enum Value {
     TimeIntervalEnd, // 9
     UseValue(ValueId), // 10
     Cond(#[ignore_option_container]Option<Observation>,#[ignore_option_container]Option<Box<Value>>,#[ignore_option_container]Option<Box<Value>>), // 11
-    
-    // 12: constant_param is not used on chain! 
-    //     (always parsed out prior to submitted and replaced with const val.)
-    // todo: add attribute to exclude 
-    //       from plutus_derive macro.
-    ConstantParam(String), // 11 ???
+    ConstantParam(String), // 12 (marlowe extended)
     
 }
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Serialize)]
+#[derive(Debug,Serialize,Deserialize)]
 pub enum BoolObs{
     True,
     False
@@ -226,6 +209,7 @@ pub enum StakingHashOrPtr  {
     Ptr { slot  : i32, transaction : i32, #[base_16]certificate: String }
 }
 
+
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Hash,PartialEq,Eq,Clone)]
 pub enum ScriptOrPubkeyCred {
@@ -239,9 +223,10 @@ pub enum ScriptOrPubkeyCred {
     },
 }
 
+
+
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Hash,PartialEq,Eq,Clone)]
-// todo :address: need to impl display for marlowe-dsl
 pub struct Address { 
     pub is_mainnet : bool,
     pub addr : ScriptOrPubkeyCred,
@@ -252,6 +237,11 @@ pub struct Address {
 pub enum Party { // ''Party [('Address,0),('Role,1)]
     Address (Address), // 0
     Role { role_token: String } // 1   
+}
+impl Party {
+    pub fn role(token:&str) -> Self {
+        Party::Role{role_token:token.to_owned()}
+    }
 }
 
 
@@ -304,9 +294,6 @@ pub enum Action {
     }
 }
 
-
-// todo - when encoding this to plutus, we must wrap it inside case(Case)/merkl(String) type.. 
-// can we add an attr to specificy how do wrap it? 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Clone,PartialEq)]
 pub struct Case { 
@@ -337,7 +324,7 @@ impl ToPlutusData for Party {
     fn to_plutus_data(&self,attributes:&Vec<String>) -> Result<PlutusData,String> {
         match self {
             Party::Address(a) => {
-                //println!("TO PLUTUS FOR ADDR: {}",a.as_bech32().unwrap());
+                
                 let big_num = plutus_data::convert_to_big_num(&0);
                 let mut items = plutus_data::PlutusList::new();
                 match a.to_plutus_data(&vec![])?.as_constr_plutus_data() {
@@ -370,14 +357,14 @@ impl ToPlutusData for Party {
 
 impl FromPlutusData<Party> for Party {
     fn from_plutus_data(x:PlutusData,attributes:&Vec<String>) -> Result<Party,String> {
-        //println!("Manual impl called with data: {}",datum_to_json(&x.clone()).unwrap());
+        
         match x.as_constr_plutus_data() {
             Some(c) => {
                 match from_bignum(&c.alternative()) {
                     0 => { // ADDRESS
                         let data = c.data(); // must have the two items here. network and address
                         if data.len() != 2 {
-                            println!("This will fail because an address is missing inside of a party... {:?}",datum_to_json(&x))
+                            panic!("Invalid/missing address inside of party... {:?}",datum_to_json(&x))
                         }
                         let item_zero = data.clone().get(0);
                         let result = Ok(Party::Address(Address {
@@ -505,26 +492,287 @@ impl Boxer for Contract {
 
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Serialize,Clone,PartialEq)]
+#[derive(Debug,Serialize,Clone,PartialEq,Deserialize,Eq,Hash)]
 pub enum ValueId {
     Name(String)
 }
 
+#[wasm_bindgen::prelude::wasm_bindgen]
+#[derive(Debug,Clone)] 
+pub enum WasmPartyType {
+    Role = 0,
+    Address = 1
+}
+#[wasm_bindgen::prelude::wasm_bindgen]
+#[derive(Debug,Clone)] 
+pub struct WasmParty {
+    typ : WasmPartyType,
+    val : String
+}
+#[wasm_bindgen::prelude::wasm_bindgen]
+impl WasmParty {
+    #[wasm_bindgen::prelude::wasm_bindgen(method,catch)]
+    pub fn value(&self) -> String {
+        self.val.clone()
+    }
+    #[wasm_bindgen::prelude::wasm_bindgen(method,catch)]
+    pub fn typ(&self) -> WasmPartyType {
+        self.typ.clone()
+    }
+    #[wasm_bindgen::prelude::wasm_bindgen(method,catch)]
+    pub fn new_addr(bech32_addr:&str) -> Self {
+        Self {
+            typ: WasmPartyType::Address,
+            val: bech32_addr.to_owned()
+        }
+    }
+    #[wasm_bindgen::prelude::wasm_bindgen(method,catch)]
+    pub fn new_role(role_token:&str) -> Self {
+        Self {
+            typ: WasmPartyType::Role,
+            val: role_token.to_owned()
+        }
+    }
+}
+
+impl TryFrom<crate::types::marlowe_core::Party> for WasmParty {
+    type Error = String;
+
+    fn try_from(value: crate::types::marlowe_core::Party) -> Result<Self, Self::Error> {
+        match value {
+            super::marlowe_core::Party::Address(a) => Ok(WasmParty::new_addr(&a)),
+            super::marlowe_core::Party::Role(r) => Ok(WasmParty::new_role(&r)),
+        }
+    }   
+}
+
+
+// ===============================================================================
+// THE TYPES BELOW EXIST ONLY FOR WASM INTEROP & ARE NOT MEAN TO BE USED DIRECTLY
+// ===============================================================================
+
+#[wasm_bindgen::prelude::wasm_bindgen]
+#[derive(Debug,Clone)] 
+pub struct WasmToken {
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub name : String,
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub pol : String
+}
+
+#[wasm_bindgen::prelude::wasm_bindgen]
+#[derive(Debug,Clone)] 
+pub struct WasmAccount {
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub party : WasmParty,
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub token : WasmToken,
+    pub amount : u64
+}
+#[wasm_bindgen::prelude::wasm_bindgen]
+#[derive(Debug,Clone)] 
+pub struct WasmChoice {
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub choice_name : String,
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub choice_owner : WasmParty,
+    pub value : u64,
+}
+
+#[wasm_bindgen::prelude::wasm_bindgen]
+#[derive(Debug,Clone)] 
+pub struct WasmBoundValue {
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub name : String,
+    pub value : u64,
+}
+
+#[wasm_bindgen::prelude::wasm_bindgen]
+#[derive(Debug,Clone)] 
+pub struct WasmAccounts(Vec<WasmAccount>);
+impl WasmAccounts {
+    pub fn new(accounts:Vec<WasmAccount>) -> Self {
+        Self(accounts)
+    }
+}
+
+#[wasm_bindgen::prelude::wasm_bindgen]
+#[derive(Debug,Clone)] 
+pub struct WasmChoices(Vec<WasmChoice>);
+impl WasmChoices {
+    pub fn new(choices:Vec<WasmChoice>) -> Self {
+        Self(choices)
+    }
+}
+
+#[wasm_bindgen::prelude::wasm_bindgen]
+#[derive(Debug,Clone)] 
+pub struct WasmBoundValues(Vec<WasmBoundValue>);
+impl WasmBoundValues {
+    pub fn new(bound_values:Vec<WasmBoundValue>) -> Self {
+        Self(bound_values)
+    }
+}
+
+// THIS TYPE EXISTS ONLY FOR WASM INTEROP
+#[wasm_bindgen::prelude::wasm_bindgen]
+#[derive(Debug,Clone)] 
+pub struct WasmState {
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub accounts : WasmAccounts,
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub choices : WasmChoices,
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub bound_values : WasmBoundValues,
+    pub min_time : u64 , // POSIXTime  
+}
+
+
+
+
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Serialize,Clone)] // todo -- add plutus_data derives when we support hashmaps
-pub struct MarloweDatumState {
-    // todo , 1 -> not sure how to represent this... 
+#[derive(Debug,Clone)]
+pub struct State {
+    // 1
     // type Accounts = Map (AccountId, Token) Integer
     pub accounts : HashMap<(Party,Token),i64>, // Accounts: Map (AccountId, Token) Integer
     // 2 , choices
-    pub choices : HashMap<ChoiceId,String> , // Map ChoiceId ChosenNum
-    // 3 , bound vals
-    pub bound_values : HashMap<String,i64>, // Map ValueId Integer
+    pub choices : HashMap<ChoiceId,i64> , // Map ChoiceId ChosenNum
+    // 3 , bound vals ((ValueId × int) list)
+    pub bound_values : HashMap<ValueId,i64>, // Map ValueId Integer
     // 4, min time
     pub min_time : u64 , // POSIXTime  
 }
 
+
+
+impl TryFrom<Party> for crate::types::marlowe_core::Party {
+    type Error = String;
+
+    fn try_from(value: Party) -> Result<Self, Self::Error> {
+        match value {
+            Party::Address(a) => Ok(crate::types::marlowe_core::Party::Address(a.as_bech32()?)),
+            Party::Role { role_token } => Ok(crate::types::marlowe_core::Party::Role(role_token)),
+        }
+    }   
+}
+
+impl TryFrom<ChoiceId> for crate::types::marlowe_core::ChoiceId {
+    type Error = String;
+
+    fn try_from(value: ChoiceId) -> Result<Self, Self::Error> {
+        if let Some(owner) = value.choice_owner {
+            Ok(crate::types::marlowe_core::ChoiceId {
+                choice_name: value.choice_name,
+                choice_owner: owner.try_into()?
+            })
+        } else {
+            Err(format!("Missing owner of choice '{}'",value.choice_name))
+        }
+
+    }   
+}
+
+
+impl TryFrom<WasmState> for State {
+    type Error = String;
+
+    fn try_from(value: WasmState) -> Result<Self, Self::Error> {
+        let mut accounthash : HashMap<(Party, Token), i64> = HashMap::new();
+        let mut choicehash : HashMap<ChoiceId, i64> = HashMap::new();
+
+        for x in value.accounts.0 {
+            if let WasmPartyType::Address = &x.party.typ {
+                accounthash.insert(
+                    (
+                        Party::Address(Address::from_bech32(&x.party.val).unwrap()),
+                        Token {
+                            currency_symbol: x.token.pol,
+                            token_name: x.token.name
+                        }
+                    ), 
+                    x.amount as i64
+                );
+                continue;
+            }
+            if let WasmPartyType::Role = &x.party.typ {
+                accounthash.insert(
+                    (
+                        Party::Role { role_token: x.party.val },
+                        Token {
+                            currency_symbol: x.token.pol,
+                            token_name: x.token.name
+                        }
+                    ), 
+                    x.amount as i64
+                );
+                continue;
+            }
+            return Err(String::from("invalid state due to invalid account owner."))
+        }
+
+        for x in value.choices.0 {
+            //TODO: Get rid of unwrap
+            if let WasmPartyType::Address = &x.choice_owner.typ {
+                choicehash.insert(
+                    ChoiceId { choice_name: x.choice_name, choice_owner: Some(Party::Address(Address::from_bech32(&x.choice_owner.val).unwrap())) }, 
+                    x.value as i64
+                );
+                continue;
+            }
+            if let WasmPartyType::Role = &x.choice_owner.typ {
+                choicehash.insert(
+                    ChoiceId { choice_name: x.choice_name, choice_owner: Some(Party::Role{role_token:x.choice_owner.val}) }, 
+                    x.value as i64
+                );
+                continue;
+            }
+
+            return Err(String::from("invalid state due to invalid choice owner."))
+        }
+
+        let mut boundhash : HashMap<ValueId,i64> = HashMap::new();
+        for x in value.bound_values.0 {
+            boundhash.insert(ValueId::Name(x.name), x.value as i64);
+        } 
+
+        Ok(State {
+            accounts: accounthash,
+            choices: choicehash,
+            bound_values: boundhash,
+            min_time: value.min_time,
+        })
+    }
+    
+}
+
+impl TryFrom<State> for WasmState {
+    type Error = String;
+
+    fn try_from(value: State) -> Result<Self, Self::Error> {
+
+
+        Ok(WasmState {
+            accounts: WasmAccounts(value.accounts.iter().map(|x|{
+
+                let (p,t) = x.0;
+
+                let tok_name = &t.token_name;
+                let tok_sym = &t.currency_symbol;
+
+                let party = match p {
+                    Party::Role { role_token } => WasmParty::new_role(role_token),
+                    //TODO: Get rid of unwrap
+                    Party::Address(a) => WasmParty::new_addr(&a.as_bech32().unwrap())
+                };
+
+                WasmAccount {
+                    party,
+                    token: WasmToken { 
+                        name: tok_name.clone(), 
+                        pol: tok_sym.clone() 
+                    },
+                    amount: *x.1 as u64,
+                }
+            }).collect()),
+            choices: WasmChoices(vec![]),
+            bound_values: WasmBoundValues(vec![]),
+            min_time: value.min_time,
+        })
+    }
+    
+}
 
 // #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 // #[derive(Debug,Serialize)]
@@ -533,17 +781,17 @@ pub struct MarloweDatumState {
 // }
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Serialize,Clone)]
+#[derive(Debug,Serialize,Deserialize,Clone)]
 pub struct MarloweParams(#[base_16]pub String); 
 
+
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Serialize,Clone)]
+#[derive(Debug,Serialize,Deserialize,Clone)]
 pub struct MarloweDatum {
     #[base_16]pub marlowe_params : MarloweParams,
-    pub state : MarloweDatumState,
+    pub state : State,
     pub contract : Contract,
 }
-
 
 
 #[derive(Clone,Debug,PartialEq)]
@@ -771,3 +1019,126 @@ impl Contract {
 
     }
 }
+
+
+#[derive(Serialize,Deserialize,Debug)]
+pub struct Transaction {
+    pub tx_interval : TxTimeInterval,
+    pub tx_inputs : Vec<InputAction>
+}
+
+#[derive(Serialize,Deserialize,Debug)]
+pub struct TxTimeInterval {
+    pub from : u128,
+    pub to : u128
+}
+
+
+#[derive(Serialize,Deserialize,Debug)]
+pub struct Payment {
+   pub payment_from : String,
+   pub to : String,
+   pub token : Token,
+   pub amount : u64
+}
+
+
+#[derive(Serialize,Deserialize,Debug)]
+pub struct TransactionError {
+    pub contents : Option<TransactionErrorContent>,
+    pub tag : String
+}
+
+impl TransactionError {
+    pub fn teambiguous_time_interval_error(contents:Option<String>) -> Self {
+        Self {
+            tag: "TEAmbiguousTimeIntervalError".into(),
+            contents: if let Some(c) = contents { Some(TransactionErrorContent::Str(c)) } else {None}
+        }
+    }
+    pub fn teapply_no_match_error(contents:Option<String>) -> Self {
+        Self {
+            tag: "TEApplyNoMatchError".into(),
+            contents: if let Some(c) = contents { Some(TransactionErrorContent::Str(c)) } else {None}
+        }
+    }
+    pub fn teinterval_error(contents:IntervalError) -> Self {
+        Self {
+            tag: "TEIntervalError".into(),
+            contents: Some(TransactionErrorContent::Obj(contents))
+        }
+    }
+    pub fn teuseless_transaction(contents:Option<String>) -> Self {
+        Self {
+            tag: "TEUselessTransaction".into(),
+            contents: if let Some(c) = contents { Some(TransactionErrorContent::Str(c)) } else {None}
+        }
+    }
+}
+
+#[derive(Serialize,Deserialize,Debug)]
+#[serde(untagged)]
+pub enum TransactionErrorContent {
+    Obj(IntervalError), Str(String)
+}
+
+
+#[derive(Serialize,Deserialize,Debug)]
+pub struct TransactionOutput {
+    #[serde(skip_serializing_if = "Option::is_none")] pub transaction_error : Option<TransactionError>,
+    #[serde(skip_serializing_if = "Option::is_none")] pub warnings : Option<Vec<TransactionWarning>>,
+    #[serde(skip_serializing_if = "Option::is_none")] pub payments : Option<Vec<Payment>>,
+    #[serde(skip_serializing_if = "Option::is_none")] pub state : Option<State>,
+    #[serde(skip_serializing_if = "Option::is_none")] pub contract : Option<Contract>
+}
+
+#[derive(Serialize,Deserialize,Debug)]
+pub struct IntervalError {
+    #[serde(rename(serialize = "intervalInPastError", deserialize = "intervalInPastError"))]
+    pub interval_in_past_error : Vec<i64>
+}
+
+
+pub type AccountId = Party;
+
+
+#[derive(Serialize,Deserialize,Debug)]
+#[serde(untagged)]
+pub enum TransactionWarning {
+    TransactionNonPositiveDeposit {
+        asked_to_deposit : i64,
+        in_account : AccountId,
+        of_token : Token,        
+        party : Party
+    },
+    TransactionPartialPay  {
+        account : AccountId,
+        asked_to_pay : i64,
+        of_token : Token,
+        to_payee : Payee,
+        but_only_paid : i64
+    },
+    TransactionNonPositivePay {
+        account : AccountId,
+        asked_to_pay : i64,
+        of_token : Token,
+        to_payee : Payee
+    },
+    TransactionShadowing {
+        value_id : String,
+        had_value : Value,
+        is_now_assigned : Value
+    },
+    /// Do not use this directly.
+    /// Instead call transaction_assertion_failed()!
+    TransactionAssertionFailed(String)
+}
+
+impl TransactionWarning {
+    /// This will create a TransactionAssertionFailed instance which will serialize 
+    /// into the string: "assertion_failed" as required per the marlowe specification v3.
+    pub fn transaction_assertion_failed() -> TransactionWarning {
+        TransactionWarning::TransactionAssertionFailed("assertion_failed".into())
+    }
+}
+

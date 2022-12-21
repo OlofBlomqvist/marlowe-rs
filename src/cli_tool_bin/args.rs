@@ -141,8 +141,8 @@ pub enum ContractArgs {
         #[clap(value_enum)]
         output_type: ContractOutputInfoType,
         /// Input to be used with the contract.
-        /// Example 1: -d "my_constant_parameter=123, my_other_constant_parameter_name=321, timeout_number_one=2022-03-04@15:41:31"
-        /// Example 2: -d "timeout_number_one=4128381238132"
+        /// Example 1: -i "my_constant_parameter=123, my_other_constant_parameter_name=321, timeout_number_one=2022-03-04@15:41:31"
+        /// Example 2: -i "timeout_number_one=4128381238132"
         #[clap(short = 'i')]
         init: Option<String>,
 

@@ -1,0 +1,18 @@
+{
+    "timeout": 20,
+    "timeout_continuation": "close",
+    "when": [
+        {
+            "case": {
+                "notify_if": true
+            },
+            "merkleized_then": "09df8g098df09gdfjkgklfgkljdfg"
+        },
+        {
+            "case": {
+                "notify_if": false
+            },
+            "then": "close"
+        }
+    ]
+}

@@ -1,11 +1,11 @@
 use std::{collections::HashMap, ops::Neg};
 
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 
 use crate::types::marlowe::*;
 
 
-#[derive(Debug,PartialEq,Serialize)]
+#[derive(Debug,PartialEq,Serialize,Deserialize)]
 pub enum InputType {
 
     Deposit { 
@@ -26,7 +26,8 @@ pub enum InputType {
     Notify
 }
 
-#[derive(Debug,Serialize)]
+
+#[derive(Debug,Serialize,Deserialize)]
 pub enum MachineState {
     Closed,
     Faulted(String),
@@ -35,7 +36,8 @@ pub enum MachineState {
 }
 
 
-#[derive(Clone,Debug)]
+/// WIP
+#[derive(Clone,Debug,Serialize,Deserialize)]
 pub struct ContractInstance {
     pub datum : MarloweDatum,
     pub payouts : Vec<String>,
@@ -46,30 +48,34 @@ pub struct ContractInstance {
 
 impl ContractInstance {
 
-    // TODO - handle params and state
-    // TODO - Enum so that we can either use a contract or a datum since datum contains and overrides the contract.
-    pub fn new(contract:&Contract,datum:Option<MarloweDatum>) -> Self {
+    // TODO: Should take MarloweDatum as input here instead
+
+    pub fn new(contract:&Contract) -> Self {
         ContractInstance {
-            datum: if let Some(d) = datum {d} else { MarloweDatum { 
+            datum: MarloweDatum { 
                 marlowe_params: MarloweParams("".into()), 
-                state: MarloweDatumState { 
+                state: State { 
                     accounts: HashMap::new(), 
                     choices: HashMap::new(), 
                     bound_values: HashMap::new(), 
                     min_time: Self::get_current_time()
                 }, 
                 contract: contract.clone()
-            }},
+            },
             payouts: vec![],
             marlowe_validator_hash: String::from("AA"),
             payout_validator_hash: String::from("BB"),
-            logs:vec![],
+            logs:vec![
+                format!("INITIALIZED BY MARLOWE LANG STATE MACHINE AT {:?}",Self::get_current_time()),
+                format!("OH AND THIS OTHER MESSAGE TOO!"),
+            ],
         }
     }
 
     pub fn reduce_num_value(&self,val:&Value) -> Result<i64,String> {
         match val {
-            Value::AvailableMoney(Some(a), Some(b)) => {
+            //                        ---               ---
+            Value::AvailableMoney(Some(_), Some(_)) => {
                 todo!() // look up the amount of that token B that exists in the acc of A
             },
             Value::ConstantValue(a) => Ok(*a),
@@ -99,27 +105,18 @@ impl ContractInstance {
             },
             Value::ChoiceValue(Some(choice)) => {
                 match self.datum.state.choices.get(choice) {
-                    Some(v) => match v.parse::<i64>() {
-                        Ok(n) => {
-                            Ok(n)
-                        },
-                        Err(e) => Err(format!("A value in this contract reads a choice ({choice:?}) which indeed exists. A choice has been made, but it is not possible to parse as i64! {e:?}")),
-                    },
+                    Some(v) => Ok(*v),
                     None => Err(format!("Contract contains value referencing a choice, but no such choice has been made: {choice:?}")),
                 }
             },
             Value::TimeIntervalStart => Ok(self.datum.state.min_time as i64),
             Value::TimeIntervalEnd => todo!(), // not actually sure.. max timeout that exists in the remaining tree?
             Value::UseValue(vid) => {
-                match vid {
-                    ValueId::Name(k) => {
-                        match self.datum.state.bound_values.get(k) {
-                            Some(v) => {
-                                Ok(v.to_owned() as i64)
-                            },
-                            None => Err(format!("Contract contains UseValue(ValueId({k})), but '{k}' has not been bound when initializing the contract.")),
-                        }
+                match self.datum.state.bound_values.get(vid) {
+                    Some(v) => {
+                        Ok(v.to_owned() as i64)
                     },
+                    None => Err(format!("Contract contains UseValue({vid:?}), but it is not found in the contracts bound values.")),
                 }
             },
             Value::Cond(Some(obs), Some(a), Some(b)) => {
@@ -134,7 +131,7 @@ impl ContractInstance {
                 }
             },
             Value::ConstantParam(p) => {
-                match self.datum.state.bound_values.get(p) {
+                match self.datum.state.bound_values.get(&ValueId::Name(p.to_string())) {
                     Some(_) => todo!(),
                     None => Err(format!("Contract contains constant parameter reference which has not been initialized: {p}")),
                 }
@@ -143,59 +140,59 @@ impl ContractInstance {
         }
     }
 
-    // todo - keep logs? Option<(bool,obs_logs)> so that we can see more details of each observation?
     pub fn assert_observation(&self,obs:&Observation) -> Option<bool> {
         match &obs {
 
-            Observation::AndObs { both:Some(A), and:Some(B) } => 
+            Observation::AndObs { both:Some(a), and:Some(b) } => 
                 Some(
-                    self.assert_observation(A)? && self.assert_observation(B)?
+                    self.assert_observation(a)? && self.assert_observation(b)?
                 ),
 
-            Observation::OrObs { either:Some(A), or:Some(B) } => 
+            Observation::OrObs { either:Some(a), or:Some(b) } => 
                 Some(
-                    self.assert_observation(A)? || self.assert_observation(B)?
+                    self.assert_observation(a)? || self.assert_observation(b)?
                 ),
 
-            Observation::NotObs { not:Some(A) } => 
-                if let Some(v) = self.assert_observation(A) {
+            Observation::NotObs { not:Some(a) } => 
+                if let Some(v) = self.assert_observation(a) {
                     Some(!v)
                 } else {
                     None
                 }
 
-            Observation::ChoseSomething(Some(A)) => {
-                match self.datum.state.choices.get(A) {
-                    Some(v) => {
+            // TODO - WTH?
+            Observation::ChoseSomething(Some(a)) => {
+                match self.datum.state.choices.get(a) {
+                    Some(_) => { // <-------
                         Some(true)
                     },
                     None => Some(false),
                 }
             },
 
-            Observation::ValueGE { value:Some(A), ge_than:Some(B) } => 
+            Observation::ValueGE { value:Some(a), ge_than:Some(b) } => 
             Some(
-                self.reduce_num_value(A) >= self.reduce_num_value(B)
+                self.reduce_num_value(a) >= self.reduce_num_value(b)
             ),
 
-            Observation::ValueGT { value:Some(A), gt_than:Some(B) } => 
+            Observation::ValueGT { value:Some(a), gt_than:Some(b) } => 
             Some(
-                self.reduce_num_value(A) > self.reduce_num_value(B)
+                self.reduce_num_value(a) > self.reduce_num_value(b)
             ),
 
-            Observation::ValueLT { value:Some(A), lt_than:Some(B) } => 
+            Observation::ValueLT { value:Some(a), lt_than:Some(b) } => 
             Some(
-                self.reduce_num_value(A) < self.reduce_num_value(B)
+                self.reduce_num_value(a) < self.reduce_num_value(b)
             ),
 
-            Observation::ValueLE { value:Some(A), le_than:Some(B) } => 
+            Observation::ValueLE { value:Some(a), le_than:Some(b) } => 
             Some(
-                self.reduce_num_value(A) <= self.reduce_num_value(B)
+                self.reduce_num_value(a) <= self.reduce_num_value(b)
             ),
 
-            Observation::ValueEQ { value:Some(A), equal_to:Some(B) } => 
+            Observation::ValueEQ { value:Some(a), equal_to:Some(b) } => 
             Some(
-                self.reduce_num_value(A) == self.reduce_num_value(B)
+                self.reduce_num_value(a) == self.reduce_num_value(b)
             ),
 
             Observation::True => Some(true),
@@ -205,10 +202,9 @@ impl ContractInstance {
     }
 
     pub fn get_current_time() -> u64 {
-        let now = 
-            std::time::SystemTime::now()
-            .duration_since(std::time::SystemTime::UNIX_EPOCH);
-        now.unwrap().as_millis() as u64
+        // using chronos because it also works with wasm unlike std
+        let nowly = chrono::Utc::now().timestamp();
+        nowly as u64
     }
     
     pub fn apply_input_choice(&self,applied_choice_name:String, applied_choice_owner:Party, applied_chosen_value: i64) -> Result<ContractInstance,String> {
@@ -243,7 +239,7 @@ impl ContractInstance {
                     new_instance.datum.state.choices.insert(ChoiceId{
                         choice_name:applied_choice_name,
                         choice_owner:Some(applied_choice_owner)
-                    }, applied_chosen_value.to_string());
+                    }, applied_chosen_value);
                     new_instance.datum.contract = continuation.clone();
                     Ok(new_instance)
                 } else {
@@ -255,8 +251,7 @@ impl ContractInstance {
         
     }
 
-    // TODO: this can only be applied if we are inside of a WHEN and is below timeout.
-    pub fn apply_input_deposit(&self,from:Party, asset: Token, quantity: Value, to:Party) -> Result<ContractInstance,String> {
+    pub fn apply_input_deposit(&self,from:Party, asset: Token, quantity: i64, to:Party) -> Result<ContractInstance,String> {
         let (mut new_instance,machine_state) = self.process()?;
         match machine_state {
             MachineState::Closed => Err(String::from("Cannot apply input (deposit) since the contract has already closed.")),
@@ -272,24 +267,22 @@ impl ContractInstance {
                             continuation 
                         } => {
 
-                            let reduced_value = self.reduce_num_value(&quantity)?;
                             let reduced_expected_value = self.reduce_num_value(&expected_amount)?;
 
                             if who_is_expected_to_pay == &from   // here we make
                                 && &asset == expected_asset_type  // sure that
-                                && reduced_value == reduced_expected_value
+                                && quantity == reduced_expected_value
                                 && expected_target_account == &to 
                             {
                                 
-                                let reduced_value = self.reduce_num_value(&quantity)?;
                                 
                                 // Add or update amount for the party that is depositing value to their account.
                                 if let Some(existing_amount) = new_instance.datum.state.accounts.get_mut(&(from.clone(),asset.clone())) {
-                                    *existing_amount = *existing_amount + reduced_value;
+                                    *existing_amount = *existing_amount + quantity;
                                 } else {
                                     new_instance.datum.state.accounts.insert(
                                         (from.clone(),asset.clone()), 
-                                        reduced_value
+                                        quantity
                                     );
                                 }
                                 
@@ -392,7 +385,7 @@ impl ContractInstance {
                 let maxtime = match t {
                     Timeout::TimeConstant(t) => t.clone() as u64,
                     Timeout::TimeParam(p) => {
-                        match self.datum.state.bound_values.get(p) {
+                        match self.datum.state.bound_values.get(&ValueId::Name(p.to_string())) {
                             Some(v) => v.to_owned() as u64,
                             None => return Err(format!("Uninitialized timeout parameter: {p}")),
                         }
@@ -466,7 +459,7 @@ impl ContractInstance {
                 };
 
                 let reduced_value = self.reduce_num_value(v)?;
-                _ = new_instance.datum.state.bound_values.insert(var_name.to_string(), reduced_value);
+                _ = new_instance.datum.state.bound_values.insert(ValueId::Name(var_name.to_string()), reduced_value);
                 new_instance.logs.push(format!("Updated variable '{var_name}' to: {reduced_value}"));
                 new_instance.datum.contract = *c.clone();
                 Ok((new_instance,MachineState::ReadyForNextStep))
@@ -623,18 +616,22 @@ fn state_machine_basic_example2() {
                 ))
             })
         ], 
+        // TODO: Get rid of unwrap
         timeout: Some(Timeout::TimeConstant((ContractInstance::get_current_time()+(1000*60*60)).try_into().unwrap())), 
         timeout_continuation:  Some(Contract::Close.boxed())
     };
 
-    let c = wait_for_choice_contract.clone().to_string();
-    println!("{c}");
+    // hmm is this supposed to be used?
+    let _ = wait_for_choice_contract.clone().to_string();
+    //println!("{c}");
 
+    // TODO: Get rid of unwrap
     let machine = 
-        ContractInstance::new(&wait_for_choice_contract,None)
+        ContractInstance::new(&wait_for_choice_contract)
         .process()
         .unwrap();
 
+    // TODO: Get rid of unwrap
     let machine_of_first_kind = machine.0.apply_input_choice(
             "nisses_choice".into(),
             Party::Role { role_token: "NISSE".into() }, 
@@ -642,6 +639,7 @@ fn state_machine_basic_example2() {
         )
     .unwrap().process().unwrap();
 
+    // TODO: Get rid of unwrap
     let machine_of_second_kind = 
         machine.0.apply_input_choice(
             "nisses_choice".into(),
@@ -655,30 +653,34 @@ fn state_machine_basic_example2() {
         ).unwrap().process().unwrap().0.apply_input_deposit(
             Party::Role { role_token: "NISSE".into() },
             Token::ada(), 
-            Value::MulValue(Some(Box::new(Value::ConstantValue(42/2))),Some(Box::new(Value::ConstantValue(2)))), 
+            42, 
             Party::Role { role_token: "NISSE".into() }
         ).unwrap().process().unwrap();
 
-    for x in &machine_of_first_kind.0.logs {
-        println!("A: ---> {x}");
+    for _ in &machine_of_first_kind.0.logs {
+        //println!("A: ---> {x}");
     }
 
-    println!("A: {:?}",machine_of_first_kind.1);
+    //println!("A: {:?}",machine_of_first_kind.1);
 
     
-    for x in &machine_of_second_kind.0.logs {
-        println!("B: ---> {x}");
+    for _ in &machine_of_second_kind.0.logs {
+        //println!("B: ---> {x}");
     }
 
-    println!("B: {:?}",machine_of_second_kind.1);
+    //println!("B: {:?}",machine_of_second_kind.1);
 
     match machine_of_first_kind.1 {
-        MachineState::Closed => {println!("First machine is closed! Thats great! We selected 4 so it should not take more input! ")},
+        MachineState::Closed => {
+            //println!("First machine is closed! Thats great! We selected 4 so it should not take more input! ")
+        },
         _ => panic!("The first machine was not closed even though we selected the number 4. This is bad.")
     }
 
     match machine_of_second_kind.1 {
-        MachineState::Closed => {println!("Seconds machine is closed! Thats great! We selected 3 and then 3 again so it should not take more input! ")},
+        MachineState::Closed => {
+            //println!("Second machine is closed! Thats great! We selected 3 and then 3 again so it should not take more input! ")
+        },
         _ => panic!("The first machine was not closed even though we selected the number 3 and 3 again... This is bad.")
     }
 

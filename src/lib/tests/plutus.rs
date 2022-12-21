@@ -9,7 +9,7 @@ use plutus_data::FromPlutusData;
 fn encode_decode_contract_to_plutus_data() {
 
     use std::fs::read_to_string;
-    use crate::{parsing::deserialization::deserialize, types::marlowe::Contract};
+    use crate::{deserialization::marlowe::deserialize, types::marlowe::Contract};
 
     _ = std::fs::remove_file("FAILING_TEST_PLUTUS_ERROR_dectpd_original.marlowe");
     _ = std::fs::remove_file("FAILING_TEST_PLUTUS_ERROR_dectpd_post.marlowe");
@@ -22,8 +22,8 @@ fn encode_decode_contract_to_plutus_data() {
     let encoded_json_plutus = datum_to_json(&encoded).unwrap();
     _ = std::fs::write("SAMPLE_ENCODED_AS_JSON_PLUTUS.json",encoded_json_plutus);
     let decoded = Contract::from_plutus_data(encoded,&vec![]).expect("failed to decode a contract from plutus data");
-    let pre = format!("{}",crate::parsing::serialization::marlowe::serialize(contract));
-    let post = format!("{}",crate::parsing::serialization::marlowe::serialize(decoded));
+    let pre = format!("{}",crate::serialization::marlowe::serialize(contract));
+    let post = format!("{}",crate::serialization::marlowe::serialize(decoded));
     _ = std::fs::remove_file("SAMPLE_ENCODED_AS_JSON_PLUTUS.json");
     if pre != post {
         _ = std::fs::write("FAILING_TEST_PLUTUS_ERROR_dectpd_original.marlowe",serialized_contract);
@@ -39,7 +39,7 @@ fn encode_decode_contract_to_plutus_data() {
 fn encode_decode_contract_to_plutus_data_all_playground_samples() {
     
     use std::fs::read_to_string;
-    use crate::{parsing::deserialization::deserialize, types::marlowe::Contract};
+    use crate::{deserialization::marlowe::deserialize, types::marlowe::Contract};
 
     _ = std::fs::remove_file("FAILING_TEST_pre.marlowe");
     _ = std::fs::remove_file("FAILING_TEST_post.marlowe");
@@ -49,7 +49,7 @@ fn encode_decode_contract_to_plutus_data_all_playground_samples() {
         let path_string = canonical_path.display().to_string();
         if !path_string.to_uppercase().ends_with(".MARLOWE") || path_string.contains("test_simple_addr") { continue; }
         let serialized_contract = read_to_string(&path_string).unwrap();
-        let deserialization_result = deserialize(&serialized_contract).expect(&format!("failed to deserialize marlowe dsl {}",path_string));
+        let deserialization_result = deserialize(&serialized_contract).expect(&format!("failed to deserialize marlowe dsl {}\n",path_string));
         match deserialization_result.contract.to_plutus_data(&vec![]) {
             Ok(encoded) => {
                 let decoded = Contract::from_plutus_data(encoded,&vec![]).expect(&format!("could not deserialize contract from our own encoded bytes.. {}",path_string));
@@ -141,24 +141,24 @@ fn validate_decode_of_actual_on_chain_data_and_that_we_can_re_encode_with_identi
     
     let redeemercbor = "9fd8799fd8799fd8799fd87a80d8799fd8799f581cfd37884bbd044c72e5f29de1b777a9c1c1d531773535cd5b55e2f6ffffd87a80ffffd8799fd87a80d8799fd8799f581cfd37884bbd044c72e5f29de1b777a9c1c1d531773535cd5b55e2f6ffffd87a80ffffd8799f4040ff1a05f5e100ffffff";
     let datumcbor = "d8799fd8799f40ffd8799fa1d8799fd8799fd87a80d8799fd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd87a80ffffd8799f4040ffff1a002dc6c0a0a01b00000183f1aa2ff0ffd87c9f9fd8799fd8799fd8799fd87a80d8799fd8799f581cfd37884bbd044c72e5f29de1b777a9c1c1d531773535cd5b55e2f6ffffd87a80ffffd8799fd87a80d8799fd8799f581cfd37884bbd044c72e5f29de1b777a9c1c1d531773535cd5b55e2f6ffffd87a80ffffd8799f4040ffd87a9f1a05f5e100ffffd87a9fd8799fd87a80d8799fd8799f581cfd37884bbd044c72e5f29de1b777a9c1c1d531773535cd5b55e2f6ffffd87a80ffffd87a9fd8799fd87a80d8799fd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd87a80ffffffd8799f4040ffd87a9f1a05f5e100ffd87980ffffff1b00000183f4975530d87980ffff";
-    println!("ATTEMPTING TO DESERIALIZE A THING");
+    //println!("ATTEMPTING TO DESERIALIZE A THING");
     
     let redeemer_result = try_decode_redeemer_input_cbor_hex(&redeemercbor).unwrap();
     
     let datum_result = try_decode_cborhex_marlowe_plutus_datum(&datumcbor).unwrap();
     
-    for x in &redeemer_result {
-        println!("Decoded Redeemer: {:?}",x);
+    for _ in &redeemer_result {
+        //println!("Decoded Redeemer: {:?}",x);
     }
 
-    println!("Decoded Datum: :{:?}",datum_result);
-    println!("Datum contract marlowe-dsl: {}",datum_result.contract);
+    // println!("Decoded Datum: :{:?}",datum_result);
+    // println!("Datum contract marlowe-dsl: {}",datum_result.contract);
 
     let re_datum = datum_result.to_plutus_data(&vec![]).unwrap();
     if hex::encode(re_datum.to_bytes()) != datumcbor {
         panic!("not identical re-serialized datum")
     } else {
-        println!("we have re-serialized the datum and it came out exactly the same.")
+        //println!("we have re-serialized the datum and it came out exactly the same.")
     }
 
     let re_redeemer = redeemer_result.to_plutus_data(&vec![]).unwrap();
@@ -166,7 +166,7 @@ fn validate_decode_of_actual_on_chain_data_and_that_we_can_re_encode_with_identi
     if hex::encode(re_redeemer.to_bytes()) != redeemercbor {
         panic!("not identical re-serialized redeemer")
     } else {
-        println!("we have re-serialized the redeemer and it came out exactly the same.")
+        //println!("we have re-serialized the redeemer and it came out exactly the same.")
     }
 
 

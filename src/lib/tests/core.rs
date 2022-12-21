@@ -1,10 +1,11 @@
+use crate::serialization;
 #[cfg(test)]
 use crate::{
     parsing,
     parsing::Rule,
     types::marlowe::*,
-    parsing::deserialization::deserialize,
-    parsing::serialization::marlowe::serialize
+    deserialization::marlowe::deserialize,
+    serialization::marlowe::serialize
 };
 
 #[cfg(test)]
@@ -46,8 +47,10 @@ fn serialize_and_print() {
 
     let serialized = serialize(my_contract);
     match deserialize(&serialized) {
-        Ok(d) => println!("{}",d.contract),
-        Err(e) => panic!("{e:#}"),
+        Ok(_) => {
+            // println!("{}",d.contract)
+        },
+        Err(e) => panic!("{e:?}"),
     };
     
 }
@@ -147,7 +150,7 @@ fn can_parse_sample() {
     let serialized_contract = read_from_file(&"sample.marlowe");
     match deserialize(&serialized_contract) {
         Ok(_) => {},
-        Err(e) => panic!("{e:#}"),
+        Err(e) => panic!("{e:?}"),
     }
 }
 
@@ -177,7 +180,7 @@ fn modify_example_works(){
 }
 
 #[cfg(test)]
-fn read_from_file(path:&str) -> String {
+pub(crate) fn read_from_file(path:&str) -> String {
     let path_exists = std::path::Path::new(&path).exists();
     if path_exists {
         std::fs::read_to_string(&path).expect("failed to read from file.").to_owned()
@@ -237,10 +240,10 @@ fn new_parser() {
     let deserialized = deserialize(&simple_contract);
     match deserialized {
         Ok(d) => {
-            let serialized = serialize(d.contract);
-            println!("{serialized}");
+            let _ = serialize(d.contract);
+            //println!("{serialized}");
         },
-        Err(e) => panic!("{e}"),
+        Err(e) => panic!("{e:?}"),
     }
 }
 
@@ -264,7 +267,7 @@ fn json_core_should_return_error_for_uninitialized_timeout_params() {
 
     let result = deserialize(&serialized_contract).unwrap();
 
-    match parsing::serialization::json::serialize(result.contract) {
+    match serialization::json::serialize(result.contract) {
         Ok(_v) => {
             panic!("Should not be possible to serialize prior to initializing all constant params")
         },
@@ -279,10 +282,14 @@ fn json_core_should_return_error_for_uninitialized_timeout_params() {
 fn json_core_should_return_error_for_uninitialized_constant_params() {
     let contract_path = "test_data/test_uninitialized_constants.marlowe";
     let serialized_contract = read_from_file(contract_path);
-    let tokens = <parsing::MarloweParser as pest::Parser<crate::parsing::Rule>>::parse(
-        crate::parsing::Rule::MainContract,
-        &serialized_contract,                     
-    ).unwrap();
+    let tokens = 
+        match <parsing::MarloweParser as pest::Parser<crate::parsing::Rule>>::parse(
+            crate::parsing::Rule::MainContract,
+            &serialized_contract,                     
+        ) {
+            Ok(v) => v,
+            Err(e) => panic!("{:#}",e),
+        };
     
     let flat = tokens.flatten();
     let bad : Vec<Pair<Rule>> = flat.filter( |x| x.as_rule() == crate::parsing::Rule::ConstantParam ).collect();
@@ -293,7 +300,7 @@ fn json_core_should_return_error_for_uninitialized_constant_params() {
 
     let result = deserialize(&serialized_contract).unwrap();
 
-    match parsing::serialization::json::serialize(result.contract) {
+    match serialization::json::serialize(result.contract) {
         Ok(_v) => {
             panic!("Should not be possible to serialize prior to initializing all constant params")
         },
@@ -310,10 +317,14 @@ fn json_core_should_return_error_for_uninitialized_constant_params() {
 fn json_core_should_return_output_identical_to_playground() {
     let contract_path = "test_data/test_timeouts.marlowe";
     let serialized_contract = read_from_file(contract_path);
-    let tokens = <parsing::MarloweParser as pest::Parser<crate::parsing::Rule>>::parse(
-        crate::parsing::Rule::MainContract,
-        &serialized_contract,                     
-    ).unwrap();
+    let tokens = 
+        match <parsing::MarloweParser as pest::Parser<crate::parsing::Rule>>::parse(
+            crate::parsing::Rule::MainContract,
+            &serialized_contract,                     
+        ) {
+            Ok(v) => v,
+            Err(e) => panic!("{:#}",e),
+        };
     
     let flat = tokens.flatten();
     let bad : Vec<Pair<Rule>> = flat.filter( |x| x.as_rule() == crate::parsing::Rule::ConstantParam ).collect();
@@ -326,9 +337,9 @@ fn json_core_should_return_output_identical_to_playground() {
     input.insert("TEST_PARAMETER_ONE".to_string(),666);
     input.insert("TEST_PARAMETER_TWO".to_string(),4242);
     input.insert("TEST_PARAMETER_THREE".to_string(),1658504132546);
-    let deserialized = parsing::deserialization::deserialize_with_input(&serialized_contract,input).unwrap();
+    let deserialized = crate::deserialization::marlowe::deserialize_with_input(&serialized_contract,input).unwrap();
 
-    match parsing::serialization::json::serialize(deserialized.contract) {
+    match serialization::json::serialize(deserialized.contract) {
         Ok(json_core) => {
 
             // when writing this test, playground had not yet been updated to use ADDRESS but 
@@ -351,7 +362,10 @@ fn json_core_should_return_output_identical_to_playground() {
             if json_play == json_core {
                 //println!("Successfully validated re-enc test_timeouts_as_serialized_by_playground_v2 are identical!")
             } else {
-                panic!("json serialization by marlowe_lang differs from that of the playground. \n{}",json_core)
+                _ = std::fs::write("c:/temp/jsontest_core.json", json_core);
+                _ = std::fs::write("c:/temp/jsontest_play.json", json_play);
+                
+                panic!("json serialization by marlowe_lang differs from that of the playground.")
             }
         },
         Err(e) => {
@@ -369,12 +383,12 @@ fn json_core_should_return_output_identical_to_playground() {
 // We need to be able to get a list of such items in a contract
 // so that we can tell how a contract must be initialized properly.
 #[test]
-pub fn can_find_uninitialized_inputs() -> Result<(),String> {
+fn can_find_uninitialized_inputs() -> Result<(),String> {
     let contract_path = "test_data/test_deeply_nested_contract.marlowe";
     let contract_dsl = std::fs::read_to_string(&contract_path).expect("failed to read from file.").to_owned();
     
     let result = 
-        crate::parsing::deserialization::deserialize(&contract_dsl)
+        crate::deserialization::marlowe::deserialize(&contract_dsl)
             .unwrap();
 
     if result.uninitialized_const_params.is_empty() {
@@ -405,13 +419,13 @@ pub fn can_find_uninitialized_inputs() -> Result<(),String> {
                 if !result.uninitialized_time_params.contains(&name) {
                     return Err(format!("During parsing we found an uninitialized time-param ('{name}') but Contract::list_input_params did not find such a field."))
                 }
-                println!("Successfully validated uninitialized time param: {name}")
+                //println!("Successfully validated uninitialized time param: {name}")
             },
             RequiredContractInputField::ConstantParam(name) => {
                 if !result.uninitialized_const_params.contains(&name) {
                     return Err(format!("During parsing we found an uninitialized const-param ('{name}') but Contract::list_input_params did not find such a field."))
                 }
-                println!("Successfully validated uninitialized const param: {name}")
+                //println!("Successfully validated uninitialized const param: {name}")
             },
         }
     }

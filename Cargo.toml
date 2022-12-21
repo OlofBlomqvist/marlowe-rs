@@ -22,10 +22,12 @@ serde_derive = { version = "1.0.144", optional = true }
 hex = { version = "0.4.3", optional = true }
 minicbor = { version = "0.18.0", optional = true }
 cardano-multiplatform-lib = { version = "3.1.0", optional = true }
-wasm-bindgen = { version = "0.2.78", optional = true }
-web-sys = { version = "0.3.4", features = [ 'console' ],optional = true }
+wasm-bindgen = { version = "0.2.78", optional = true , features=["serde-serialize"]}
+web-sys = { version = "0.3.4", features = [ 'console' ], optional = true }
 bech32 = "0.9.1"
+chrono = { version = "0.4", features = ["wasmbind"] }
 #aiken-lang = "*"
+js-sys = { version = "*", optional=true }
 # =============================================================
 
 
@@ -40,6 +42,7 @@ utils = [
     "dep:serde_derive" ]
 wasm = [
     "utils",
+    "dep:js-sys",
     "dep:wasm-bindgen",
     "dep:console_error_panic_hook",
     "dep:web-sys" ]

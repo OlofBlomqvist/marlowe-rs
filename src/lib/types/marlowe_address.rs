@@ -44,7 +44,8 @@ impl Address {
                                     Some(
                                         StakingHashOrPtr::Hash { 
                                             creds: PubKeyOrValidatorHashForStaking::PubKeyHash (
-                                                PubKeyValidatorHash { spkh: sc.to_keyhash().unwrap().to_hex() }
+                                                // TODO: Get rid of unwrap
+                                                PubKeyValidatorHash { spkh: sc.to_keyhash().unwrap().to_hex() } 
                                             )
                                         }
                                     )
@@ -53,6 +54,7 @@ impl Address {
                                     Some(
                                         StakingHashOrPtr::Hash { 
                                             creds: PubKeyOrValidatorHashForStaking::ScriptCredentials (
+                                                // TODO: Get rid of unwrap
                                                 ScriptValidatorHash { svah: sc.to_scripthash().unwrap().to_hex()   }
                                             )
                                         }
@@ -66,12 +68,14 @@ impl Address {
                     match pc.kind() {
                         cardano_multiplatform_lib::address::StakeCredKind::Key => {
                             ScriptOrPubkeyCred::PubKeyCredential { 
+                                // TODO: Get rid of unwrap
                                 pkh: PubKeyHash { pkhash : pc.to_keyhash().unwrap().to_hex() }, 
                                 staking: delegation_part
                             }
                         },
                         cardano_multiplatform_lib::address::StakeCredKind::Script => {
                             ScriptOrPubkeyCred::ScriptCredential { 
+                                // TODO: Get rid of unwrap
                                 vah: ValidatorHash { vhash : pc.to_scripthash().unwrap().to_hex()},
                                 staking: delegation_part 
                             }
@@ -97,6 +101,7 @@ impl Address {
                 })
             } => {
                 let now_with_key_type_info = format!("0{}{}{}",if self.is_mainnet {"1"} else {"0"},pkh.pkhash,spkh.spkh);
+                // TODO: Get rid of unwrap
                 let bytes = hex::decode(now_with_key_type_info).unwrap();
                 let a = cardano_multiplatform_lib::address::Address::from_bytes(bytes).unwrap();
                 if a.as_reward().is_some() {
@@ -116,6 +121,7 @@ impl Address {
                 })
             } => {
                 let now_with_key_type_info = format!("2{}{}{}",if self.is_mainnet {"1"} else {"0"},pkh.pkhash,svah.svah);
+                // TODO: Get rid of unwrap
                 let bytes = hex::decode(now_with_key_type_info).unwrap();
                 let a = cardano_multiplatform_lib::address::Address::from_bytes(bytes).unwrap();
                 if a.as_reward().is_some() {
@@ -142,6 +148,7 @@ impl Address {
                 pkh, 
                 staking : None
             } => {
+                // TODO: Get rid of unwrap
                 // if we got here i suppose we must have been able to create an instance using the from_bech32?
                 let now_with_key_type_info = format!("6{}{}",if self.is_mainnet {"1"} else {"0"},pkh.pkhash);
                 let bytes = hex::decode(now_with_key_type_info).unwrap();
@@ -164,6 +171,7 @@ impl Address {
                         spkh 
                 )})
             } => {
+                // TODO: Get rid of unwrap
                 let now_with_key_type_info = format!("1{}{}{}",if self.is_mainnet {"1"} else {"0"},vah.vhash,spkh.spkh);
                 let bytes = hex::decode(now_with_key_type_info).unwrap();
                 let a = cardano_multiplatform_lib::address::Address::from_bytes(bytes).unwrap();
@@ -184,6 +192,7 @@ impl Address {
                             svah 
                     )})
             } => {
+                // TODO: Get rid of unwrap
                 let now_with_key_type_info = format!("3{}{}{}",if self.is_mainnet {"1"} else {"0"},vah.vhash,svah.svah);
                 let bytes = hex::decode(now_with_key_type_info).unwrap();
                 let a = cardano_multiplatform_lib::address::Address::from_bytes(bytes).unwrap();
@@ -212,6 +221,7 @@ impl Address {
                 vah, 
                 staking : None
             } => {
+                // TODO: Get rid of unwrap
                 let now_with_key_type_info = format!("7{}{}",if self.is_mainnet {"1"} else {"0"},vah.vhash);
                 let bytes = hex::decode(now_with_key_type_info).unwrap();
                 let a = cardano_multiplatform_lib::address::Address::from_bytes(bytes).unwrap();

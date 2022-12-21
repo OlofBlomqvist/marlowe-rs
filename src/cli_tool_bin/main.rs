@@ -1,7 +1,7 @@
 mod args;
 use args::{DatumArgs, RedeemerArgs, StateArgs, ContractArgs, PlutusArgs};
 use cardano_multiplatform_lib::{plutus};
-use marlowe_lang::{types::marlowe::{Contract, MarloweDatum, PossibleMerkleizedInput}, parsing::serialization::marlowe, simulation::state_machine::MachineState};
+use marlowe_lang::{types::marlowe::{Contract, MarloweDatum, PossibleMerkleizedInput}, simulation::state_machine::MachineState};
 use std::{collections::HashMap};
 use marlowe_lang::extras::utils::*;
 use plutus_data::{ToPlutusData, PlutusData, FromPlutusData};
@@ -29,7 +29,7 @@ fn datum_handler(args:DatumArgs) {
 
                 let contract = 
                     format!("Contract (Marlowe-DSL): {}",
-                        marlowe_lang::parsing::serialization::marlowe::serialize(x.contract));
+                        marlowe_lang::serialization::marlowe::serialize(x.contract));
                 
                 format!("Validator hash: {validator_hash}\n\nState: {}\n\nContinuation: {}",x.state,contract)
             },
@@ -118,18 +118,6 @@ fn state_handler(args:StateArgs) {
     }
 }
 
-
-// TODO:::::    
-// cargo run --bin marlowe_lang_cli contract from-file .\test_data\test_uninitialized_timeout.marlowe  marlowe-dsl extended-marlowe-inputs
-// does not seem to return any inputs??? should return the timrout param?
-
-// this works:  cargo run --bin marlowe_lang_cli contract from-file .\test_data\Coupon_Bond_Guaranteed.marlowe marlowe-dsl extended-marlowe-inputs
-
-// This seems to work : expected actions with input init
-//cargo run --bin marlowe_lang_cli contract from-file -i "MyTimeoutParam=9999999999999" .\test_data\test_uninitialized_timeout.marlowe  marlowe-dsl expected-actions
-
-// ... seems its just timeout that did not work?
-
 fn contract_handler(args:ContractArgs) {
 
     fn serialize(c:Contract,e:ContractOutputInfoType) -> String {
@@ -148,7 +136,7 @@ fn contract_handler(args:ContractArgs) {
                 result_string
             }
             ContractOutputInfoType::ExpectedActions => {
-                let machine = marlowe_lang::simulation::state_machine::ContractInstance::new(&c, None);
+                let machine = marlowe_lang::simulation::state_machine::ContractInstance::new(&c);
                 let result = machine.process().unwrap();
                 let state: MachineState = result.1;
                 for x in result.0.logs {
@@ -160,9 +148,9 @@ fn contract_handler(args:ContractArgs) {
                 hex::encode(c.to_plutus_data(&vec![]).unwrap().to_bytes()),
             ContractOutputInfoType::MarloweDSL => 
                 marlowe_lang::parsing::fmt::fmt(&
-                    marlowe_lang::parsing::serialization::marlowe::serialize(c)),
+                    marlowe_lang::serialization::marlowe::serialize(c)),
             ContractOutputInfoType::MarloweJSON => 
-                marlowe_lang::parsing::serialization::json::serialize(c).unwrap(),
+                marlowe_lang::serialization::json::serialize(c).unwrap(),
             ContractOutputInfoType::PlutusDataDetailedJson => {
                 let pl = c.to_plutus_data(&vec![]).unwrap();
                 datum_to_json(&pl).unwrap()
@@ -187,9 +175,9 @@ fn contract_handler(args:ContractArgs) {
                             let value_num = value.trim().parse::<i64>().unwrap();                        
                             h.insert(name.trim().to_string(),value_num);
                         }
-                        marlowe_lang::parsing::deserialization::deserialize_with_input(&s,h).unwrap().contract
+                        marlowe_lang::deserialization::marlowe::deserialize_with_input(&s,h).unwrap().contract
                     },
-                    None => marlowe_lang::parsing::deserialization::deserialize(&s).unwrap().contract
+                    None => marlowe_lang::deserialization::marlowe::deserialize(&s).unwrap().contract
                 }
             }
             ContractInputEncoding::PlutusDataDetailedJson => {
