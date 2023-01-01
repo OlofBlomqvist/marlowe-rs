@@ -27,7 +27,7 @@ web-sys = { version = "0.3.4", features = [ 'console' ], optional = true }
 bech32 = "0.9.1"
 chrono = { version = "0.4", features = ["wasmbind"] }
 #aiken-lang = "*"
-js-sys = { version = "*", optional=true }
+js-sys = { version = "0.3.59", optional=true }
 serde_stacker = {version= "0.1.7"}
 # =============================================================
 
