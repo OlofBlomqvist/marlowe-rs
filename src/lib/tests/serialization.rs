@@ -103,64 +103,44 @@ fn can_reserialize_all_test_data_marlowe_files_using_json() {
     let paths = std::fs::read_dir("test_data").unwrap();
     let mut count = 0;
     
-    // pre-populate marlowe extended vars so we can serialize to json correctly
-    let mut inputs : HashMap<String,i64> = HashMap::new();
-    inputs.insert("Amount of dollars".into(), 1111);
-    inputs.insert("Timeout for dollar deposit".into(), 22222);
-    inputs.insert("Amount of Ada".into(), 33333);
-    inputs.insert("Timeout for Ada deposit".into(), 4444);
-    inputs.insert("Amount paid by party".into(), 4444);
-    inputs.insert("Amount paid by counterparty".into(), 5555);
-    inputs.insert("Second window deadline".into(), 666);
-    inputs.insert("Second window beginning".into(), 777);
-    inputs.insert("First window deadline".into(), 888);
-    inputs.insert("First window beginning".into(), 9299);
-    inputs.insert("Counterparty deposit deadline".into(), 1334);
-    inputs.insert("Party deposit deadline".into(), 9919);
-    inputs.insert("Amount of Ada to use as asset".into(), 9919);
-    inputs.insert("Principal".into(), 9919);
-    inputs.insert("Interest instalment".into(), 9919);
-    inputs.insert("Price".into(), 9898);
-    inputs.insert("Mediation deadline".into(), 19898);
-    inputs.insert("Complaint deadline".into(), 19898);
-    inputs.insert("Complaint response deadline".into(), 19898);
-    inputs.insert("Payment deadline".into(), 19898);
-    inputs.insert("Collateral amount".into(), 19898);
-    inputs.insert("Dispute by buyer timeout".into(), 19898);
-    inputs.insert("Deposit of price by buyer timeout".into(), 19898);
-    inputs.insert("Deposit of collateral by buyer timeout".into(), 19898);
-    inputs.insert("Collateral deposit by seller timeout".into(), 19898);
-    inputs.insert("Very deep constant parameter for test".into(),99);
-    inputs.insert("Deeply nested time param for test".into(),99);
-    inputs.insert("Even deeper constant param for test".into(),99);
     
-    
-    
+        
     for path in paths {
 
+        let mut inputs : HashMap<String,i64> = HashMap::new();
         count = count + 1;
         let canonical_path = path.unwrap().path().canonicalize().unwrap();
         let path_string = canonical_path.display().to_string();
+        
         if !path_string.to_uppercase().ends_with(".MARLOWE") || path_string.contains("test_simple_addr") {
             continue
         }
-
+        
         let serialized_contract = crate::tests::core::read_from_file(&path_string);
 
-        
+        let de_one = crate::deserialization::marlowe::deserialize(&serialized_contract).unwrap();
+        for x in de_one.uninitialized_const_params {
+            inputs.insert(x, 42);
+        }
+        for x in de_one.uninitialized_time_params {
+            inputs.insert(x, 42);
+        }
         let deserialization_result = crate::deserialization::marlowe::deserialize_with_input(&serialized_contract,inputs.clone()).expect("valid marlowe dsl contract");
        
         let serialized_to_json = 
             crate::serialization::json::serialize(deserialization_result.contract);
 
         let serialized_to_json = match serialized_to_json {
-            Ok(v) => v,
+            Ok(v) => {
+                //println!("Successfully re-serialized {path_string}");
+                v
+            },
             Err(e) => 
                 if e.to_string().contains("param not initialized") {
-                    panic!("please add more input for this test! {:?}",e)
+                    panic!("please add more input for this test! {:?}. It is required for serializing {path_string}",e)
                 } else if e.to_string().contains("contains null values") {
                     // marlowe core json format does not support holes so ignore these
-                    break
+                    continue
             } else {
                 panic!("failed to serialize to json due to error: {:?}",e)
             }
