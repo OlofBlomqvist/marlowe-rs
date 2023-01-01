@@ -1,18 +1,21 @@
 use std::collections::HashMap;
 
-use serde::{Deserialize};
+use serde::{Deserialize, __private::de, Deserializer};
 use crate::types::marlowe::*;
 
-pub fn deserialize<'a,'b,T>(json:&str) -> Result<T,serde_json::Error> 
-where T : serde::de::DeserializeOwned {
-    let result = serde_json::from_str::<T>(&json);
-    match result {
-        Ok(v) => Ok(v),
-        Err(e) => Err(e),
-    }
+
+pub fn deserialize<'a,T : 'static>(json:&str) -> Result<T,serde_json::Error> 
+where T : serde::de::DeserializeOwned + std::marker::Send{
+    let j = json.to_owned();
+    std::thread::Builder::new().stack_size(32 * 1024 * 1024).spawn(move ||{
+        let mut deserializer = serde_json::Deserializer::from_str(&j);
+        deserializer.disable_recursion_limit();
+        let deserializer = serde_stacker::Deserializer::new(&mut deserializer);
+        let value = T::deserialize(deserializer).unwrap();
+        Ok(value)
+    }).unwrap().join().unwrap()
+
 }
-
-
 
 struct TimeoutVisitor;
 impl<'de> serde::de::Visitor<'de> for TimeoutVisitor {
@@ -63,11 +66,15 @@ impl<'de> serde::de::Visitor<'de> for TokenVisitor {
             return Err(serde::de::Error::custom(&format!("Invalid token object")));
         }
 
-        // TODO: While these unwraps are safe, they make it hard to find unsafe ones
-        // and so we should get rid of them.
         return Ok(Token {
-            currency_symbol: currency_symbol.unwrap(),
-            token_name: token_name.unwrap(),
+            currency_symbol: currency_symbol.map_or_else(
+                || Err(serde::de::Error::custom(&format!("missing currency symbol"))),
+                |v|Ok(v)
+            )?,
+            token_name: token_name.map_or_else(
+                || Err(serde::de::Error::custom(&format!("missing token name"))),
+                |v|Ok(v)
+            )?,
         })
 
     }
@@ -235,9 +242,10 @@ impl<'de> serde::de::Visitor<'de> for ActionVisitor {
         if for_choice.is_some() && choose_between.is_some()  {
             return Ok(Action::Choice { 
                 for_choice, 
-                // TODO: While these unwraps are safe, they make it hard to find unsafe ones
-                // and so we should get rid of them.
-                choose_between: choose_between.unwrap().iter()
+                choose_between: choose_between.map_or_else(
+                    || Err(serde::de::Error::custom(&format!("missing bounds"))),
+                    |v|Ok(v)
+                )?.iter()
                     .map(|x|Some(x.to_owned())).collect::<Vec<Option<Bound>>>()
             })
         }
@@ -414,10 +422,11 @@ impl<'de> serde::de::Visitor<'de> for ChoiceIdVisitor {
             return Err(serde::de::Error::custom("Missing choice_name or choice_owner"));
         }
 
-        // TODO: While these unwraps are safe, they make it hard to find unsafe ones
-        // and so we should get rid of them.
         Ok(ChoiceId{
-            choice_name: choice_name.unwrap(),
+            choice_name: choice_name.map_or_else(
+                || Err(serde::de::Error::custom(&format!("missing choice name"))),
+                |v|Ok(v)
+            )?,
             choice_owner
         })
     }
@@ -524,43 +533,66 @@ impl<'de> serde::de::Visitor<'de> for ContractVisitor {
 
         // WHEN CONTRACT
         if timeout_continuation.is_some() && timeout.is_some() && when.is_some() {
-            // TODO: Get rid of unwrap
             return Ok(Contract::When { 
-                when: when.unwrap().iter().map(|x|Some(x.clone())).collect::<Vec<Option<Case>>>(), 
-                timeout: Some(Timeout::TimeConstant(timeout.unwrap())), 
-                timeout_continuation: Some(timeout_continuation.unwrap().boxed())
+                when: when.map_or_else(
+                    || Err(serde::de::Error::custom(&format!("missing when contract continuation"))),
+                    |v|Ok(v)
+                )?.iter().map(|x|Some(x.clone())).collect::<Vec<Option<Case>>>(), 
+                timeout: Some(Timeout::TimeConstant(timeout.map_or_else(
+                    || Err(serde::de::Error::custom(&format!("missing timeout"))),
+                    |v|Ok(v)
+                )?)), 
+                timeout_continuation: Some(timeout_continuation.map_or_else(
+                    || Err(serde::de::Error::custom(&format!("missing timeout continuation"))),
+                    |v|Ok(v)
+                )?.boxed())
             })
         }
 
         // IF CONTRACT
         if r#if.is_some() && then.is_some() && r#else.is_some() {
-            // TODO: Get rid of unwrap
             return Ok(Contract::If { 
                 x_if: r#if, 
-                then: Some(Box::new(then.unwrap())), 
-                x_else: Some(Box::new(r#else.unwrap())) 
+                then: Some(Box::new(then.map_or_else(
+                    || Err(serde::de::Error::custom(&format!("missing IF contract continuation (then)"))),
+                    |v|Ok(v)
+                )?)), 
+                x_else: Some(Box::new(r#else.map_or_else(
+                    || Err(serde::de::Error::custom(&format!("missing IF contract continuation (else)"))),
+                    |v|Ok(v)
+                )?)) 
             })
         }
 
         // LET CONTRACT
         if r#let.is_some() && be.is_some() && then.is_some() {
-            // TODO: Get rid of unwrap
             return Ok(Contract::Let {
-                x_let: r#let.unwrap(),
-                be: Some(Box::new(be.unwrap())),
-                then: Some(Box::new(then.unwrap())),
+                x_let: r#let.map_or_else(
+                    || Err(serde::de::Error::custom(&format!("missing LET contract valueId (let)"))),
+                    |v|Ok(v)
+                )?,
+                be: Some(Box::new(be.map_or_else(
+                    || Err(serde::de::Error::custom(&format!("missing LET contract value (be)"))),
+                    |v|Ok(v)
+                )?)),
+                then: Some(Box::new(then.map_or_else(
+                    || Err(serde::de::Error::custom(&format!("missing LET contract continuation (then)"))),
+                    |v|Ok(v)
+                )?)),
             })
         }
         
         // PAY CONTRACT
         if from_account.is_some() && to.is_some() && token.is_some() && pay.is_some() && r#then.is_some() {
-            // TODO: Get rid of unwrap
             return Ok(Contract::Pay { 
                 from_account: from_account, 
                 to: to, 
                 token: token, 
                 pay: pay, 
-                then: Some(Box::new(r#then.unwrap()))
+                then: Some(Box::new(r#then.map_or_else(
+                    || Err(serde::de::Error::custom(&format!("missing PAY contract continuation (then)"))),
+                    |v|Ok(v)
+                )?))
             })
         }
 
@@ -568,8 +600,10 @@ impl<'de> serde::de::Visitor<'de> for ContractVisitor {
         if assert.is_some() && r#then.is_some() {
             return Ok(Contract::Assert {
                 assert: assert,
-                // TODO: Get rid of unwrap
-                then: Some(Box::new(r#then.unwrap())),
+                then: Some(Box::new(r#then.map_or_else(
+                    || Err(serde::de::Error::custom(&format!("missing ASSERT contract continuation (then)"))),
+                    |v|Ok(v)
+                )?)),
             })
         }
 
@@ -621,13 +655,23 @@ impl<'de> serde::de::Visitor<'de> for CaseVisitor {
         }
 
         if merkleized_then.is_some() {
-            Ok(Case { case:Some(case.unwrap()), then:Some(
-                // TODO: Get rid of unwrap
-                PossiblyMerkleizedContract::Merkleized(merkleized_then.unwrap())) })
+            Ok(Case { case:Some(case.map_or_else(
+                || Err(serde::de::Error::custom(&format!("missing CASE action"))),
+                |v|Ok(v)
+            )?), then:Some(
+                PossiblyMerkleizedContract::Merkleized(merkleized_then.map_or_else(
+                    || Err(serde::de::Error::custom(&format!("missing CASE continuation merkleized data (merkleized_then)"))),
+                    |v|Ok(v)
+                )?)) })
         } else {
-            // TODO: Get rid of unwrap
-            Ok(Case { case:Some(case.unwrap()), then:Some(
-                PossiblyMerkleizedContract::Raw(Box::new(then.unwrap()))) })
+            Ok(Case { case:Some(case.map_or_else(
+                || Err(serde::de::Error::custom(&format!("missing CASE action"))),
+                |v|Ok(v)
+            )?), then:Some(
+                PossiblyMerkleizedContract::Raw(Box::new(then.map_or_else(
+                    || Err(serde::de::Error::custom(&format!("missing CASE continuation (then)"))),
+                    |v|Ok(v)
+                )?))) })
         }
         
 
@@ -659,7 +703,7 @@ impl<'de> serde::de::Visitor<'de> for StateVisitor {
         M: serde::de::MapAccess<'de>
     {
         
-        let mut accounts : Option<Vec<((Party,Token),i64)>> = None;
+        let mut accounts : Option<Vec<((Party,Token),u64)>> = None;
         let mut choices : Option<Vec<(ChoiceId,i64)>> = None;
         let mut bound_values : Option<Vec<(ValueId,i64)>> = None;
         let mut min_time : Option<u64> = None;
@@ -1142,6 +1186,7 @@ impl<'de> Deserialize<'de> for Observation {
 impl<'de> Deserialize<'de> for InputAction {    
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where D: serde::Deserializer<'de> { 
+            
             deserializer.deserialize_map(InputActionVisitor)
 
     }

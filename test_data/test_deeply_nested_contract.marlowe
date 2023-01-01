@@ -791,8 +791,8 @@ When  [
                                                                                                                                                                                                                                     ))
                                                                                                                                                                                                                             )
                                                                                                                                                                                                                             (Pay
-                                                                                                                                                                                                                                (Role "Party")
-                                                                                                                                                                                                                                (Account (Role "Counterparty"))
+                                                                                                                                                                                                                                (Role "Party2")
+                                                                                                                                                                                                                                (Account (Role "CounterpartyX"))
                                                                                                                                                                                                                                 (Token "" "")
 
                                                                                                                                                                                                                                 (Cond
@@ -1749,7 +1749,7 @@ When  [
                             ))]
                         (TimeParam "First window deadline")
 
-                        ?contract 
+                        Close 
                     )
                 ))]
             (TimeParam "Counterparty deposit deadline")
@@ -1761,7 +1761,7 @@ When  [
                             ))]
                         (TimeParam "First window deadline")
 
-                        ?contract 
+                        Close
                     )
                 ))]
             (TimeParam "Counterparty deposit deadline")

@@ -433,3 +433,157 @@ fn can_find_uninitialized_inputs() -> Result<(),String> {
     Ok(())
     
 }
+
+
+
+
+
+
+#[test]
+pub fn marlowe_strict_conversion() -> Result<(),String> {
+    use crate::types::marlowe_strict::*;
+    let simple = Contract::When { 
+        when: vec![
+            Case { 
+                case: Action::Notify { 
+                    notify_if: Observation::True 
+                }, 
+                then: Contract::When { 
+                    when: vec![
+                        Case { 
+                            case: Action::Notify { 
+                                notify_if: Observation::True 
+                            }, 
+                            then: Contract::When { 
+                                when: vec![
+                                    Case { 
+                                        case: Action::Notify { 
+                                            notify_if: Observation::True 
+                                        }, 
+                                        then: Contract::Close.into() 
+                                    }.into()
+                                ], 
+                                timeout: 42, 
+                                timeout_continuation: Contract::When { 
+                                    when: vec![
+                                        Case { 
+                                            case: Action::Notify { 
+                                                notify_if: Observation::True 
+                                            }, 
+                                            then: Contract::Close.into() 
+                                        }.into()
+                                    ], 
+                                    timeout: 42, 
+                                    timeout_continuation: Contract::Close.into()
+                                }.into()
+                            }
+                        }.into()
+                    ], 
+                    timeout: 42, 
+                    timeout_continuation: Contract::When { 
+                        when: vec![
+                            Case { 
+                                case: Action::Notify { 
+                                    notify_if: Observation::True 
+                                }, 
+                                then: Contract::Close.into() 
+                            }.into()
+                        ], 
+                        timeout: 42, 
+                        timeout_continuation: Contract::Close.into()
+                    }.into()
+                } 
+            }.into()
+        ], 
+        timeout: 42, 
+        timeout_continuation: Contract::When { 
+            when: vec![
+                Case { 
+                    case: Action::Notify { 
+                        notify_if: Observation::True 
+                    }, 
+                    then: Contract::Close.into() 
+                }.into()
+            ], 
+            timeout: 42, 
+            timeout_continuation: Contract::Close.into()
+        }.into()
+    };
+
+    let _ : crate::types::marlowe::Contract = simple.try_into()?;
+    Ok(())
+
+}
+
+#[test]
+pub fn basic_marlowe_strict_example_code() {
+
+    use crate::types::marlowe_strict::*;
+    
+    let p1 = Party::Role("P1".into());
+    let p2 = Party::Role("P2".into());
+    let tok = Token::ada();
+    let quantity = Value::ConstantValue(42000000);
+
+    let _ = Contract::When { 
+        when: vec![
+            Case { 
+                case: Action::Deposit { 
+                    into_account: p2.clone(), 
+                    party: p1.clone(), 
+                    of_token: tok, 
+                    deposits: quantity
+                }, 
+                then: 
+                    Contract::Pay { 
+                        from_account: p1, 
+                        to: Payee::Party(p2), 
+                        token: Token::ada(), 
+                        pay: Value::ConstantValue(42), 
+                        then: Contract::Close.into()
+                    } 
+            }
+        ], 
+        timeout: 999999999, 
+        timeout_continuation: Contract::Close.into()
+    };
+
+    //println!("{}",crate::serialization::marlowe::serialize(contract.into()));
+
+
+}
+
+
+
+
+#[test]
+fn walk_for_roles() {
+    let serialized_contract = crate::tests::core::read_from_file(&"test_data/test_deeply_nested_contract.marlowe");
+    match crate::deserialization::marlowe::deserialize(&serialized_contract) {
+        Ok(c) => {
+            // make sure we capture all roles both when deserializing
+            // and when using ast_node walking. 
+            let mut actual_parties = c.parties;
+            let mut found_parties = c.contract.parties();
+            actual_parties.dedup_by_key(|x|format!("{x:?}"));
+            found_parties.dedup_by_key(|x|format!("{x:?}"));
+            actual_parties.sort_by(|a,b| {
+                let aa = format!("{a:?}");
+                let bb = format!("{b:?}");
+                aa.cmp(&bb)
+            });
+            found_parties.sort_by(|a,b| {
+                let aa = format!("{a:?}");
+                let bb = format!("{b:?}");
+                aa.cmp(&bb)
+            });
+            // println!("FOUND PARTIES : {found_parties:?}");
+            // println!("ACTUAL PARTIES: {actual_parties:?}");
+            assert!(actual_parties.eq(&found_parties));
+
+            
+        },
+        _ => panic!()
+    }
+}
+

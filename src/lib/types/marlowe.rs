@@ -8,6 +8,7 @@ use plutus_data::ToPlutusDataDerive;
 use plutus_data::FromPlutusDataDerive;
 
 use crate::extras::utils::datum_to_json;
+use crate::parsing::marlowe::ParseError;
 use crate::{
     Impl_From_For_Vec, 
     Impl_From_For
@@ -60,21 +61,6 @@ pub enum Payee { // Payee [('Account,0),('Party,1)]
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Clone,PartialEq)]
 pub enum Observation { 
-    /*
-    makeIsDataIndexed ''Observation [
-    ('AndObs,0),
-    ('OrObs,1),
-    ('NotObs,2),
-    ('ChoseSomething,3),
-    ('ValueGE,4),
-    ('ValueGT,5),
-    ('ValueLT,6),
-    ('ValueLE,7),
-    ('ValueEQ,8),
-    ('TrueObs,9),
-    ('FalseObs,10)
-    ]
-    */
     AndObs { // 0
         #[ignore_option_container]
         both: Option<Box<Observation>>,
@@ -135,6 +121,7 @@ pub enum Value {
     
 }
 
+
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Serialize,Deserialize)]
 pub enum BoolObs{
@@ -188,17 +175,13 @@ pub struct ScriptValidatorHash {
     #[base_16] pub svah : String
 }
 
-#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Hash,PartialEq,Eq,Clone)]
-pub struct PubKeyValidatorHash {
-    #[base_16] pub spkh : String
-}
+
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Hash,PartialEq,Eq,Clone)]
 pub enum PubKeyOrValidatorHashForStaking {
-    PubKeyHash(PubKeyValidatorHash),
-    ScriptCredentials(ScriptValidatorHash)
+    PubKeyHash(#[base_16] String),
+    ScriptCredentials(#[base_16] String)
 }
 
 
@@ -270,7 +253,7 @@ pub enum InputAction {
 // aka redeemer
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug)]
-pub enum PossibleMerkleizedInput {
+pub enum PossiblyMerkleizedInput {
     Action(InputAction),
     MerkleizedInput(InputAction, #[base_16] String)
 }
@@ -340,7 +323,7 @@ impl ToPlutusData for Party {
                         let item = plutus_data::ConstrPlutusData::new(&big_num,&items);
                         Ok(plutus_data::PlutusData::new_constr_plutus_data(&item))
                     },
-                    None => todo!(),
+                    None => Err(String::from("failed to convert into plutus data. this is most likely a bug in the marlowe_lang crate.")),
                 }
             },
             Party::Role { role_token } => {
@@ -479,8 +462,206 @@ Impl_From_For!(@Contract,MarloweContract);
 Impl_From_For!(@i64,MarloweNumber);
 Impl_From_For!(@Observation,MarloweObservation);
 Impl_From_For!(@ValueId,MarloweValueId);
-//Impl_From_For!(@PossiblyMerkleizedContract,MarlowePossiblyMerkleizedContract);
 
+pub(crate) fn walk_any<T>(x:T,f:&mut dyn FnMut(&AstNode)) -> () where crate::types::marlowe::AstNode: From<T> {
+    walk(&x.into(),f);
+}
+pub(crate) fn walk(
+    node:&AstNode,
+    func: &mut dyn FnMut(&AstNode) -> () 
+) {
+    func(node);
+
+    match &node {
+        AstNode::MarloweToken(_) => { },
+        AstNode::MarloweTimeout(_) => { },
+        AstNode::MarloweBound(_) => {},
+        AstNode::MarloweValueId(_) => {},
+        AstNode::MarloweParty(p) => {
+            match &p {
+                Party::Address(_) => {},
+                Party::Role { role_token:_ } => {},
+            }
+        }
+        AstNode::MarloweContract(x) => match x {
+            Contract::Pay { from_account:Some(a), to:Some(b), token:Some(c), pay:Some(d), then:Some(e) } => {
+                walk_any(a,func);
+                walk_any(b,func);
+                walk_any(c,func);
+                walk_any(d,func);
+                walk_any(e,func);
+            },
+            Contract::If { x_if:Some(a), then:Some(b), x_else:Some(c) } => {
+                walk_any(a,func);
+                walk_any(b,func);
+                walk_any(c,func);
+            },
+            Contract::When { when, timeout:Some(b), timeout_continuation:Some(c) } => {
+                for x in when {
+                    if let Some(case) = x {
+                        walk_any(case,func)
+                    }
+                }
+                walk_any(b,func);
+                walk_any(c,func);
+            },
+            Contract::Let { x_let, be:Some(a), then:Some(b) } => {
+                walk_any(x_let,func);
+                walk_any(a,func);
+                walk_any(b,func);
+                
+            },
+            Contract::Assert { assert:Some(a), then:Some(b) } => {
+                walk_any(a,func);
+                walk_any(b,func);
+            },
+            Contract::Close => {},
+            _ => {
+                //panic!("BAD CONTRACT: {c:?}")
+            }
+        },
+        AstNode::MarloweCaseList(x) => {
+            for a in x {
+                walk(a,func)
+            }
+        },
+        AstNode::MarloweBoundList(x) => {
+            for a in x {
+                walk(a,func)
+            }
+        },
+        AstNode::MarloweCase(x) => {
+            if let Some(case) = &x.case {
+                walk_any(case,func);
+            }
+            if let Some(PossiblyMerkleizedContract::Raw(c)) = &x.then {
+                walk_any(c,func);
+            }
+        },
+        AstNode::MarloweAction(x) => match x {
+            Action::Deposit { into_account:Some(a), party:Some(b), of_token:Some(c), deposits:Some(d) } => {
+                walk_any(a,func);
+                walk_any(b,func);
+                walk_any(c,func);
+                walk_any(d,func);
+            },
+            Action::Choice { for_choice:Some(a), choose_between } => {
+                match &a.choice_owner {
+                    Some(o) => walk_any(o,func),
+                    None => {},
+                }
+                for x in choose_between {
+                    if let Some(xx) = x {
+                        walk_any(xx,func)
+                    }
+                }
+            },
+            Action::Notify { notify_if:Some(a) } => walk_any(a,func),
+            _ => {
+                //panic!("BAD ACTION:  {x:?}")
+            }
+        },
+        AstNode::MarloweValue(x) => {
+            match x {
+                Value::AvailableMoney(Some(a), Some(b)) => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Value::ConstantValue(_num) => {},
+                Value::NegValue(Some(a)) => walk_any(a, func),
+                Value::AddValue(Some(a),Some(b)) => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Value::SubValue(Some(a),Some(b)) => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Value::MulValue(Some(a),Some(b)) => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Value::DivValue(Some(a),Some(b)) => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Value::ChoiceValue(Some(a)) => match &a.choice_owner {
+                    Some(o) => walk_any(o,func),
+                    None => {},
+                },
+                Value::Cond(Some(a), Some(b), Some(c)) => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                    walk_any(c, func);
+                },
+                Value::ConstantParam(_a) => {},
+                Value::UseValue(_) => {}
+                _ => {
+                    //panic!("BAD VAL: {x:?}")
+                }
+            }
+        },
+        AstNode::MarloweObservation(x) => {
+            match x {
+                Observation::AndObs { both:Some(a), and:Some(b) } => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Observation::OrObs { either:Some(a), or:Some(b) } => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Observation::NotObs { not:Some(a) } => {
+                    walk_any(a,func);
+                },
+                Observation::ChoseSomething(Some(x)) => {
+                    if let Some(o) = &x.choice_owner {
+                        walk_any(o, func);
+                    }
+                },
+                Observation::ValueGE { value:Some(a), ge_than :Some(b)} => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Observation::ValueGT { value:Some(a), gt_than :Some(b)} => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Observation::ValueLT { value:Some(a), lt_than :Some(b)} => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Observation::ValueLE { value:Some(a), le_than :Some(b)} => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Observation::ValueEQ { value:Some(a), equal_to:Some(b) } => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                _ => {
+                    //panic!("BAD OBS: {x:?}")
+                }
+            }
+        },
+        AstNode::MarlowePayee(x) => {
+            match x {
+                Payee::Account(Some(pt)) => walk_any(pt,func),
+                Payee::Party(Some(pt)) => walk_any(pt,func),
+                _ => {
+                    //panic!("BAD PAYEE:  {x:?}")
+                }
+            }
+        },
+        AstNode::MarloweChoiceId(x) => match &x.choice_owner {
+            Some(o) => walk_any(o,func),
+            None => {},
+        },
+        _ => {
+            //panic!("BAD AST NODE: {x:?}")
+        }
+    }
+}
 
 /// This is just the same as doing Box::new(..)
 pub trait Boxer { fn boxed(self) -> Box<Contract>; }
@@ -497,163 +678,49 @@ pub enum ValueId {
     Name(String)
 }
 
-#[wasm_bindgen::prelude::wasm_bindgen]
-#[derive(Debug,Clone)] 
-pub enum WasmPartyType {
-    Role = 0,
-    Address = 1
-}
-#[wasm_bindgen::prelude::wasm_bindgen]
-#[derive(Debug,Clone)] 
-pub struct WasmParty {
-    typ : WasmPartyType,
-    val : String
-}
-#[wasm_bindgen::prelude::wasm_bindgen]
-impl WasmParty {
-    #[wasm_bindgen::prelude::wasm_bindgen(method,catch)]
-    pub fn value(&self) -> String {
-        self.val.clone()
-    }
-    #[wasm_bindgen::prelude::wasm_bindgen(method,catch)]
-    pub fn typ(&self) -> WasmPartyType {
-        self.typ.clone()
-    }
-    #[wasm_bindgen::prelude::wasm_bindgen(method,catch)]
-    pub fn new_addr(bech32_addr:&str) -> Self {
-        Self {
-            typ: WasmPartyType::Address,
-            val: bech32_addr.to_owned()
-        }
-    }
-    #[wasm_bindgen::prelude::wasm_bindgen(method,catch)]
-    pub fn new_role(role_token:&str) -> Self {
-        Self {
-            typ: WasmPartyType::Role,
-            val: role_token.to_owned()
-        }
-    }
-}
-
-impl TryFrom<crate::types::marlowe_core::Party> for WasmParty {
-    type Error = String;
-
-    fn try_from(value: crate::types::marlowe_core::Party) -> Result<Self, Self::Error> {
-        match value {
-            super::marlowe_core::Party::Address(a) => Ok(WasmParty::new_addr(&a)),
-            super::marlowe_core::Party::Role(r) => Ok(WasmParty::new_role(&r)),
-        }
-    }   
-}
-
-
-// ===============================================================================
-// THE TYPES BELOW EXIST ONLY FOR WASM INTEROP & ARE NOT MEAN TO BE USED DIRECTLY
-// ===============================================================================
-
-#[wasm_bindgen::prelude::wasm_bindgen]
-#[derive(Debug,Clone)] 
-pub struct WasmToken {
-    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub name : String,
-    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub pol : String
-}
-
-#[wasm_bindgen::prelude::wasm_bindgen]
-#[derive(Debug,Clone)] 
-pub struct WasmAccount {
-    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub party : WasmParty,
-    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub token : WasmToken,
-    pub amount : u64
-}
-#[wasm_bindgen::prelude::wasm_bindgen]
-#[derive(Debug,Clone)] 
-pub struct WasmChoice {
-    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub choice_name : String,
-    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub choice_owner : WasmParty,
-    pub value : u64,
-}
-
-#[wasm_bindgen::prelude::wasm_bindgen]
-#[derive(Debug,Clone)] 
-pub struct WasmBoundValue {
-    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub name : String,
-    pub value : u64,
-}
-
-#[wasm_bindgen::prelude::wasm_bindgen]
-#[derive(Debug,Clone)] 
-pub struct WasmAccounts(Vec<WasmAccount>);
-impl WasmAccounts {
-    pub fn new(accounts:Vec<WasmAccount>) -> Self {
-        Self(accounts)
-    }
-}
-
-#[wasm_bindgen::prelude::wasm_bindgen]
-#[derive(Debug,Clone)] 
-pub struct WasmChoices(Vec<WasmChoice>);
-impl WasmChoices {
-    pub fn new(choices:Vec<WasmChoice>) -> Self {
-        Self(choices)
-    }
-}
-
-#[wasm_bindgen::prelude::wasm_bindgen]
-#[derive(Debug,Clone)] 
-pub struct WasmBoundValues(Vec<WasmBoundValue>);
-impl WasmBoundValues {
-    pub fn new(bound_values:Vec<WasmBoundValue>) -> Self {
-        Self(bound_values)
-    }
-}
-
-// THIS TYPE EXISTS ONLY FOR WASM INTEROP
-#[wasm_bindgen::prelude::wasm_bindgen]
-#[derive(Debug,Clone)] 
-pub struct WasmState {
-    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub accounts : WasmAccounts,
-    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub choices : WasmChoices,
-    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub bound_values : WasmBoundValues,
-    pub min_time : u64 , // POSIXTime  
-}
-
-
-
 
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Clone)]
 pub struct State {
+    
+    // Current quanties of token per token and participant 
     // 1
     // type Accounts = Map (AccountId, Token) Integer
-    pub accounts : HashMap<(Party,Token),i64>, // Accounts: Map (AccountId, Token) Integer
+    pub accounts : HashMap<(Party,Token),u64>, // Accounts: Map (AccountId, Token) Integer
+    
+    // Choices made by contract participants are stored here
     // 2 , choices
     pub choices : HashMap<ChoiceId,i64> , // Map ChoiceId ChosenNum
+    
+    // Bounds values are where the results of Let contracts get stored
     // 3 , bound vals ((ValueId × int) list)
     pub bound_values : HashMap<ValueId,i64>, // Map ValueId Integer
+
+    // Minimum time for contract validity. Updated on each tx to prevent backwards time-travel.
     // 4, min time
     pub min_time : u64 , // POSIXTime  
 }
 
 
 
-impl TryFrom<Party> for crate::types::marlowe_core::Party {
+impl TryFrom<Party> for crate::types::marlowe_strict::Party {
     type Error = String;
 
     fn try_from(value: Party) -> Result<Self, Self::Error> {
         match value {
-            Party::Address(a) => Ok(crate::types::marlowe_core::Party::Address(a.as_bech32()?)),
-            Party::Role { role_token } => Ok(crate::types::marlowe_core::Party::Role(role_token)),
+            Party::Address(a) => Ok(crate::types::marlowe_strict::Party::Address(a.as_bech32()?)),
+            Party::Role { role_token } => Ok(crate::types::marlowe_strict::Party::Role(role_token)),
         }
     }   
 }
 
-impl TryFrom<ChoiceId> for crate::types::marlowe_core::ChoiceId {
+impl TryFrom<ChoiceId> for crate::types::marlowe_strict::ChoiceId {
     type Error = String;
 
     fn try_from(value: ChoiceId) -> Result<Self, Self::Error> {
         if let Some(owner) = value.choice_owner {
-            Ok(crate::types::marlowe_core::ChoiceId {
+            Ok(crate::types::marlowe_strict::ChoiceId {
                 choice_name: value.choice_name,
                 choice_owner: owner.try_into()?
             })
@@ -665,123 +732,16 @@ impl TryFrom<ChoiceId> for crate::types::marlowe_core::ChoiceId {
 }
 
 
-impl TryFrom<WasmState> for State {
-    type Error = String;
-
-    fn try_from(value: WasmState) -> Result<Self, Self::Error> {
-        let mut accounthash : HashMap<(Party, Token), i64> = HashMap::new();
-        let mut choicehash : HashMap<ChoiceId, i64> = HashMap::new();
-
-        for x in value.accounts.0 {
-            if let WasmPartyType::Address = &x.party.typ {
-                accounthash.insert(
-                    (
-                        Party::Address(Address::from_bech32(&x.party.val).unwrap()),
-                        Token {
-                            currency_symbol: x.token.pol,
-                            token_name: x.token.name
-                        }
-                    ), 
-                    x.amount as i64
-                );
-                continue;
-            }
-            if let WasmPartyType::Role = &x.party.typ {
-                accounthash.insert(
-                    (
-                        Party::Role { role_token: x.party.val },
-                        Token {
-                            currency_symbol: x.token.pol,
-                            token_name: x.token.name
-                        }
-                    ), 
-                    x.amount as i64
-                );
-                continue;
-            }
-            return Err(String::from("invalid state due to invalid account owner."))
-        }
-
-        for x in value.choices.0 {
-            //TODO: Get rid of unwrap
-            if let WasmPartyType::Address = &x.choice_owner.typ {
-                choicehash.insert(
-                    ChoiceId { choice_name: x.choice_name, choice_owner: Some(Party::Address(Address::from_bech32(&x.choice_owner.val).unwrap())) }, 
-                    x.value as i64
-                );
-                continue;
-            }
-            if let WasmPartyType::Role = &x.choice_owner.typ {
-                choicehash.insert(
-                    ChoiceId { choice_name: x.choice_name, choice_owner: Some(Party::Role{role_token:x.choice_owner.val}) }, 
-                    x.value as i64
-                );
-                continue;
-            }
-
-            return Err(String::from("invalid state due to invalid choice owner."))
-        }
-
-        let mut boundhash : HashMap<ValueId,i64> = HashMap::new();
-        for x in value.bound_values.0 {
-            boundhash.insert(ValueId::Name(x.name), x.value as i64);
-        } 
-
-        Ok(State {
-            accounts: accounthash,
-            choices: choicehash,
-            bound_values: boundhash,
-            min_time: value.min_time,
-        })
-    }
-    
-}
-
-impl TryFrom<State> for WasmState {
-    type Error = String;
-
-    fn try_from(value: State) -> Result<Self, Self::Error> {
-
-
-        Ok(WasmState {
-            accounts: WasmAccounts(value.accounts.iter().map(|x|{
-
-                let (p,t) = x.0;
-
-                let tok_name = &t.token_name;
-                let tok_sym = &t.currency_symbol;
-
-                let party = match p {
-                    Party::Role { role_token } => WasmParty::new_role(role_token),
-                    //TODO: Get rid of unwrap
-                    Party::Address(a) => WasmParty::new_addr(&a.as_bech32().unwrap())
-                };
-
-                WasmAccount {
-                    party,
-                    token: WasmToken { 
-                        name: tok_name.clone(), 
-                        pol: tok_sym.clone() 
-                    },
-                    amount: *x.1 as u64,
-                }
-            }).collect()),
-            choices: WasmChoices(vec![]),
-            bound_values: WasmBoundValues(vec![]),
-            min_time: value.min_time,
-        })
-    }
-    
-}
-
 // #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 // #[derive(Debug,Serialize)]
 // pub struct MarloweParams {
 //     #[base_16]pub role_payout_validator_hash : String
 // }
 
+
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Serialize,Deserialize,Clone)]
+/// Contains the rolePayoutValidatorHash
 pub struct MarloweParams(#[base_16]pub String); 
 
 
@@ -803,9 +763,51 @@ pub enum RequiredContractInputField {
 
 impl Contract {
 
-    // It is possible to get this information during parsing
+    pub fn from_dsl(contract_marlowe_dsl:&str,inputs:Vec<(String,i64)>) -> Result<Contract,ParseError> {
+        let mut inp = HashMap::new();
+        for (a,b) in inputs {
+            inp.insert(a,b);
+        }
+        match crate::deserialization::marlowe::deserialize_with_input(contract_marlowe_dsl, inp) {
+            Ok(r) => Ok(r.contract),
+            Err(e) => Err(e),
+        }
+    }
+
+    
+    pub fn from_json(contract_marlowe_dsl:&str,inputs:Vec<(String,i64)>) -> Result<Contract,serde_json::Error> {
+        let mut inp = HashMap::new();
+        for (a,b) in inputs {
+            inp.insert(a,b);
+        }
+        match crate::deserialization::json::deserialize::<Contract>(contract_marlowe_dsl) {
+            Ok(r) => Ok(r),
+            Err(e) => Err(e),
+        }
+    }
+
+
+    /// Returns a vector of all parties mentioned in this contract
+    pub fn parties(&self) -> Vec<Party> {
+        let mut result = vec![];
+        walk_any(self, &mut |node:&AstNode| {
+            match node {
+                AstNode::MarloweParty(p) => {
+                    result.push(p.clone());
+                }
+                _ => {}
+            }
+        });
+        result.sort_by_key(|x|format!("{x:?}"));
+        result.dedup_by_key(|x|format!("{x:?}"));
+        result
+    }
+    
+    // It is possible to get this information during parsing or the walk_method
     // but if you already have an instance of a contract, using this method 
-    // will be more performant, which is why we dont just serialize and re-parse here.
+    // will be more performant.
+    /// Returns a list of all marlowe_extended parameters included in the contract.
+    /// (That is: TimeParam's & ConstParam's)
     pub fn list_input_params(&self) -> Vec<RequiredContractInputField> {
         
         fn get_from_action(x:&Action) -> Vec<RequiredContractInputField> { 
@@ -1034,16 +1036,16 @@ pub struct TxTimeInterval {
 }
 
 
-#[derive(Serialize,Deserialize,Debug)]
+#[derive(Serialize,Deserialize,Debug,Clone)]
 pub struct Payment {
-   pub payment_from : String,
-   pub to : String,
+   pub payment_from : Party,
+   pub to : Payee,
    pub token : Token,
    pub amount : u64
 }
 
-
-#[derive(Serialize,Deserialize,Debug)]
+/// Note: Do not manually construct this struct.
+#[derive(Serialize,Deserialize,Debug,Clone)]
 pub struct TransactionError {
     pub contents : Option<TransactionErrorContent>,
     pub tag : String
@@ -1076,13 +1078,19 @@ impl TransactionError {
     }
 }
 
-#[derive(Serialize,Deserialize,Debug)]
+#[derive(Serialize,Deserialize,Debug,Clone)]
 #[serde(untagged)]
 pub enum TransactionErrorContent {
     Obj(IntervalError), Str(String)
 }
 
+#[derive(Serialize,Deserialize,Debug)]
+pub struct TransactionInput {
+    pub tx_interval : TxTimeInterval,
+    pub tx_inputs   : Vec<InputAction>
+}
 
+/// Note: Use the new_err/new_ok methods for creating instances of this struct.
 #[derive(Serialize,Deserialize,Debug)]
 pub struct TransactionOutput {
     #[serde(skip_serializing_if = "Option::is_none")] pub transaction_error : Option<TransactionError>,
@@ -1091,8 +1099,28 @@ pub struct TransactionOutput {
     #[serde(skip_serializing_if = "Option::is_none")] pub state : Option<State>,
     #[serde(skip_serializing_if = "Option::is_none")] pub contract : Option<Contract>
 }
+impl TransactionOutput {
+    pub fn new_err(err:TransactionError) -> TransactionOutput {
+        Self {
+            transaction_error: Some(err),
+            warnings: None,
+            payments: None,
+            state: None,
+            contract: None,
+        }
+    }
+    pub fn new_ok(state:State,contract:Contract) -> TransactionOutput {
+        Self {
+            transaction_error: None,
+            warnings: Some(vec![]),
+            payments: Some(vec![]),
+            state: Some(state),
+            contract: Some(contract),
+        }
+    }
+}
 
-#[derive(Serialize,Deserialize,Debug)]
+#[derive(Serialize,Deserialize,Debug,Clone)]
 pub struct IntervalError {
     #[serde(rename(serialize = "intervalInPastError", deserialize = "intervalInPastError"))]
     pub interval_in_past_error : Vec<i64>
@@ -1102,7 +1130,7 @@ pub struct IntervalError {
 pub type AccountId = Party;
 
 
-#[derive(Serialize,Deserialize,Debug)]
+#[derive(Serialize,Deserialize,Debug,Clone)]
 #[serde(untagged)]
 pub enum TransactionWarning {
     TransactionNonPositiveDeposit {
@@ -1141,4 +1169,6 @@ impl TransactionWarning {
         TransactionWarning::TransactionAssertionFailed("assertion_failed".into())
     }
 }
+
+
 

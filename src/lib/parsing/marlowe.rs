@@ -32,12 +32,14 @@ fn option_to_result<T>(maybe_ast_node:Option<T>,msg:&str) -> Result<T,&str> {
 pub(crate) struct RawContractParseResult {
     pub uninitialized_time_params : Vec<String>,
     pub uninitialized_const_params : Vec<String>,
+    pub parties : Vec<Party>,
     pub node : AstNode
 }
 pub struct ContractParseResult {
     pub uninitialized_time_params : Vec<String>,
     pub uninitialized_const_params : Vec<String>,
-    pub contract : Contract
+    pub contract : Contract,
+    pub parties : Vec<Party>
 }
 
 pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<RawContractParseResult,String> {
@@ -65,7 +67,7 @@ pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Resu
     
     let mut uninitialized_time_params: Vec<String> = vec![];
     let mut uninitialized_const_params :  Vec<String> = vec![];
-
+    let mut parties : Vec<Party> = vec![];
 
     while let Some(mut current_operation) = call_stack.pop() {
 
@@ -123,14 +125,16 @@ pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Resu
             Rule::ArrayOfBounds => fold_back!(AstNode::MarloweBoundList(current_operation.extracted_child_ast_nodes)),
             Rule::Address => {
                 let addr : String = get_next_into!();
+                let pt = Party::Address(
+                    match Address::from_bech32(&addr) {
+                        Ok(a) => a,
+                        Err(e) => return Err(format!("{e:?}")),
+                    }
+                );
+                parties.push(pt.clone());
                 fold_back!(
                     AstNode::MarloweParty(
-                        Party::Address(
-                            match Address::from_bech32(&addr) {
-                                Ok(a) => a,
-                                Err(e) => return Err(format!("{e:?}")),
-                            }
-                        )   
+                        pt
                     )
                 )
             },
@@ -149,7 +153,11 @@ pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Resu
             },
             Rule::PayeeAccount => fold_back!(AstNode::MarlowePayee(Payee::Account(get_next_into!()))),
             Rule::PayeeParty => fold_back!(AstNode::MarlowePayee(Payee::Party(get_next_into!()))),
-            Rule::Role => fold_back!(AstNode::MarloweParty(Party::Role { role_token : get_next_node(&mut current_operation)?.try_into()?})),
+            Rule::Role => {
+                let role_pt = Party::Role { role_token : get_next_node(&mut current_operation)?.try_into()?};
+                parties.push(role_pt.clone());
+                fold_back!(AstNode::MarloweParty(role_pt))
+            },
             Rule::Notify => fold_back!(AstNode::MarloweAction(Action::Notify { 
                 notify_if: get_next_node(&mut current_operation)?.try_into()? })),            
             Rule::Case => {
@@ -398,10 +406,13 @@ pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Resu
 
     match result_stack.pop() {
         Some(v) => {
+            parties.sort_by_key(|x|format!("{x:?}"));
+            parties.dedup_by_key(|x|format!("{x:?}"));
             Ok(RawContractParseResult { 
                 node: v, 
                 uninitialized_const_params: uninitialized_const_params,
-                uninitialized_time_params: uninitialized_time_params
+                uninitialized_time_params: uninitialized_time_params,
+                parties
             })
         }
         _ => Err("Marlowe_Lang::ErrorCode(2)".to_string())

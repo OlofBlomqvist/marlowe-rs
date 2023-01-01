@@ -30,7 +30,8 @@ pub fn deserialize_with_input(content:&str,input:HashMap<String,i64>) -> Result<
                                 Ok(c) =>  Ok(ContractParseResult { 
                                     uninitialized_time_params: v.uninitialized_time_params, 
                                     uninitialized_const_params: v.uninitialized_const_params, 
-                                    contract: c
+                                    contract: c,
+                                    parties: v.parties
                                 }),
                                 Err(e) => {
                                     Err(ParseError {

@@ -1,17 +1,16 @@
-use serde::Deserialize;
-use serde::Serialize;
+// The strict version marlowe types do not allow for holes (option<T>) and is likely what you want to use
+// when defining contracts using Rust. All strict types can be automatically converted to the normal types.
+
 
 use crate::types::marlowe::Address;
 use crate::types::marlowe::Bound;
 use crate::types::marlowe::Token;
 use crate::types::marlowe::PossiblyMerkleizedContract;
 
-
-
 pub type Timeout = i64;
 
 
-#[derive(Clone,Serialize,Deserialize,Debug)]
+#[derive(Clone,Debug)]
 pub struct Case { 
     pub case: Action,
     pub then: Contract
@@ -209,7 +208,7 @@ impl TryFrom<Action> for crate::types::marlowe::Action {
 }
 
 
-#[derive(Clone,Serialize,Deserialize,Debug)]
+#[derive(Clone,Debug)]
 pub enum Action {
     Deposit { 
         into_account: Party, 
@@ -226,24 +225,26 @@ pub enum Action {
     }
 }
 
-#[derive(Clone,Serialize,Deserialize,Debug,PartialEq,Eq,Hash)]
+#[derive(Clone,Debug,PartialEq,Eq,Hash)]
 pub struct ChoiceId { 
     pub choice_name : String, 
     pub choice_owner : Party 
 }
 
 
-#[derive(Clone,Serialize,Deserialize,Debug,PartialEq,Eq,Hash)]
+#[derive(Clone,Debug,PartialEq,Eq,Hash)]
 pub enum Party {
     Address (String),
     Role (String)
 }
-#[derive(Clone,Serialize,Deserialize,Debug)]
+
+#[derive(Clone,Debug)]
 pub enum Payee {
     Account(Party),
     Party(Party) 
 }
-#[derive(Clone,Serialize,Deserialize,Debug)]
+
+#[derive(Clone,Debug)]
 pub enum Value {
     AvailableMoney(Party,Token),
     ConstantValue(i64),
@@ -256,16 +257,16 @@ pub enum Value {
     TimeIntervalStart,
     TimeIntervalEnd, 
     UseValue(ValueId), 
-    Cond(Observation,Box<Value>,Box<Value>), 
-    ConstantParam(String)    
+    Cond(Observation,Box<Value>,Box<Value>),
+    ConstantParam(String)
 }
 
-#[derive(Clone,Serialize,Deserialize,Debug)]
+#[derive(Clone,Debug)]
 pub enum ValueId {
     Name(String)
 }
 
-#[derive(Clone,Serialize,Deserialize,Debug)]
+#[derive(Clone,Debug)]
 pub enum Contract {
     Close,
     Pay {
@@ -299,7 +300,7 @@ pub enum Contract {
 
 
 
-#[derive(Clone,Serialize,Deserialize,Debug)]
+#[derive(Clone,Debug)]
 pub enum Observation { 
     AndObs { 
         both: Box<Observation>,
@@ -335,119 +336,4 @@ pub enum Observation {
     },
     True,
     False
-}
-
-
-#[test]
-pub fn marlowe_without_holes() -> Result<(),String> {
-    
-    let simple = Contract::When { 
-        when: vec![
-            Case { 
-                case: Action::Notify { 
-                    notify_if: Observation::True 
-                }, 
-                then: Contract::When { 
-                    when: vec![
-                        Case { 
-                            case: Action::Notify { 
-                                notify_if: Observation::True 
-                            }, 
-                            then: Contract::When { 
-                                when: vec![
-                                    Case { 
-                                        case: Action::Notify { 
-                                            notify_if: Observation::True 
-                                        }, 
-                                        then: Contract::Close.into() 
-                                    }.into()
-                                ], 
-                                timeout: 42, 
-                                timeout_continuation: Contract::When { 
-                                    when: vec![
-                                        Case { 
-                                            case: Action::Notify { 
-                                                notify_if: Observation::True 
-                                            }, 
-                                            then: Contract::Close.into() 
-                                        }.into()
-                                    ], 
-                                    timeout: 42, 
-                                    timeout_continuation: Contract::Close.into()
-                                }.into()
-                            }
-                        }.into()
-                    ], 
-                    timeout: 42, 
-                    timeout_continuation: Contract::When { 
-                        when: vec![
-                            Case { 
-                                case: Action::Notify { 
-                                    notify_if: Observation::True 
-                                }, 
-                                then: Contract::Close.into() 
-                            }.into()
-                        ], 
-                        timeout: 42, 
-                        timeout_continuation: Contract::Close.into()
-                    }.into()
-                } 
-            }.into()
-        ], 
-        timeout: 42, 
-        timeout_continuation: Contract::When { 
-            when: vec![
-                Case { 
-                    case: Action::Notify { 
-                        notify_if: Observation::True 
-                    }, 
-                    then: Contract::Close.into() 
-                }.into()
-            ], 
-            timeout: 42, 
-            timeout_continuation: Contract::Close.into()
-        }.into()
-    };
-
-    let _ : crate::types::marlowe::Contract = simple.try_into()?;
-    Ok(())
-
-}
-
-#[test]
-pub fn basic_example() {
-
-    use crate::types::marlowe_core::*;
-    
-    let p1 = Party::Role("P1".into());
-    let p2 = Party::Role("P2".into());
-    let tok = Token::ada();
-    let quantity = Value::ConstantValue(42000000);
-
-    let _ = Contract::When { 
-        when: vec![
-            Case { 
-                case: Action::Deposit { 
-                    into_account: p2.clone(), 
-                    party: p1.clone(), 
-                    of_token: tok, 
-                    deposits: quantity
-                }, 
-                then: 
-                    Contract::Pay { 
-                        from_account: p1, 
-                        to: Payee::Party(p2), 
-                        token: Token::ada(), 
-                        pay: Value::ConstantValue(42), 
-                        then: Contract::Close.into()
-                    } 
-            }
-        ], 
-        timeout: 999999999, 
-        timeout_continuation: Contract::Close.into()
-    };
-
-    //println!("{}",crate::serialization::marlowe::serialize(contract.into()));
-
-
 }

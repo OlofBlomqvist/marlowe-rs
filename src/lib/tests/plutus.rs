@@ -95,6 +95,15 @@ fn plutus_decode_tx_datum_from_cbor_hex() {
 }
 
 #[test]
+fn plutus_decode_tx_datum_from_cbor_hex_tx_fbb1a39851f3a1988112a41cdbfd9286ecf232675905586f6d6566e17bdea9df() {
+    //https://cexplorer.io/datum/fbb1a39851f3a1988112a41cdbfd9286ecf232675905586f6d6566e17bdea9df
+    let cborhex = std::fs::read_to_string("test_data/datum2.cborhex").unwrap();
+    let datum = try_decode_cborhex_marlowe_plutus_datum(&cborhex);
+    datum.expect("failed to decode datum from cbor hex");
+}
+
+
+#[test]
 fn plutus_decode_tx_datum_from_json() {
     let json = std::fs::read_to_string("test_data/datum.json").unwrap();
     let datum = try_decode_json_encoded_marlowe_plutus_datum(&json);
@@ -105,6 +114,16 @@ fn plutus_decode_tx_datum_from_json() {
 #[test]
 fn encode_decode_datum_is_identical_to_original_on_chain_data() {
     let original_cbor_hex = std::fs::read_to_string("test_data/datum.cborhex").unwrap();
+    let datum = try_decode_cborhex_marlowe_plutus_datum(&original_cbor_hex).expect("failed to decode cborhex");
+    let encoded_by_us = datum.to_plutus_data(&vec![]).expect("we failed to serialize plutus data.");
+    let our_cbor_hex = hex::encode(encoded_by_us.to_bytes());
+    assert_eq!(our_cbor_hex,original_cbor_hex);
+}
+
+#[cfg(feature = "utils")]
+#[test]
+fn encode_decode_datum_is_identical_to_original_on_chain_data2() {
+    let original_cbor_hex = std::fs::read_to_string("test_data/datum2.cborhex").unwrap();
     let datum = try_decode_cborhex_marlowe_plutus_datum(&original_cbor_hex).expect("failed to decode cborhex");
     let encoded_by_us = datum.to_plutus_data(&vec![]).expect("we failed to serialize plutus data.");
     let our_cbor_hex = hex::encode(encoded_by_us.to_bytes());

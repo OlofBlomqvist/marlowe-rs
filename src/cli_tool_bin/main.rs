@@ -1,12 +1,13 @@
 mod args;
 use args::{DatumArgs, RedeemerArgs, StateArgs, ContractArgs, PlutusArgs};
 use cardano_multiplatform_lib::{plutus};
-use marlowe_lang::{types::marlowe::{Contract, MarloweDatum, PossibleMerkleizedInput}, simulation::state_machine::MachineState};
+use marlowe_lang::{types::marlowe::{Contract, MarloweDatum, PossiblyMerkleizedInput}};
 use std::{collections::HashMap};
 use marlowe_lang::extras::utils::*;
 use plutus_data::{ToPlutusData, PlutusData, FromPlutusData};
-
 use crate::args::{ContractOutputInfoType, ContractInputEncoding, DatumInputEncoding, DatumOutputEncoding, RedeemerInputEncoding, RedeemerOutputEncoding};
+#[cfg(feature="unstable")]
+use marlowe_lang::semantics::{MachineState, ContractSemantics,ContractInstance};
 
 fn datum_handler(args:DatumArgs) {
 
@@ -25,13 +26,13 @@ fn datum_handler(args:DatumArgs) {
                 format!("{:?}",x)
             }
             DatumOutputEncoding::DetailedText => {
-                let validator_hash = x.marlowe_params.0;
+                let marlowe_params = x.marlowe_params;
 
                 let contract = 
                     format!("Contract (Marlowe-DSL): {}",
                         marlowe_lang::serialization::marlowe::serialize(x.contract));
                 
-                format!("Validator hash: {validator_hash}\n\nState: {}\n\nContinuation: {}",x.state,contract)
+                format!("Marlowe params: {marlowe_params:?}\n\nState: {}\n\nContinuation: {}",x.state,contract)
             },
             DatumOutputEncoding::PlutusDataDetailedJson => {
                 let pl = x.to_plutus_data(&vec![]).unwrap();
@@ -66,14 +67,14 @@ fn datum_handler(args:DatumArgs) {
 
 fn input_redeemer_handler(args:RedeemerArgs) {
 
-    fn decode(s:&str,d:RedeemerInputEncoding) -> Vec<PossibleMerkleizedInput> {
+    fn decode(s:&str,d:RedeemerInputEncoding) -> Vec<PossiblyMerkleizedInput> {
         match d {
             RedeemerInputEncoding::PlutusDataDetailedJson => try_decode_redeemer_input_json(s).unwrap(),
             RedeemerInputEncoding::CborHex => try_decode_redeemer_input_cbor_hex(&s).unwrap()
         }
     }
 
-    fn encode(s:Vec<PossibleMerkleizedInput>,d:&RedeemerOutputEncoding) -> String {
+    fn encode(s:Vec<PossiblyMerkleizedInput>,d:&RedeemerOutputEncoding) -> String {
         match d {
             RedeemerOutputEncoding::MarloweDSL => {
                 s.iter().map(|xx|format!("\nRESULT:\n {}",xx)).collect::<String>()
@@ -113,8 +114,10 @@ fn input_redeemer_handler(args:RedeemerArgs) {
 
 fn state_handler(args:StateArgs) {
     match args {
-        StateArgs::Create { creator_role, initial_ada } => 
+        StateArgs::InitUsingRole { creator_role, initial_ada } => 
             create_state(initial_ada,&creator_role),
+        StateArgs::InitUsingAddr { creator_addr:_, initial_ada:_ } => 
+            todo!()
     }
 }
 
@@ -122,7 +125,7 @@ fn contract_handler(args:ContractArgs) {
 
     fn serialize(c:Contract,e:ContractOutputInfoType) -> String {
         match e {
-            ContractOutputInfoType::ExtendedMarloweInputs => {
+            ContractOutputInfoType::ExtendedMarloweParams => {
                 let ext_vars = c.list_input_params();
                 let mut result_string = String::new();
                 for x in ext_vars {
@@ -135,15 +138,22 @@ fn contract_handler(args:ContractArgs) {
                 }
                 result_string
             }
+            #[cfg(feature="unstable")]
             ContractOutputInfoType::ExpectedActions => {
-                let machine = marlowe_lang::simulation::state_machine::ContractInstance::new(&c);
+
+                let machine = ContractInstance::new(&c);
                 let result = machine.process().unwrap();
                 let state: MachineState = result.1;
                 for x in result.0.logs {
                     println!("--> {x}")
                 }
-                format!("Contract state:\n{:?}",state)
+                let txt = serde_json::to_string_pretty(&state).unwrap();
+                format!("Resulting contract state:\n{}",txt)
             },
+            #[cfg(not(feature="unstable"))]
+            ContractOutputInfoType::ExpectedActions => {
+                panic!("This feature is only available when using the marlowe_lang crate feature: 'unstable'.")
+            }
             ContractOutputInfoType::CborHex => 
                 hex::encode(c.to_plutus_data(&vec![]).unwrap().to_bytes()),
             ContractOutputInfoType::MarloweDSL => 
@@ -160,6 +170,12 @@ fn contract_handler(args:ContractArgs) {
 
     fn parse(s:&str,e:ContractInputEncoding,input_variables:Option<String>) -> Contract {
         match e {
+            ContractInputEncoding::JSON => {
+                if input_variables.is_some() {
+                    panic!("It is not possible to add inputs to contracts that are already encoded to json.")
+                }
+                marlowe_lang::deserialization::json::deserialize(s).unwrap()
+            }
             ContractInputEncoding::CborHex => {
                 if input_variables.is_some() {
                     panic!("It is not possible to add inputs to contracts that are already encoded to cborhex/plutus data.")

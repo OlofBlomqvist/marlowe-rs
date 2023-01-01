@@ -29,11 +29,11 @@ impl std::fmt::Display for InputAction {
         }
     }
 }
-impl std::fmt::Display for PossibleMerkleizedInput {
+impl std::fmt::Display for PossiblyMerkleizedInput {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            PossibleMerkleizedInput::Action(a) => write!(f,"{a}"),
-            PossibleMerkleizedInput::MerkleizedInput(a,b) => 
+            PossiblyMerkleizedInput::Action(a) => write!(f,"{a}"),
+            PossiblyMerkleizedInput::MerkleizedInput(a,b) => 
                 write!(f,"MerkleizedInput({a},{b})")
         }
     }

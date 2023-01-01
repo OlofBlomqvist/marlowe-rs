@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::types::marlowe::*;
+use crate::{types::marlowe::*};
 
 
 #[test]
@@ -56,6 +56,43 @@ fn json_can_deserialize_when_contract() {
 
 
 
+#[test]
+fn deep_contract_does_not_overflow_stack() {
+    let serialized = include_str!("../../../test_data/test_deeply_nested_contract.marlowe");
+    let mut inputs: Vec<(String,i64)> = vec![];
+    inputs.push(("Amount of dollars".into(), 1111));
+    inputs.push(("Timeout for dollar deposit".into(), 22222));
+    inputs.push(("Amount of Ada".into(), 33333));
+    inputs.push(("Timeout for Ada deposit".into(), 4444));
+    inputs.push(("Amount paid by party".into(), 4444));
+    inputs.push(("Amount paid by counterparty".into(), 5555));
+    inputs.push(("Second window deadline".into(), 666));
+    inputs.push(("Second window beginning".into(), 777));
+    inputs.push(("First window deadline".into(), 888));
+    inputs.push(("First window beginning".into(), 9299));
+    inputs.push(("Counterparty deposit deadline".into(), 1334));
+    inputs.push(("Party deposit deadline".into(), 9919));
+    inputs.push(("Amount of Ada to use as asset".into(), 9919));
+    inputs.push(("Principal".into(), 9919));
+    inputs.push(("Interest instalment".into(), 9919));
+    inputs.push(("Price".into(), 9898));
+    inputs.push(("Mediation deadline".into(), 19898));
+    inputs.push(("Complaint deadline".into(), 19898));
+    inputs.push(("Complaint response deadline".into(), 19898));
+    inputs.push(("Payment deadline".into(), 19898));
+    inputs.push(("Collateral amount".into(), 19898));
+    inputs.push(("Dispute by buyer timeout".into(), 19898));
+    inputs.push(("Deposit of price by buyer timeout".into(), 19898));
+    inputs.push(("Deposit of collateral by buyer timeout".into(), 19898));
+    inputs.push(("Collateral deposit by seller timeout".into(), 19898));
+    inputs.push(("Very deep constant parameter for test".into(),99));
+    inputs.push(("Deeply nested time param for test".into(),99));
+    inputs.push(("Even deeper constant param for test".into(),99));
+    let _contract = Contract::from_dsl(serialized, inputs).unwrap();
+   // printpush:?}",contract)
+}
+
+
 
 
 // This test will go through each contract in the playground directory
@@ -93,6 +130,9 @@ fn can_reserialize_all_test_data_marlowe_files_using_json() {
     inputs.insert("Deposit of price by buyer timeout".into(), 19898);
     inputs.insert("Deposit of collateral by buyer timeout".into(), 19898);
     inputs.insert("Collateral deposit by seller timeout".into(), 19898);
+    inputs.insert("Very deep constant parameter for test".into(),99);
+    inputs.insert("Deeply nested time param for test".into(),99);
+    inputs.insert("Even deeper constant param for test".into(),99);
     
     
     
@@ -126,13 +166,14 @@ fn can_reserialize_all_test_data_marlowe_files_using_json() {
             }
         };
 
+        
         let deserialized_from_json = 
             crate::deserialization::json::deserialize::<crate::types::marlowe::Contract>(&serialized_to_json)
                 .expect("should be able to deserialize json");
-
+        
         let re_serialized_to_json = 
             crate::serialization::json::serialize(deserialized_from_json).expect("serialization to json should work..");
-
+    
         // _ = std::fs::write("c:/temp/test_a.json", &serialized_to_json);
         // _ = std::fs::write("c:/temp/test_b.json", &re_serialized_to_json);
         assert!(re_serialized_to_json == serialized_to_json);
@@ -158,7 +199,9 @@ fn deserialize_json_basic_close_contract() {
 
 
 
-
+#[cfg(feature="wasm")]
+use crate::extras::wasm::*;
+#[cfg(feature="wasm")]
 #[test]
 fn state_json_serialization() -> Result<(),String> {
     
@@ -167,7 +210,7 @@ fn state_json_serialization() -> Result<(),String> {
     let mut bound_values : HashMap<crate::types::marlowe::ValueId,i64> = HashMap::new();
     bound_values.insert(crate::types::marlowe::ValueId::Name("KALLES CHOICE".into()), 12);
 
-    let mut accounts: HashMap<(crate::types::marlowe::Party,crate::types::marlowe::Token),i64>  = HashMap::new();
+    let mut accounts: HashMap<(crate::types::marlowe::Party,crate::types::marlowe::Token),u64>  = HashMap::new();
     accounts.insert((kalle_role.clone(),crate::types::marlowe::Token::ada()), 42);
 
     let mut choices: HashMap<crate::types::marlowe::ChoiceId,i64>  = HashMap::new();
@@ -211,7 +254,7 @@ fn state_json_serialization() -> Result<(),String> {
     let wasmstate_converted_to_state : crate::types::marlowe::State = basic_wasm_state.try_into().expect("Should be able to convert wasmstate into state.");
     let _ = serde_json::to_string_pretty(&wasmstate_converted_to_state).expect("Should be able to serialize the converted state");
     let _ = serde_json::to_string_pretty(&basic_state).expect("Should be able to serialize basic state objects");
-    let basic_state_converted_to_wasmstate : crate::types::marlowe::WasmState = basic_state.try_into().expect("Should be able to convert state into wasmstate");
+    let basic_state_converted_to_wasmstate : crate::extras::wasm::WasmState = basic_state.try_into().expect("Should be able to convert state into wasmstate");
     let state_after_multiple_serdeser: crate::types::marlowe::State = basic_state_converted_to_wasmstate.try_into().expect("Should be able to convert state back in to wasmstate");
     let _ = serde_json::to_string_pretty(&state_after_multiple_serdeser).expect("should be able to serialize re-converted state");
     Ok(())

@@ -126,14 +126,14 @@ impl Serialize for InputAction {
         }
     }
 
-impl Serialize for PossibleMerkleizedInput {
+impl Serialize for PossiblyMerkleizedInput {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer {
             match self {
-                PossibleMerkleizedInput::Action(a) =>
+                PossiblyMerkleizedInput::Action(a) =>
                     a.serialize(serializer),
-                PossibleMerkleizedInput::MerkleizedInput(a,b) => 
+                PossiblyMerkleizedInput::MerkleizedInput(a,b) => 
                     format!("MerklizedInput({a},{b})").serialize(serializer)
                 
             }
@@ -238,7 +238,7 @@ where
                 ), value)
             }).collect::<Vec<(
                 (&crate::types::marlowe::Party, &crate::types::marlowe::Token), 
-                &i64
+                &u64
             )>>();
         s.serialize_field("accounts", accounts)?;
         s.serialize_field("choices", choices)?; 
