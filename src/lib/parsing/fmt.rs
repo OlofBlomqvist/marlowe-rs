@@ -73,5 +73,5 @@ pub fn fmt(text:&str) -> String {
 pub fn test_fmt() {
     
     let s = "When [Case (Deposit (Role \"role\") (Role \"role\") (Token \"\" \"\") (Constant 1000000) ) (Pay (Role \"role3\") (Party (Role \"role2\")) (Token \"\" \"\") (Constant 5000000) (When [Case (Deposit (Role \"role\") (Role \"role\") (Token \"\" \"\") (Constant 1000000) ) (Pay (Role \"role3\") (Party (Role \"role2\")) (Token \"\" \"\") (Constant 5000000) Close  )] 1668781080000 Close) )] 1668781080000 Close";
-    println!("{}",fmt(s));
+    format!("{}",fmt(s));
 }

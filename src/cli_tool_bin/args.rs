@@ -7,7 +7,7 @@ use clap::{Parser, Subcommand};
 #[clap(propagate_version = true)]
 pub enum Args {
 
-    /// Tools for working with datums
+    /// Encode/Decode datums
     #[clap(subcommand)]
     Datum(DatumArgs),
 
@@ -15,7 +15,7 @@ pub enum Args {
     #[clap(subcommand)]
     State(StateArgs),
 
-    /// Tools for working with inputs/redeemers (marlowe actions)
+    /// Encode/Decode inputs/redeemers (input actions)
     #[clap(subcommand)]
     Redeemer(RedeemerArgs),
 
@@ -23,7 +23,7 @@ pub enum Args {
     #[clap(subcommand)]
     Contract(ContractArgs),
 
-    /// Tools for working with unknown plutus data
+    /// Tools for working with generic plutus data
     #[clap(subcommand)]
     PlutusData(PlutusArgs)
     
@@ -48,10 +48,10 @@ pub enum ContractOutputInfoType {
     MarloweJSON, // json format as used in marlowe-cli (haskell impl)
     // PlutusData encoded using detailed schema
     PlutusDataDetailedJson, // plutus data detailed json format
-    /// Note: unstable/incomplete feature
+    /// WIP - Unstable feature
     ExpectedActions,
-    /// Note: unstable/incomplete feature
-    ExtendedMarloweInputs
+    /// List marlowe-extended parameters
+    ExtendedMarloweParams
 }
 
 #[derive(clap::ValueEnum, Clone)]
@@ -60,6 +60,8 @@ pub enum ContractInputEncoding {
     CborHex,
     /// Plain text marlowe contract
     MarloweDSL,
+    /// JSON encoded contract
+    JSON,
     /// Plutus data encoded with detailed json schema
     PlutusDataDetailedJson 
 }
@@ -141,8 +143,8 @@ pub enum ContractArgs {
         #[clap(value_enum)]
         output_type: ContractOutputInfoType,
         /// Input to be used with the contract.
-        /// Example 1: -d "my_constant_parameter=123, my_other_constant_parameter_name=321, timeout_number_one=2022-03-04@15:41:31"
-        /// Example 2: -d "timeout_number_one=4128381238132"
+        /// Example 1: -i "my_constant_parameter=123, my_other_constant_parameter_name=321, timeout_number_one=2022-03-04@15:41:31"
+        /// Example 2: -i "timeout_number_one=4128381238132"
         #[clap(short = 'i')]
         init: Option<String>,
 
@@ -164,8 +166,16 @@ pub enum ContractArgs {
 
 #[derive(Subcommand)]
 pub enum StateArgs {
-    Create {
+    InitUsingRole {
         creator_role: String,
+        /// The amount of ada that will be sent to the contract in the initial utxo. (most likely the min amount of ada possible for a transaction)
+        initial_ada: i64
+    },
+    /// Not yet implemented
+    InitUsingAddr {
+        /// Bech32 Cardano address
+        creator_addr: String,
+        /// The amount of ada that will be sent to the contract in the initial utxo. (most likely the min amount of ada possible for a transaction)
         initial_ada: i64
     }
 }

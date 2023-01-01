@@ -19,9 +19,9 @@ pub fn decode_hex(s: &str) -> Result<Vec<u8>, String> {
 }
 
 pub fn try_marlowe_to_json(contract:&str,inputs:&HashMap::<String,i64>) -> Result<String,String> {
-    match marlowe_lang::parsing::deserialization::deserialize_with_input(&contract,inputs.clone()) {
+    match marlowe_lang::deserialization::marlowe::deserialize_with_input(&contract,inputs.clone()) {
         Ok(c) => {
-            match marlowe_lang::parsing::serialization::json::serialize(c.contract) {
+            match marlowe_lang::serialization::json::serialize(c.contract) {
                 Ok(j) => Ok(j),
                 Err(e) => Err(format!("Failed to serialize the contract! {:?}",e))
             }
@@ -52,7 +52,7 @@ pub fn try_decode_cborhex_marlowe_plutus_datum(cbor_hex:&str) -> Result<MarloweD
                 Ok(x) => MarloweDatum::from_plutus_data(x,&vec![]),
                 Err(e) => 
                     Err(format!("Failed to decode plutus datum from input! Exception: {:?}",e))
-                
+
             }
         }
         Err(e) => {
@@ -88,19 +88,19 @@ pub fn plutus_data_list_as_vec(x:PlutusData) -> Result<Vec<PlutusData>,String> {
     }
 }
 
-pub fn try_decode_redeemer_input_cbor_hex(redeemer_cbor_hex:&str) -> Result<Vec<PossibleMerkleizedInput>,String> {
+pub fn try_decode_redeemer_input_cbor_hex(redeemer_cbor_hex:&str) -> Result<Vec<PossiblyMerkleizedInput>,String> {
     let cbor = decode_hex(redeemer_cbor_hex)?;
     match PlutusData::from_bytes(cbor) {        
-        Ok(bytes) => Vec::<PossibleMerkleizedInput>::from_plutus_data(bytes,&vec![]),
+        Ok(bytes) => Vec::<PossiblyMerkleizedInput>::from_plutus_data(bytes,&vec![]),
         Err(e) => Err(format!("Failed to decoded plutusdata: {:?}",e)),
     }
 }
 
-pub fn try_decode_redeemer_input_json(redeemer_json:&str) -> Result<Vec<PossibleMerkleizedInput>,String> {
+pub fn try_decode_redeemer_input_json(redeemer_json:&str) -> Result<Vec<PossiblyMerkleizedInput>,String> {
     let jj = encode_json_str_to_plutus_datum(
         redeemer_json, 
         PlutusDatumSchema::DetailedSchema
     ).map_err(|e|format!("failed to encode json string to plutus data: {:?}",e))?;
 
-    Vec::<PossibleMerkleizedInput>::from_plutus_data(jj,&vec![])
+    Vec::<PossiblyMerkleizedInput>::from_plutus_data(jj,&vec![])
 }

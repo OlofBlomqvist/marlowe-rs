@@ -13,6 +13,27 @@ mod macros {
                     }
                 }
             }
+            impl From<$x> for AstNode {
+                fn from(x: $x) -> Self {
+                    AstNode::$y(x)
+                }
+            }
+            impl From<&$x> for AstNode {
+                fn from(x: &$x) -> Self {
+                    AstNode::$y(x.clone())
+                }
+            }
+            impl From<&Box<$x>> for AstNode {
+                fn from(x: &Box<$x>) -> Self {
+                    x.to_owned().into()
+                }
+            }
+            impl From<Box<$x>> for AstNode {
+                fn from(x: Box<$x>) -> Self {
+                    let actual : $x = *x;
+                    AstNode::$y(actual)
+                }
+            }
             impl TryFrom<AstNode> for $x {
                 type Error = String;
                 fn try_from(x: AstNode) -> std::result::Result<Self,Self::Error> {

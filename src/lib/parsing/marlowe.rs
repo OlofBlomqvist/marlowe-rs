@@ -4,7 +4,7 @@ use crate::parsing::Rule;
 use crate::types::{marlowe::*};
 
 struct Operation<'a> {
-    pair_rule_type : Rule,
+pub(crate)     pair_rule_type : Rule,
     thing_to_extract_ast_from : pest::iterators::Pairs<'a,Rule>,
     extracted_child_ast_nodes : Vec<AstNode>,
     string_representation : Option<String>
@@ -29,17 +29,20 @@ fn option_to_result<T>(maybe_ast_node:Option<T>,msg:&str) -> Result<T,&str> {
 }
 
 
-struct RawContractParseResult {
+pub(crate) struct RawContractParseResult {
     pub uninitialized_time_params : Vec<String>,
     pub uninitialized_const_params : Vec<String>,
+    pub parties : Vec<Party>,
     pub node : AstNode
 }
 pub struct ContractParseResult {
     pub uninitialized_time_params : Vec<String>,
     pub uninitialized_const_params : Vec<String>,
-    pub contract : Contract
+    pub contract : Contract,
+    pub parties : Vec<Party>
 }
-fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<RawContractParseResult,String> {
+
+pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<RawContractParseResult,String> {
     
     let mut keys : Vec<String> = input.keys().map(|x|x.to_owned()).collect();
     keys.dedup();
@@ -64,7 +67,7 @@ fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<RawContr
     
     let mut uninitialized_time_params: Vec<String> = vec![];
     let mut uninitialized_const_params :  Vec<String> = vec![];
-
+    let mut parties : Vec<Party> = vec![];
 
     while let Some(mut current_operation) = call_stack.pop() {
 
@@ -122,14 +125,16 @@ fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<RawContr
             Rule::ArrayOfBounds => fold_back!(AstNode::MarloweBoundList(current_operation.extracted_child_ast_nodes)),
             Rule::Address => {
                 let addr : String = get_next_into!();
+                let pt = Party::Address(
+                    match Address::from_bech32(&addr) {
+                        Ok(a) => a,
+                        Err(e) => return Err(format!("{e:?}")),
+                    }
+                );
+                parties.push(pt.clone());
                 fold_back!(
                     AstNode::MarloweParty(
-                        Party::Address(
-                            match Address::from_bech32(&addr) {
-                                Ok(a) => a,
-                                Err(e) => return Err(format!("{e:?}")),
-                            }
-                        )   
+                        pt
                     )
                 )
             },
@@ -148,7 +153,11 @@ fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<RawContr
             },
             Rule::PayeeAccount => fold_back!(AstNode::MarlowePayee(Payee::Account(get_next_into!()))),
             Rule::PayeeParty => fold_back!(AstNode::MarlowePayee(Payee::Party(get_next_into!()))),
-            Rule::Role => fold_back!(AstNode::MarloweParty(Party::Role { role_token : get_next_node(&mut current_operation)?.try_into()?})),
+            Rule::Role => {
+                let role_pt = Party::Role { role_token : get_next_node(&mut current_operation)?.try_into()?};
+                parties.push(role_pt.clone());
+                fold_back!(AstNode::MarloweParty(role_pt))
+            },
             Rule::Notify => fold_back!(AstNode::MarloweAction(Action::Notify { 
                 notify_if: get_next_node(&mut current_operation)?.try_into()? })),            
             Rule::Case => {
@@ -335,7 +344,8 @@ fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<RawContr
                 fold_back!(AstNode::MarloweValue(Value::TimeIntervalStart))
             }
             Rule::TimeConstant => {
-                let vv = option_to_result(current_operation.string_representation,"failed to parse time constant")?;
+                
+                let vv = option_to_result(current_operation.string_representation.clone(),&format!("failed to parse time constant: {:?}",current_operation.string_representation))?;
                 let vvv = match vv.parse::<i64>() {
                     Ok(n) => n,
                     Err(e) => return Err(format!("{} : {e:?}",format!("failed to convert time constant value {vv}' to i64."))),
@@ -396,10 +406,13 @@ fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<RawContr
 
     match result_stack.pop() {
         Some(v) => {
+            parties.sort_by_key(|x|format!("{x:?}"));
+            parties.dedup_by_key(|x|format!("{x:?}"));
             Ok(RawContractParseResult { 
                 node: v, 
                 uninitialized_const_params: uninitialized_const_params,
-                uninitialized_time_params: uninitialized_time_params
+                uninitialized_time_params: uninitialized_time_params,
+                parties
             })
         }
         _ => Err("Marlowe_Lang::ErrorCode(2)".to_string())
@@ -407,32 +420,65 @@ fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<RawContr
 }
 
 
+#[cfg(feature="wasm")]
+use wasm_bindgen::{prelude::*};
 
-/// Parses a string into an instance of a Marlowe contract
-pub fn deserialize(content:&str) -> Result<ContractParseResult,String>  { 
-    deserialize_with_input(content,Default::default())
+#[derive(serde::Serialize,serde::Deserialize)]
+#[cfg(feature="wasm")]
+#[wasm_bindgen]
+pub struct ParseError {
+
+    pub start_line : usize,
+    pub end_line : usize,
+    pub start_col : usize,
+    pub end_col : usize,
+    #[wasm_bindgen(getter_with_clone)]pub error_message : String,
 }
 
-pub fn deserialize_with_input(content:&str,input:HashMap<String,i64>) -> Result<ContractParseResult,String>  {
-    match <super::MarloweParser as pest::Parser::<Rule>>::parse(
-        Rule::MainContract, 
-        content
-    ) {
-        Result::Ok(mut pairs) => {
-            match pairs.next() {
-                None => Result::Err("it doesn't look like anything to me.".to_string()),
-                Some(root) => {
-                    match parse_raw_inner(root,input) {
-                        Ok(v) => Ok(ContractParseResult { 
-                            uninitialized_time_params: v.uninitialized_time_params, 
-                            uninitialized_const_params: v.uninitialized_const_params, 
-                            contract: v.node.try_into()?
-                        }),
-                        Err(e) => Err(e),
-                    }
-                }
-            }
+#[cfg(not(feature="wasm"))]
+pub struct ParseError {
+
+    pub start_line : usize,
+    pub end_line : usize,
+    pub start_col : usize,
+    pub end_col : usize,
+    pub error_message : String,
+}
+
+#[cfg_attr(feature="wasm",wasm_bindgen::prelude::wasm_bindgen)]
+impl ParseError {
+    #[cfg_attr(feature="wasm",wasm_bindgen::prelude::wasm_bindgen(constructor))]
+    pub fn new(start_line:usize,end_line:usize,start_col:usize,end_col:usize,error_message:String) -> Self {
+        ParseError {
+            start_line,
+            end_line,
+            start_col,
+            end_col,
+            error_message,
         }
-        Result::Err(e) => Err(format!("{e:#}"))
+    }
+    #[cfg_attr(feature="wasm",wasm_bindgen::prelude::wasm_bindgen(getter))]
+    pub fn error_message(&self) -> String {
+        self.error_message.to_owned()
     }
 }
+impl Clone for ParseError {
+    fn clone(&self) -> Self {
+        Self { 
+            start_line: self.start_line.clone(), 
+            end_line: self.end_line.clone(), 
+            start_col: self.start_col.clone(), 
+            end_col: self.end_col.clone(), 
+            error_message: self.error_message.clone() 
+        }
+    }
+}
+
+impl std::fmt::Debug for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:#}", self.error_message)
+    }
+}
+
+
+

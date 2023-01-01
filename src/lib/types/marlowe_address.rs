@@ -1,11 +1,25 @@
-
-
 use crate::types::marlowe::ValidatorHash;
 use crate::types::marlowe::PubKeyHash;
 
-use super::marlowe::{Address, StakingHashOrPtr, ScriptOrPubkeyCred, PubKeyOrValidatorHashForStaking, PubKeyValidatorHash, ScriptValidatorHash};
+use super::marlowe::{Address, StakingHashOrPtr, ScriptOrPubkeyCred, PubKeyOrValidatorHashForStaking, ScriptValidatorHash};
 
+// temp func for getting rid of unwraps quickly
+fn sterr<T,E>(x:Result<T,E>) -> Result<T,String> where E : std::fmt::Debug {
+    x.map_err(|e|format!("{e:?}"))
+}
+
+// temp func for getting rid of unwraps of options quickly
+fn opterr<T>(x:Option<T>) -> Result<T,String> {
+    match x {
+        Some(v) => Ok(v),
+        None => Err(String::from("Expected Some, found None!")),
+    }
+}
+
+// Note: This logic is ripped from here:
 // https://github.com/input-output-hk/marlowe-cardano/blob/a55d51fea9f25e3df3d7ea2551d0e8888490980a/marlowe/src/Language/Marlowe/Core/V1/Semantics/Types/Address.hs
+// .. It seems to not support all address types, and also has rather brittle logic for address prefixes. 
+// We should rewrite this based on the cardano address CIP..
 
 impl Address {
 
@@ -44,7 +58,7 @@ impl Address {
                                     Some(
                                         StakingHashOrPtr::Hash { 
                                             creds: PubKeyOrValidatorHashForStaking::PubKeyHash (
-                                                PubKeyValidatorHash { spkh: sc.to_keyhash().unwrap().to_hex() }
+                                                opterr(sc.to_keyhash())?.to_hex() 
                                             )
                                         }
                                     )
@@ -53,7 +67,7 @@ impl Address {
                                     Some(
                                         StakingHashOrPtr::Hash { 
                                             creds: PubKeyOrValidatorHashForStaking::ScriptCredentials (
-                                                ScriptValidatorHash { svah: sc.to_scripthash().unwrap().to_hex()   }
+                                                 opterr(sc.to_scripthash())?.to_hex()   
                                             )
                                         }
                                     )
@@ -66,13 +80,13 @@ impl Address {
                     match pc.kind() {
                         cardano_multiplatform_lib::address::StakeCredKind::Key => {
                             ScriptOrPubkeyCred::PubKeyCredential { 
-                                pkh: PubKeyHash { pkhash : pc.to_keyhash().unwrap().to_hex() }, 
+                                pkh: PubKeyHash { pkhash : opterr(pc.to_keyhash())?.to_hex() }, 
                                 staking: delegation_part
                             }
                         },
                         cardano_multiplatform_lib::address::StakeCredKind::Script => {
                             ScriptOrPubkeyCred::ScriptCredential { 
-                                vah: ValidatorHash { vhash : pc.to_scripthash().unwrap().to_hex()},
+                                vah: ValidatorHash { vhash :opterr(pc.to_scripthash())?.to_hex()},
                                 staking: delegation_part 
                             }
                         },
@@ -96,14 +110,14 @@ impl Address {
                     )
                 })
             } => {
-                let now_with_key_type_info = format!("0{}{}{}",if self.is_mainnet {"1"} else {"0"},pkh.pkhash,spkh.spkh);
-                let bytes = hex::decode(now_with_key_type_info).unwrap();
-                let a = cardano_multiplatform_lib::address::Address::from_bytes(bytes).unwrap();
+                let now_with_key_type_info = format!("0{}{}{}",if self.is_mainnet {"1"} else {"0"},pkh.pkhash,spkh);
+                let bytes = dehex(&now_with_key_type_info)?;
+                let a = cardano_multiplatform_lib::address::Address::from_bytes(bytes).map_err(|e|format!("{e:?}"))?;
                 if a.as_reward().is_some() {
                     return Err(String::from("staking cred is not supported"))
                 }
                 let prefix = if self.is_mainnet {"addr"} else {"addr_test"};
-                Ok(a.to_bech32(Some(prefix.into())).unwrap())
+                Ok(sterr(a.to_bech32(Some(prefix.into())))?)
             }
 
             // 2 == PKH + svah
@@ -115,9 +129,9 @@ impl Address {
                     )
                 })
             } => {
-                let now_with_key_type_info = format!("2{}{}{}",if self.is_mainnet {"1"} else {"0"},pkh.pkhash,svah.svah);
-                let bytes = hex::decode(now_with_key_type_info).unwrap();
-                let a = cardano_multiplatform_lib::address::Address::from_bytes(bytes).unwrap();
+                let now_with_key_type_info = format!("2{}{}{}",if self.is_mainnet {"1"} else {"0"},pkh.pkhash,svah);
+                let bytes = dehex(&now_with_key_type_info)?;
+                let a = sterr(cardano_multiplatform_lib::address::Address::from_bytes(bytes))?;
                 if a.as_reward().is_some() {
                     return Err(String::from("staking cred is not supported"))
                 }
@@ -144,14 +158,14 @@ impl Address {
             } => {
                 // if we got here i suppose we must have been able to create an instance using the from_bech32?
                 let now_with_key_type_info = format!("6{}{}",if self.is_mainnet {"1"} else {"0"},pkh.pkhash);
-                let bytes = hex::decode(now_with_key_type_info).unwrap();
-                let a = cardano_multiplatform_lib::address::Address::from_bytes(bytes).unwrap();
+                let bytes = dehex(&now_with_key_type_info)?;
+                let a = sterr(cardano_multiplatform_lib::address::Address::from_bytes(bytes))?;
                 if a.as_reward().is_some() {
                     return Err(String::from("staking cred is not supported"))
                 }
                 // the prefix here should depend on more than the network ?
                 let prefix = if self.is_mainnet {"addr"} else {"addr_test"};
-                Ok(a.to_bech32(Some(prefix.into())).unwrap())
+                Ok(sterr(a.to_bech32(Some(prefix.into())))?)
 
             },
 
@@ -164,9 +178,9 @@ impl Address {
                         spkh 
                 )})
             } => {
-                let now_with_key_type_info = format!("1{}{}{}",if self.is_mainnet {"1"} else {"0"},vah.vhash,spkh.spkh);
-                let bytes = hex::decode(now_with_key_type_info).unwrap();
-                let a = cardano_multiplatform_lib::address::Address::from_bytes(bytes).unwrap();
+                let now_with_key_type_info = format!("1{}{}{}",if self.is_mainnet {"1"} else {"0"},vah.vhash,spkh);
+                let bytes = sterr(hex::decode(now_with_key_type_info))?;
+                let a = sterr(cardano_multiplatform_lib::address::Address::from_bytes(bytes))?;
                 if a.as_reward().is_some() {
                     return Err(String::from("staking cred is not supported"))
                 }
@@ -184,9 +198,9 @@ impl Address {
                             svah 
                     )})
             } => {
-                let now_with_key_type_info = format!("3{}{}{}",if self.is_mainnet {"1"} else {"0"},vah.vhash,svah.svah);
-                let bytes = hex::decode(now_with_key_type_info).unwrap();
-                let a = cardano_multiplatform_lib::address::Address::from_bytes(bytes).unwrap();
+                let now_with_key_type_info = format!("3{}{}{}",if self.is_mainnet {"1"} else {"0"},vah.vhash,svah);
+                let bytes = sterr(hex::decode(now_with_key_type_info))?;
+                let a = sterr(cardano_multiplatform_lib::address::Address::from_bytes(bytes))?;
                 if a.as_reward().is_some() {
                     return Err(String::from("staking cred is not supported"))
                 }
@@ -213,8 +227,8 @@ impl Address {
                 staking : None
             } => {
                 let now_with_key_type_info = format!("7{}{}",if self.is_mainnet {"1"} else {"0"},vah.vhash);
-                let bytes = hex::decode(now_with_key_type_info).unwrap();
-                let a = cardano_multiplatform_lib::address::Address::from_bytes(bytes).unwrap();
+                let bytes = sterr(hex::decode(now_with_key_type_info))?;
+                let a = sterr(cardano_multiplatform_lib::address::Address::from_bytes(bytes))?;
                 if a.as_reward().is_some() {
                     return Err(String::from("staking cred is not supported"))
                 }
@@ -226,5 +240,13 @@ impl Address {
 
 
 
+    }
+}
+
+
+fn dehex(x:&str) -> Result<Vec<u8>,String> {
+    match hex::decode(x) {
+        Ok(v) => Ok(v),
+        Err(e) => Err(format!("{e:?}")),
     }
 }

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use serde::Deserialize;
 use serde::Serialize;
 
 #[cfg(feature = "utils")]
@@ -7,6 +8,7 @@ use plutus_data::ToPlutusDataDerive;
 use plutus_data::FromPlutusDataDerive;
 
 use crate::extras::utils::datum_to_json;
+use crate::parsing::marlowe::ParseError;
 use crate::{
     Impl_From_For_Vec, 
     Impl_From_For
@@ -34,9 +36,12 @@ pub(crate) enum AstNode {
     //MarlowePossiblyMerkleizedContract(PossiblyMerkleizedContract),    
     Null
 }
+
+#[cfg_attr(feature="wasm",wasm_bindgen::prelude::wasm_bindgen)]
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Clone,PartialEq)]
 pub struct Bound(pub i64,pub i64);
+
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Hash,PartialEq,Eq,Clone)]
@@ -52,24 +57,10 @@ pub enum Payee { // Payee [('Account,0),('Party,1)]
     #[ignore_option_container] Party(Option<Party>)    // 1
 }
 
+
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Clone,PartialEq)]
 pub enum Observation { 
-    /*
-    makeIsDataIndexed ''Observation [
-    ('AndObs,0),
-    ('OrObs,1),
-    ('NotObs,2),
-    ('ChoseSomething,3),
-    ('ValueGE,4),
-    ('ValueGT,5),
-    ('ValueLT,6),
-    ('ValueLE,7),
-    ('ValueEQ,8),
-    ('TrueObs,9),
-    ('FalseObs,10)
-    ]
-    */
     AndObs { // 0
         #[ignore_option_container]
         both: Option<Box<Observation>>,
@@ -114,23 +105,6 @@ pub enum Observation {
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Clone,PartialEq)]
 pub enum Value {
-    /*
-        makeIsDataIndexed ''Value [
-        ('AvailableMoney,0),
-        ('Constant,1),
-        ('NegValue,2),
-        ('AddValue,3),
-        ('SubValue,4),
-        ('MulValue,5),
-        ('DivValue,6),
-        ('ChoiceValue,7),
-        ('TimeIntervalStart, 8),
-        ('TimeIntervalEnd,9),
-        ('UseValue,10),
-        ('Cond,11)
-        ]
-    */
-    
     AvailableMoney(#[ignore_option_container]Option<Party>,#[ignore_option_container]Option<Token>), // 0
     ConstantValue(i64), // 1
     NegValue(#[ignore_option_container]Option<Box<Value>>), // 2
@@ -143,17 +117,13 @@ pub enum Value {
     TimeIntervalEnd, // 9
     UseValue(ValueId), // 10
     Cond(#[ignore_option_container]Option<Observation>,#[ignore_option_container]Option<Box<Value>>,#[ignore_option_container]Option<Box<Value>>), // 11
-    
-    // 12: constant_param is not used on chain! 
-    //     (always parsed out prior to submitted and replaced with const val.)
-    // todo: add attribute to exclude 
-    //       from plutus_derive macro.
-    ConstantParam(String), // 11 ???
+    ConstantParam(String), // 12 (marlowe extended)
     
 }
 
+
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Serialize)]
+#[derive(Debug,Serialize,Deserialize)]
 pub enum BoolObs{
     True,
     False
@@ -205,17 +175,13 @@ pub struct ScriptValidatorHash {
     #[base_16] pub svah : String
 }
 
-#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Hash,PartialEq,Eq,Clone)]
-pub struct PubKeyValidatorHash {
-    #[base_16] pub spkh : String
-}
+
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Hash,PartialEq,Eq,Clone)]
 pub enum PubKeyOrValidatorHashForStaking {
-    PubKeyHash(PubKeyValidatorHash),
-    ScriptCredentials(ScriptValidatorHash)
+    PubKeyHash(#[base_16] String),
+    ScriptCredentials(#[base_16] String)
 }
 
 
@@ -225,6 +191,7 @@ pub enum StakingHashOrPtr  {
     Hash { creds: PubKeyOrValidatorHashForStaking },
     Ptr { slot  : i32, transaction : i32, #[base_16]certificate: String }
 }
+
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Hash,PartialEq,Eq,Clone)]
@@ -239,9 +206,10 @@ pub enum ScriptOrPubkeyCred {
     },
 }
 
+
+
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Hash,PartialEq,Eq,Clone)]
-// todo :address: need to impl display for marlowe-dsl
 pub struct Address { 
     pub is_mainnet : bool,
     pub addr : ScriptOrPubkeyCred,
@@ -252,6 +220,11 @@ pub struct Address {
 pub enum Party { // ''Party [('Address,0),('Role,1)]
     Address (Address), // 0
     Role { role_token: String } // 1   
+}
+impl Party {
+    pub fn role(token:&str) -> Self {
+        Party::Role{role_token:token.to_owned()}
+    }
 }
 
 
@@ -280,7 +253,7 @@ pub enum InputAction {
 // aka redeemer
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug)]
-pub enum PossibleMerkleizedInput {
+pub enum PossiblyMerkleizedInput {
     Action(InputAction),
     MerkleizedInput(InputAction, #[base_16] String)
 }
@@ -304,9 +277,6 @@ pub enum Action {
     }
 }
 
-
-// todo - when encoding this to plutus, we must wrap it inside case(Case)/merkl(String) type.. 
-// can we add an attr to specificy how do wrap it? 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Clone,PartialEq)]
 pub struct Case { 
@@ -337,7 +307,7 @@ impl ToPlutusData for Party {
     fn to_plutus_data(&self,attributes:&Vec<String>) -> Result<PlutusData,String> {
         match self {
             Party::Address(a) => {
-                //println!("TO PLUTUS FOR ADDR: {}",a.as_bech32().unwrap());
+                
                 let big_num = plutus_data::convert_to_big_num(&0);
                 let mut items = plutus_data::PlutusList::new();
                 match a.to_plutus_data(&vec![])?.as_constr_plutus_data() {
@@ -353,7 +323,7 @@ impl ToPlutusData for Party {
                         let item = plutus_data::ConstrPlutusData::new(&big_num,&items);
                         Ok(plutus_data::PlutusData::new_constr_plutus_data(&item))
                     },
-                    None => todo!(),
+                    None => Err(String::from("failed to convert into plutus data. this is most likely a bug in the marlowe_lang crate.")),
                 }
             },
             Party::Role { role_token } => {
@@ -370,14 +340,14 @@ impl ToPlutusData for Party {
 
 impl FromPlutusData<Party> for Party {
     fn from_plutus_data(x:PlutusData,attributes:&Vec<String>) -> Result<Party,String> {
-        //println!("Manual impl called with data: {}",datum_to_json(&x.clone()).unwrap());
+        
         match x.as_constr_plutus_data() {
             Some(c) => {
                 match from_bignum(&c.alternative()) {
                     0 => { // ADDRESS
                         let data = c.data(); // must have the two items here. network and address
                         if data.len() != 2 {
-                            println!("This will fail because an address is missing inside of a party... {:?}",datum_to_json(&x))
+                            panic!("Invalid/missing address inside of party... {:?}",datum_to_json(&x))
                         }
                         let item_zero = data.clone().get(0);
                         let result = Ok(Party::Address(Address {
@@ -492,8 +462,206 @@ Impl_From_For!(@Contract,MarloweContract);
 Impl_From_For!(@i64,MarloweNumber);
 Impl_From_For!(@Observation,MarloweObservation);
 Impl_From_For!(@ValueId,MarloweValueId);
-//Impl_From_For!(@PossiblyMerkleizedContract,MarlowePossiblyMerkleizedContract);
 
+pub(crate) fn walk_any<T>(x:T,f:&mut dyn FnMut(&AstNode)) -> () where crate::types::marlowe::AstNode: From<T> {
+    walk(&x.into(),f);
+}
+pub(crate) fn walk(
+    node:&AstNode,
+    func: &mut dyn FnMut(&AstNode) -> () 
+) {
+    func(node);
+
+    match &node {
+        AstNode::MarloweToken(_) => { },
+        AstNode::MarloweTimeout(_) => { },
+        AstNode::MarloweBound(_) => {},
+        AstNode::MarloweValueId(_) => {},
+        AstNode::MarloweParty(p) => {
+            match &p {
+                Party::Address(_) => {},
+                Party::Role { role_token:_ } => {},
+            }
+        }
+        AstNode::MarloweContract(x) => match x {
+            Contract::Pay { from_account:Some(a), to:Some(b), token:Some(c), pay:Some(d), then:Some(e) } => {
+                walk_any(a,func);
+                walk_any(b,func);
+                walk_any(c,func);
+                walk_any(d,func);
+                walk_any(e,func);
+            },
+            Contract::If { x_if:Some(a), then:Some(b), x_else:Some(c) } => {
+                walk_any(a,func);
+                walk_any(b,func);
+                walk_any(c,func);
+            },
+            Contract::When { when, timeout:Some(b), timeout_continuation:Some(c) } => {
+                for x in when {
+                    if let Some(case) = x {
+                        walk_any(case,func)
+                    }
+                }
+                walk_any(b,func);
+                walk_any(c,func);
+            },
+            Contract::Let { x_let, be:Some(a), then:Some(b) } => {
+                walk_any(x_let,func);
+                walk_any(a,func);
+                walk_any(b,func);
+                
+            },
+            Contract::Assert { assert:Some(a), then:Some(b) } => {
+                walk_any(a,func);
+                walk_any(b,func);
+            },
+            Contract::Close => {},
+            _ => {
+                //panic!("BAD CONTRACT: {c:?}")
+            }
+        },
+        AstNode::MarloweCaseList(x) => {
+            for a in x {
+                walk(a,func)
+            }
+        },
+        AstNode::MarloweBoundList(x) => {
+            for a in x {
+                walk(a,func)
+            }
+        },
+        AstNode::MarloweCase(x) => {
+            if let Some(case) = &x.case {
+                walk_any(case,func);
+            }
+            if let Some(PossiblyMerkleizedContract::Raw(c)) = &x.then {
+                walk_any(c,func);
+            }
+        },
+        AstNode::MarloweAction(x) => match x {
+            Action::Deposit { into_account:Some(a), party:Some(b), of_token:Some(c), deposits:Some(d) } => {
+                walk_any(a,func);
+                walk_any(b,func);
+                walk_any(c,func);
+                walk_any(d,func);
+            },
+            Action::Choice { for_choice:Some(a), choose_between } => {
+                match &a.choice_owner {
+                    Some(o) => walk_any(o,func),
+                    None => {},
+                }
+                for x in choose_between {
+                    if let Some(xx) = x {
+                        walk_any(xx,func)
+                    }
+                }
+            },
+            Action::Notify { notify_if:Some(a) } => walk_any(a,func),
+            _ => {
+                //panic!("BAD ACTION:  {x:?}")
+            }
+        },
+        AstNode::MarloweValue(x) => {
+            match x {
+                Value::AvailableMoney(Some(a), Some(b)) => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Value::ConstantValue(_num) => {},
+                Value::NegValue(Some(a)) => walk_any(a, func),
+                Value::AddValue(Some(a),Some(b)) => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Value::SubValue(Some(a),Some(b)) => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Value::MulValue(Some(a),Some(b)) => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Value::DivValue(Some(a),Some(b)) => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Value::ChoiceValue(Some(a)) => match &a.choice_owner {
+                    Some(o) => walk_any(o,func),
+                    None => {},
+                },
+                Value::Cond(Some(a), Some(b), Some(c)) => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                    walk_any(c, func);
+                },
+                Value::ConstantParam(_a) => {},
+                Value::UseValue(_) => {}
+                _ => {
+                    //panic!("BAD VAL: {x:?}")
+                }
+            }
+        },
+        AstNode::MarloweObservation(x) => {
+            match x {
+                Observation::AndObs { both:Some(a), and:Some(b) } => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Observation::OrObs { either:Some(a), or:Some(b) } => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Observation::NotObs { not:Some(a) } => {
+                    walk_any(a,func);
+                },
+                Observation::ChoseSomething(Some(x)) => {
+                    if let Some(o) = &x.choice_owner {
+                        walk_any(o, func);
+                    }
+                },
+                Observation::ValueGE { value:Some(a), ge_than :Some(b)} => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Observation::ValueGT { value:Some(a), gt_than :Some(b)} => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Observation::ValueLT { value:Some(a), lt_than :Some(b)} => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Observation::ValueLE { value:Some(a), le_than :Some(b)} => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Observation::ValueEQ { value:Some(a), equal_to:Some(b) } => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                _ => {
+                    //panic!("BAD OBS: {x:?}")
+                }
+            }
+        },
+        AstNode::MarlowePayee(x) => {
+            match x {
+                Payee::Account(Some(pt)) => walk_any(pt,func),
+                Payee::Party(Some(pt)) => walk_any(pt,func),
+                _ => {
+                    //panic!("BAD PAYEE:  {x:?}")
+                }
+            }
+        },
+        AstNode::MarloweChoiceId(x) => match &x.choice_owner {
+            Some(o) => walk_any(o,func),
+            None => {},
+        },
+        _ => {
+            //panic!("BAD AST NODE: {x:?}")
+        }
+    }
+}
 
 /// This is just the same as doing Box::new(..)
 pub trait Boxer { fn boxed(self) -> Box<Contract>; }
@@ -505,24 +673,62 @@ impl Boxer for Contract {
 
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Serialize,Clone,PartialEq)]
+#[derive(Debug,Serialize,Clone,PartialEq,Deserialize,Eq,Hash)]
 pub enum ValueId {
     Name(String)
 }
 
 
+
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Serialize,Clone)] // todo -- add plutus_data derives when we support hashmaps
-pub struct MarloweDatumState {
-    // todo , 1 -> not sure how to represent this... 
+#[derive(Debug,Clone)]
+pub struct State {
+    
+    // Current quanties of token per token and participant 
+    // 1
     // type Accounts = Map (AccountId, Token) Integer
-    pub accounts : HashMap<(Party,Token),i64>, // Accounts: Map (AccountId, Token) Integer
+    pub accounts : HashMap<(Party,Token),u64>, // Accounts: Map (AccountId, Token) Integer
+    
+    // Choices made by contract participants are stored here
     // 2 , choices
-    pub choices : HashMap<ChoiceId,String> , // Map ChoiceId ChosenNum
-    // 3 , bound vals
-    pub bound_values : HashMap<String,i64>, // Map ValueId Integer
+    pub choices : HashMap<ChoiceId,i64> , // Map ChoiceId ChosenNum
+    
+    // Bounds values are where the results of Let contracts get stored
+    // 3 , bound vals ((ValueId × int) list)
+    pub bound_values : HashMap<ValueId,i64>, // Map ValueId Integer
+
+    // Minimum time for contract validity. Updated on each tx to prevent backwards time-travel.
     // 4, min time
     pub min_time : u64 , // POSIXTime  
+}
+
+
+
+impl TryFrom<Party> for crate::types::marlowe_strict::Party {
+    type Error = String;
+
+    fn try_from(value: Party) -> Result<Self, Self::Error> {
+        match value {
+            Party::Address(a) => Ok(crate::types::marlowe_strict::Party::Address(a.as_bech32()?)),
+            Party::Role { role_token } => Ok(crate::types::marlowe_strict::Party::Role(role_token)),
+        }
+    }   
+}
+
+impl TryFrom<ChoiceId> for crate::types::marlowe_strict::ChoiceId {
+    type Error = String;
+
+    fn try_from(value: ChoiceId) -> Result<Self, Self::Error> {
+        if let Some(owner) = value.choice_owner {
+            Ok(crate::types::marlowe_strict::ChoiceId {
+                choice_name: value.choice_name,
+                choice_owner: owner.try_into()?
+            })
+        } else {
+            Err(format!("Missing owner of choice '{}'",value.choice_name))
+        }
+
+    }   
 }
 
 
@@ -532,18 +738,20 @@ pub struct MarloweDatumState {
 //     #[base_16]pub role_payout_validator_hash : String
 // }
 
+
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Serialize,Clone)]
+#[derive(Debug,Serialize,Deserialize,Clone)]
+/// Contains the rolePayoutValidatorHash
 pub struct MarloweParams(#[base_16]pub String); 
 
+
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Serialize,Clone)]
+#[derive(Debug,Serialize,Deserialize,Clone)]
 pub struct MarloweDatum {
     #[base_16]pub marlowe_params : MarloweParams,
-    pub state : MarloweDatumState,
+    pub state : State,
     pub contract : Contract,
 }
-
 
 
 #[derive(Clone,Debug,PartialEq)]
@@ -555,9 +763,51 @@ pub enum RequiredContractInputField {
 
 impl Contract {
 
-    // It is possible to get this information during parsing
+    pub fn from_dsl(contract_marlowe_dsl:&str,inputs:Vec<(String,i64)>) -> Result<Contract,ParseError> {
+        let mut inp = HashMap::new();
+        for (a,b) in inputs {
+            inp.insert(a,b);
+        }
+        match crate::deserialization::marlowe::deserialize_with_input(contract_marlowe_dsl, inp) {
+            Ok(r) => Ok(r.contract),
+            Err(e) => Err(e),
+        }
+    }
+
+    
+    pub fn from_json(contract_marlowe_dsl:&str,inputs:Vec<(String,i64)>) -> Result<Contract,serde_json::Error> {
+        let mut inp = HashMap::new();
+        for (a,b) in inputs {
+            inp.insert(a,b);
+        }
+        match crate::deserialization::json::deserialize::<Contract>(contract_marlowe_dsl) {
+            Ok(r) => Ok(r),
+            Err(e) => Err(e),
+        }
+    }
+
+
+    /// Returns a vector of all parties mentioned in this contract
+    pub fn parties(&self) -> Vec<Party> {
+        let mut result = vec![];
+        walk_any(self, &mut |node:&AstNode| {
+            match node {
+                AstNode::MarloweParty(p) => {
+                    result.push(p.clone());
+                }
+                _ => {}
+            }
+        });
+        result.sort_by_key(|x|format!("{x:?}"));
+        result.dedup_by_key(|x|format!("{x:?}"));
+        result
+    }
+    
+    // It is possible to get this information during parsing or the walk_method
     // but if you already have an instance of a contract, using this method 
-    // will be more performant, which is why we dont just serialize and re-parse here.
+    // will be more performant.
+    /// Returns a list of all marlowe_extended parameters included in the contract.
+    /// (That is: TimeParam's & ConstParam's)
     pub fn list_input_params(&self) -> Vec<RequiredContractInputField> {
         
         fn get_from_action(x:&Action) -> Vec<RequiredContractInputField> { 
@@ -771,3 +1021,154 @@ impl Contract {
 
     }
 }
+
+
+#[derive(Serialize,Deserialize,Debug)]
+pub struct Transaction {
+    pub tx_interval : TxTimeInterval,
+    pub tx_inputs : Vec<InputAction>
+}
+
+#[derive(Serialize,Deserialize,Debug)]
+pub struct TxTimeInterval {
+    pub from : u128,
+    pub to : u128
+}
+
+
+#[derive(Serialize,Deserialize,Debug,Clone)]
+pub struct Payment {
+   pub payment_from : Party,
+   pub to : Payee,
+   pub token : Token,
+   pub amount : u64
+}
+
+/// Note: Do not manually construct this struct.
+#[derive(Serialize,Deserialize,Debug,Clone)]
+pub struct TransactionError {
+    pub contents : Option<TransactionErrorContent>,
+    pub tag : String
+}
+
+impl TransactionError {
+    pub fn teambiguous_time_interval_error(contents:Option<String>) -> Self {
+        Self {
+            tag: "TEAmbiguousTimeIntervalError".into(),
+            contents: if let Some(c) = contents { Some(TransactionErrorContent::Str(c)) } else {None}
+        }
+    }
+    pub fn teapply_no_match_error(contents:Option<String>) -> Self {
+        Self {
+            tag: "TEApplyNoMatchError".into(),
+            contents: if let Some(c) = contents { Some(TransactionErrorContent::Str(c)) } else {None}
+        }
+    }
+    pub fn teinterval_error(contents:IntervalError) -> Self {
+        Self {
+            tag: "TEIntervalError".into(),
+            contents: Some(TransactionErrorContent::Obj(contents))
+        }
+    }
+    pub fn teuseless_transaction(contents:Option<String>) -> Self {
+        Self {
+            tag: "TEUselessTransaction".into(),
+            contents: if let Some(c) = contents { Some(TransactionErrorContent::Str(c)) } else {None}
+        }
+    }
+}
+
+#[derive(Serialize,Deserialize,Debug,Clone)]
+#[serde(untagged)]
+pub enum TransactionErrorContent {
+    Obj(IntervalError), Str(String)
+}
+
+#[derive(Serialize,Deserialize,Debug)]
+pub struct TransactionInput {
+    pub tx_interval : TxTimeInterval,
+    pub tx_inputs   : Vec<InputAction>
+}
+
+/// Note: Use the new_err/new_ok methods for creating instances of this struct.
+#[derive(Serialize,Deserialize,Debug)]
+pub struct TransactionOutput {
+    #[serde(skip_serializing_if = "Option::is_none")] pub transaction_error : Option<TransactionError>,
+    #[serde(skip_serializing_if = "Option::is_none")] pub warnings : Option<Vec<TransactionWarning>>,
+    #[serde(skip_serializing_if = "Option::is_none")] pub payments : Option<Vec<Payment>>,
+    #[serde(skip_serializing_if = "Option::is_none")] pub state : Option<State>,
+    #[serde(skip_serializing_if = "Option::is_none")] pub contract : Option<Contract>
+}
+impl TransactionOutput {
+    pub fn new_err(err:TransactionError) -> TransactionOutput {
+        Self {
+            transaction_error: Some(err),
+            warnings: None,
+            payments: None,
+            state: None,
+            contract: None,
+        }
+    }
+    pub fn new_ok(state:State,contract:Contract) -> TransactionOutput {
+        Self {
+            transaction_error: None,
+            warnings: Some(vec![]),
+            payments: Some(vec![]),
+            state: Some(state),
+            contract: Some(contract),
+        }
+    }
+}
+
+#[derive(Serialize,Deserialize,Debug,Clone)]
+pub struct IntervalError {
+    #[serde(rename(serialize = "intervalInPastError", deserialize = "intervalInPastError"))]
+    pub interval_in_past_error : Vec<i64>
+}
+
+
+pub type AccountId = Party;
+
+
+#[derive(Serialize,Deserialize,Debug,Clone)]
+#[serde(untagged)]
+pub enum TransactionWarning {
+    TransactionNonPositiveDeposit {
+        asked_to_deposit : i64,
+        in_account : AccountId,
+        of_token : Token,        
+        party : Party
+    },
+    TransactionPartialPay  {
+        account : AccountId,
+        asked_to_pay : i64,
+        of_token : Token,
+        to_payee : Payee,
+        but_only_paid : i64
+    },
+    TransactionNonPositivePay {
+        account : AccountId,
+        asked_to_pay : i64,
+        of_token : Token,
+        to_payee : Payee
+    },
+    TransactionShadowing {
+        value_id : String,
+        had_value : Value,
+        is_now_assigned : Value
+    },
+    /// Do not use this directly.
+    /// Instead call transaction_assertion_failed()!
+    TransactionAssertionFailed(String)
+}
+
+impl TransactionWarning {
+    /// This will create a TransactionAssertionFailed instance which will serialize 
+    /// into the string: "assertion_failed" as required per the marlowe specification v3.
+    pub fn transaction_assertion_failed() -> TransactionWarning {
+        TransactionWarning::TransactionAssertionFailed("assertion_failed".into())
+    }
+}
+
+
+

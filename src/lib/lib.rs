@@ -40,8 +40,8 @@
 //! 
 //! ```rust
 //! use marlowe_lang::types::marlowe::*;
-//! use marlowe_lang::parsing::{
-//!  deserialization::deserialize,
+//! use marlowe_lang::{
+//!  deserialization::marlowe::deserialize,
 //!  serialization::marlowe::serialize,
 //! };
 //! 
@@ -81,11 +81,13 @@ pub mod parsing;
 /// Extra features such as plutus encoding/decoding, cli tool etc.
 pub mod extras;
 
-// Simulation of contracts
-pub mod simulation;
-
 #[cfg(test)]
 mod tests;
 
-// =============================================================
+pub mod serialization;
+pub mod deserialization;
+
+
+#[cfg(feature="unstable")]
+pub mod semantics;
 
