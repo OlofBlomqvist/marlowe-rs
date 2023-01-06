@@ -26,7 +26,7 @@ wasm-bindgen = { version = "0.2.78", optional = true , features=["serde-serializ
 web-sys = { version = "0.3.4", features = [ 'console' ], optional = true }
 bech32 = "0.9.1"
 time = "0.3.17"
-chrono = { version = "0.4", features = ["wasmbind"] }
+chrono = { version = "0.4.23", features = ["wasmbind"] }
 #aiken-lang = "*"
 js-sys = { version = "0.3.59", optional=true }
 serde_stacker = {version= "0.1.7"}
