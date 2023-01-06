@@ -124,7 +124,7 @@ impl ContractInstance {
 
     pub fn get_current_time() -> u64 {
         // using chronos because it also works with wasm unlike std
-        let nowly = chrono::Utc::now().timestamp();
+        let nowly = chrono::Utc::now().timestamp_millis();
         nowly as u64
     }
     

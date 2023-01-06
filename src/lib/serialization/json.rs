@@ -1,9 +1,12 @@
 use serde::{Serialize, ser::SerializeStruct};
 use crate::types::marlowe::*;
 
-pub fn serialize<T>(json:T) -> Result<String, serde_json::Error>  
+pub fn serialize<T>(json:T) -> Result<String, String>  
 where T : serde::Serialize { 
-    serde_json::to_string_pretty(&json)
+    match serde_json::to_string_pretty(&json) {
+        Err(e) => Err(format!("{e:?}")),
+        Ok(v) => Ok(v)
+    }
 }
 
 impl Serialize for Action {

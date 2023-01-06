@@ -516,29 +516,30 @@ pub fn marlowe_strict_conversion() -> Result<(),String> {
 }
 
 #[test]
-pub fn basic_marlowe_strict_example_code() {
+pub fn basic_marlowe_strict_example_code() -> Result<(),String> {
 
     use crate::types::marlowe_strict::*;
-    
-    let p1 = Party::Role("P1".into());
-    let p2 = Party::Role("P2".into());
+    use crate::serialization::*;
+
+    let p1 = Party::role("P1");
+    let p2 = Party::role("P2");
     let tok = Token::ada();
     let quantity = Value::ConstantValue(42000000);
 
-    let _ = Contract::When { 
+    let contract = Contract::When { 
         when: vec![
             Case { 
                 case: Action::Deposit { 
                     into_account: p2.clone(), 
                     party: p1.clone(), 
-                    of_token: tok, 
+                    of_token: tok.clone(), 
                     deposits: quantity
                 }, 
                 then: 
                     Contract::Pay { 
                         from_account: p1, 
                         to: Payee::Party(p2), 
-                        token: Token::ada(), 
+                        token: tok, 
                         pay: Value::ConstantValue(42), 
                         then: Contract::Close.into()
                     } 
@@ -548,9 +549,74 @@ pub fn basic_marlowe_strict_example_code() {
         timeout_continuation: Contract::Close.into()
     };
 
-    //println!("{}",crate::serialization::marlowe::serialize(contract.into()));
+    let serializable_contract : crate::types::marlowe::Contract = contract.try_into()?;
+
+    println!("{}",marlowe::serialize(serializable_contract.clone()));
+    println!("{}",json::serialize(serializable_contract.clone())?);
+    println!("{}",cborhex::serialize(serializable_contract.clone())?);
 
 
+    Ok(())
+}
+
+
+#[test]
+fn marlowe_strict_with_iter_example() {
+        
+    use chrono::Days;
+    use crate::{types::{
+        marlowe_strict::*,
+        marlowe::{Token,Bound}
+    },serialization::*};
+
+    let choice_owner = Party::role("bank");
+    
+    let winner_choice = ChoiceId { 
+        choice_name: "winner".into(), 
+        choice_owner: choice_owner.clone() 
+    };
+
+    let quantity = Value::ConstantValue(42000000);
+
+    let pay_this_winner = |pt| -> Contract {
+        Contract::Pay { 
+            from_account: choice_owner.clone(), 
+            to: Payee::Party(pt), 
+            token: Token::ada(), 
+            pay: quantity.clone(), 
+            then: Box::new(Contract::Close)
+        }
+    };
+
+    let contract = Contract::When { 
+        when: vec![
+            Case { 
+                case: Action::Deposit { 
+                    into_account: choice_owner.clone(), 
+                    party: choice_owner.clone(), 
+                    of_token: Token::ada(), 
+                    deposits: quantity.clone()
+                }, 
+                then: Contract::When { 
+                        when: (1..11).map(|n| {
+                            Case { 
+                                case: Action::Choice { 
+                                    for_choice: winner_choice.clone(), 
+                                    choose_between: vec![Bound(n,n)]
+                                }, 
+                                then: pay_this_winner(Party::role(&format!("P{n}")))
+                            }
+                        }).collect(), 
+                        timeout: chrono::Utc::now().checked_add_days(Days::new(2)).unwrap().timestamp_millis(), 
+                        timeout_continuation: Contract::Close.into()
+                    }
+            }
+        ], 
+        timeout: chrono::Utc::now().checked_add_days(Days::new(1)).unwrap().timestamp_millis(), 
+        timeout_continuation: Contract::Close.into()
+    };
+    let serialized = marlowe::serialize_strict(contract).unwrap();
+    println!("{}",parsing::fmt::fmt(&serialized))
 }
 
 

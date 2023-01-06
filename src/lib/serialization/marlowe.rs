@@ -6,6 +6,10 @@ use crate::types::marlowe::*;
 pub fn serialize(contract:Contract) -> String { 
     format!("{:#}",contract)
 }
+pub fn serialize_strict(contract:crate::types::marlowe_strict::Contract) -> Result<String,String> { 
+    let serializable : Contract = contract.try_into()?;
+    Ok(format!("{:#}",serializable))
+}
 
 impl std::fmt::Display for InputAction {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {

@@ -1,5 +1,6 @@
 // The strict version marlowe types do not allow for holes (option<T>) and is likely what you want to use
 // when defining contracts using Rust. All strict types can be automatically converted to the normal types.
+// TryFrom is used since we want to validate addresses and such to be valid
 
 
 use crate::types::marlowe::Address;
@@ -18,7 +19,7 @@ pub struct Case {
 
 impl TryFrom<Contract> for crate::types::marlowe::Contract {
     type Error = String;
-    fn try_from(x: Contract) -> Result<Self,Self::Error> {
+    fn try_from(x: Contract) -> Result<Self, String> {
         Ok(match x {
             Contract::Close => crate::types::marlowe::Contract::Close,
             Contract::Pay { from_account, to, token, pay, then } => 
@@ -236,6 +237,10 @@ pub struct ChoiceId {
 pub enum Party {
     Address (String),
     Role (String)
+}
+impl Party {
+    pub fn role(name:&str) -> Self {Self::Role(name.to_owned())}
+    pub fn addr(addr:&str) -> Self {Self::Address(addr.to_owned())}
 }
 
 #[derive(Clone,Debug)]
