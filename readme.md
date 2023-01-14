@@ -4,7 +4,7 @@
 [![Documentation](https://docs.rs/marlowe_lang/badge.svg)](https://docs.rs/marlowe_lang)
 [![BuildAndTest](https://github.com/OlofBlomqvist/marlowe_rust/actions/workflows/rust.yml/badge.svg?branch=master)](https://github.com/OlofBlomqvist/marlowe_rust/actions/workflows/rust.yml)
 
-An experimental Rust implementation of the Marlowe DSL for Cardano smart (financial) contracts. 
+An experimental Rust implementation of  Marlowe for Cardano smart (financial) contracts. 
 
 **Warning:** This crate should not (yet) be used anywhere near a production environment.
 
@@ -12,11 +12,6 @@ An experimental Rust implementation of the Marlowe DSL for Cardano smart (financ
 
 - The Marlowe playground 
 does not yet support using using address for parties, so if you want to parse contracts created from there, you need to use v 1.12 or convert them manually.
-
-- Not all example data for datums, redeemers or contracts in the iohk cardano-marlowe lib has been updated to use address but still uses PK for parties: if you want to parse those, use v 1.12.
-
-- Same with old marlowe instances on-chain: will not be possible to parse datum or redeemer using v 1.13+.
-
 
 ### Main Features
 - Encode/Decode Marlowe types between: MarloweDSL/Rust/Json/CborHex
