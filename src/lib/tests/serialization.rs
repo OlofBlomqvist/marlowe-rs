@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use crate::{types::marlowe::*};
 
+#[cfg(feature="js")]
+use crate::extras::js::*;
 
 #[test]
 fn json_can_deserialize_choice_id_with_owner_address() {
@@ -179,9 +181,8 @@ fn deserialize_json_basic_close_contract() {
 
 
 
-#[cfg(feature="wasm")]
-use crate::extras::wasm::*;
-#[cfg(feature="wasm")]
+
+#[cfg(feature="js")]
 #[test]
 fn state_json_serialization() -> Result<(),String> {
     
@@ -234,7 +235,7 @@ fn state_json_serialization() -> Result<(),String> {
     let wasmstate_converted_to_state : crate::types::marlowe::State = basic_wasm_state.try_into().expect("Should be able to convert wasmstate into state.");
     let _ = serde_json::to_string_pretty(&wasmstate_converted_to_state).expect("Should be able to serialize the converted state");
     let _ = serde_json::to_string_pretty(&basic_state).expect("Should be able to serialize basic state objects");
-    let basic_state_converted_to_wasmstate : crate::extras::wasm::WasmState = basic_state.try_into().expect("Should be able to convert state into wasmstate");
+    let basic_state_converted_to_wasmstate : crate::extras::js::WasmState = basic_state.try_into().expect("Should be able to convert state into wasmstate");
     let state_after_multiple_serdeser: crate::types::marlowe::State = basic_state_converted_to_wasmstate.try_into().expect("Should be able to convert state back in to wasmstate");
     let _ = serde_json::to_string_pretty(&state_after_multiple_serdeser).expect("should be able to serialize re-converted state");
     Ok(())

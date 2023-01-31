@@ -228,6 +228,11 @@ pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Resu
                 //let s = option_to_result(current_operation.string_representation,"failed to parse a valueid.")?;
                 fold_back!(AstNode::MarloweValueId(ValueId::Name(inner_str)))
             }
+            Rule::ChoseSomething => {
+                let choice_id = get_next_into!();
+                fold_back!(AstNode::MarloweObservation( Observation::ChoseSomething(choice_id)))
+            
+            }
             Rule::TrueObs => fold_back!(AstNode::MarloweObservation(Observation::True)),
             Rule::FalseObs => fold_back!(AstNode::MarloweObservation(Observation::False)),
             Rule::Number => {                
@@ -420,14 +425,13 @@ pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Resu
 }
 
 
-#[cfg(feature="wasm")]
+#[cfg(feature="js")]
 use wasm_bindgen::{prelude::*};
 
 #[derive(serde::Serialize,serde::Deserialize)]
-#[cfg(feature="wasm")]
+#[cfg(feature="js")]
 #[wasm_bindgen]
 pub struct ParseError {
-
     pub start_line : usize,
     pub end_line : usize,
     pub start_col : usize,
@@ -435,9 +439,9 @@ pub struct ParseError {
     #[wasm_bindgen(getter_with_clone)]pub error_message : String,
 }
 
-#[cfg(not(feature="wasm"))]
+#[derive(serde::Serialize,serde::Deserialize)]
+#[cfg(not(feature="js"))]
 pub struct ParseError {
-
     pub start_line : usize,
     pub end_line : usize,
     pub start_col : usize,
@@ -445,9 +449,9 @@ pub struct ParseError {
     pub error_message : String,
 }
 
-#[cfg_attr(feature="wasm",wasm_bindgen::prelude::wasm_bindgen)]
+#[cfg_attr(feature="js",wasm_bindgen::prelude::wasm_bindgen)]
 impl ParseError {
-    #[cfg_attr(feature="wasm",wasm_bindgen::prelude::wasm_bindgen(constructor))]
+    #[cfg_attr(feature="js",wasm_bindgen::prelude::wasm_bindgen(constructor))]
     pub fn new(start_line:usize,end_line:usize,start_col:usize,end_col:usize,error_message:String) -> Self {
         ParseError {
             start_line,
@@ -456,10 +460,6 @@ impl ParseError {
             end_col,
             error_message,
         }
-    }
-    #[cfg_attr(feature="wasm",wasm_bindgen::prelude::wasm_bindgen(getter))]
-    pub fn error_message(&self) -> String {
-        self.error_message.to_owned()
     }
 }
 impl Clone for ParseError {

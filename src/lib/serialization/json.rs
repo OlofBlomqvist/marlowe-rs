@@ -266,6 +266,18 @@ where
     }
 }
 
+impl Serialize for ValueId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer {
+        match self {
+            ValueId::Name(n) => {
+                serializer.serialize_str(n)
+            }
+        }
+    }
+}
+
 
 impl Serialize for Timeout {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

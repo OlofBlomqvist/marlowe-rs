@@ -12,7 +12,7 @@ export function decode_marlowe_input_cbor_hex(redeemer_cbor_hex: string): string
 export function decode_marlowe_input_json(redeemer_json: string): string;
 /**
 */
-export function main(): void;
+export function wasm_main(): void;
 /**
 * @param {string} contract
 * @returns {string}
@@ -25,7 +25,15 @@ export function marlowe_to_json(contract: string): string;
 * @param {string} params_str
 * @returns {string}
 */
-export function marlowe_to_json_with_inputs(contract: string, params_str: string): string;
+export function marlowe_to_json_with_variables(contract: string, params_str: string): string;
+/**
+* params_str format by example:
+* "variable_one_name=12345,variable_two_name=6789"
+* @param {string} contract
+* @param {string} params_str
+* @returns {string}
+*/
+export function parse_marlowe_with_variables(contract: string, params_str: string): string;
 /**
 * @param {string} contract
 * @returns {string}
@@ -58,26 +66,9 @@ export function cbor_hex_to_json_basic_schema(bytes: Uint8Array): any;
 export function get_input_params_for_contract(marlowe_dsl: string): any[];
 /**
 * @param {string} marlowe_dsl
-* @returns {any[]}
+* @returns {ParseError | undefined}
 */
-export function list_inputs_params(marlowe_dsl: string): any[];
-/**
-* @param {string} marlowe_dsl
-* @returns {string}
-*/
-export function get_expected_input_action(marlowe_dsl: string): string;
-/**
-* @param {string} json
-* @param {number} schema
-* @returns {PlutusData}
-*/
-export function encode_json_str_to_plutus_datum(json: string, schema: number): PlutusData;
-/**
-* @param {PlutusData} datum
-* @param {number} schema
-* @returns {string}
-*/
-export function decode_plutus_datum_to_json_str(datum: PlutusData, schema: number): string;
+export function get_marlowe_dsl_parser_errors(marlowe_dsl: string): ParseError | undefined;
 /**
 * @param {Uint8Array} bytes
 * @returns {TransactionMetadatum}
@@ -101,49 +92,17 @@ export function encode_json_str_to_metadatum(json: string, schema: number): Tran
 */
 export function decode_metadatum_to_json_str(metadatum: TransactionMetadatum, schema: number): string;
 /**
-* @param {AuxiliaryData} auxiliary_data
-* @returns {AuxiliaryDataHash}
+* @param {string} json
+* @param {number} schema
+* @returns {PlutusData}
 */
-export function hash_auxiliary_data(auxiliary_data: AuxiliaryData): AuxiliaryDataHash;
+export function encode_json_str_to_plutus_datum(json: string, schema: number): PlutusData;
 /**
-* @param {TransactionBody} tx_body
-* @returns {TransactionHash}
+* @param {PlutusData} datum
+* @param {number} schema
+* @returns {string}
 */
-export function hash_transaction(tx_body: TransactionBody): TransactionHash;
-/**
-* @param {PlutusData} plutus_data
-* @returns {DataHash}
-*/
-export function hash_plutus_data(plutus_data: PlutusData): DataHash;
-/**
-* @param {Redeemers} redeemers
-* @param {Costmdls} cost_models
-* @param {PlutusList | undefined} datums
-* @returns {ScriptDataHash}
-*/
-export function hash_script_data(redeemers: Redeemers, cost_models: Costmdls, datums?: PlutusList): ScriptDataHash;
-/**
-* @param {Redeemers} redeemers
-* @param {PlutusList} datums
-* @param {Costmdls} cost_models
-* @param {Languages} used_langs
-* @returns {ScriptDataHash | undefined}
-*/
-export function calc_script_data_hash(redeemers: Redeemers, datums: PlutusList, cost_models: Costmdls, used_langs: Languages): ScriptDataHash | undefined;
-/**
-* @param {TransactionHash} tx_body_hash
-* @param {ByronAddress} addr
-* @param {LegacyDaedalusPrivateKey} key
-* @returns {BootstrapWitness}
-*/
-export function make_daedalus_bootstrap_witness(tx_body_hash: TransactionHash, addr: ByronAddress, key: LegacyDaedalusPrivateKey): BootstrapWitness;
-/**
-* @param {TransactionHash} tx_body_hash
-* @param {ByronAddress} addr
-* @param {Bip32PrivateKey} key
-* @returns {BootstrapWitness}
-*/
-export function make_icarus_bootstrap_witness(tx_body_hash: TransactionHash, addr: ByronAddress, key: Bip32PrivateKey): BootstrapWitness;
+export function decode_plutus_datum_to_json_str(datum: PlutusData, schema: number): string;
 /**
 * @param {string} password
 * @param {string} salt
@@ -158,20 +117,6 @@ export function encrypt_with_password(password: string, salt: string, nonce: str
 * @returns {string}
 */
 export function decrypt_with_password(password: string, data: string): string;
-/**
-* Provide backwards compatibility to Alonzo by taking the max min value of both er
-* @param {TransactionOutput} output
-* @param {BigNum} coins_per_utxo_byte
-* @param {BigNum} coins_per_utxo_word
-* @returns {BigNum}
-*/
-export function compatible_min_ada_required(output: TransactionOutput, coins_per_utxo_byte: BigNum, coins_per_utxo_word: BigNum): BigNum;
-/**
-* @param {TransactionOutput} output
-* @param {BigNum} coins_per_utxo_byte
-* @returns {BigNum}
-*/
-export function min_ada_required(output: TransactionOutput, coins_per_utxo_byte: BigNum): BigNum;
 /**
 * @param {Transaction} tx
 * @param {ExUnitPrices} ex_unit_prices
@@ -207,6 +152,36 @@ export function min_fee(tx: Transaction, linear_fee: LinearFee, ex_unit_prices: 
 */
 export function encode_json_str_to_native_script(json: string, self_xpub: string, schema: number): NativeScript;
 /**
+* @param {AuxiliaryData} auxiliary_data
+* @returns {AuxiliaryDataHash}
+*/
+export function hash_auxiliary_data(auxiliary_data: AuxiliaryData): AuxiliaryDataHash;
+/**
+* @param {TransactionBody} tx_body
+* @returns {TransactionHash}
+*/
+export function hash_transaction(tx_body: TransactionBody): TransactionHash;
+/**
+* @param {PlutusData} plutus_data
+* @returns {DataHash}
+*/
+export function hash_plutus_data(plutus_data: PlutusData): DataHash;
+/**
+* @param {Redeemers} redeemers
+* @param {Costmdls} cost_models
+* @param {PlutusList | undefined} datums
+* @returns {ScriptDataHash}
+*/
+export function hash_script_data(redeemers: Redeemers, cost_models: Costmdls, datums?: PlutusList): ScriptDataHash;
+/**
+* @param {Redeemers} redeemers
+* @param {PlutusList} datums
+* @param {Costmdls} cost_models
+* @param {Languages} used_langs
+* @returns {ScriptDataHash | undefined}
+*/
+export function calc_script_data_hash(redeemers: Redeemers, datums: PlutusList, cost_models: Costmdls, used_langs: Languages): ScriptDataHash | undefined;
+/**
 * @param {TransactionBody} txbody
 * @param {BigNum} pool_deposit
 * @param {BigNum} key_deposit
@@ -221,6 +196,34 @@ export function get_implicit_input(txbody: TransactionBody, pool_deposit: BigNum
 */
 export function get_deposit(txbody: TransactionBody, pool_deposit: BigNum, key_deposit: BigNum): BigNum;
 /**
+* Provide backwards compatibility to Alonzo by taking the max min value of both er
+* @param {TransactionOutput} output
+* @param {BigNum} coins_per_utxo_byte
+* @param {BigNum} coins_per_utxo_word
+* @returns {BigNum}
+*/
+export function compatible_min_ada_required(output: TransactionOutput, coins_per_utxo_byte: BigNum, coins_per_utxo_word: BigNum): BigNum;
+/**
+* @param {TransactionOutput} output
+* @param {BigNum} coins_per_utxo_byte
+* @returns {BigNum}
+*/
+export function min_ada_required(output: TransactionOutput, coins_per_utxo_byte: BigNum): BigNum;
+/**
+* @param {TransactionHash} tx_body_hash
+* @param {ByronAddress} addr
+* @param {LegacyDaedalusPrivateKey} key
+* @returns {BootstrapWitness}
+*/
+export function make_daedalus_bootstrap_witness(tx_body_hash: TransactionHash, addr: ByronAddress, key: LegacyDaedalusPrivateKey): BootstrapWitness;
+/**
+* @param {TransactionHash} tx_body_hash
+* @param {ByronAddress} addr
+* @param {Bip32PrivateKey} key
+* @returns {BootstrapWitness}
+*/
+export function make_icarus_bootstrap_witness(tx_body_hash: TransactionHash, addr: ByronAddress, key: Bip32PrivateKey): BootstrapWitness;
+/**
 * @param {TransactionHash} tx_body_hash
 * @param {PrivateKey} sk
 * @returns {Vkeywitness}
@@ -228,55 +231,49 @@ export function get_deposit(txbody: TransactionBody, pool_deposit: BigNum, key_d
 export function make_vkey_witness(tx_body_hash: TransactionHash, sk: PrivateKey): Vkeywitness;
 /**
 */
-export enum DatumKind {
-  Hash,
-  Inline,
+export enum WasmPartyType {
+  Role,
+  Address,
 }
 /**
 */
-export enum CertificateKind {
-  StakeRegistration,
-  StakeDeregistration,
-  StakeDelegation,
-  PoolRegistration,
-  PoolRetirement,
-  GenesisKeyDelegation,
-  MoveInstantaneousRewardsCert,
+export enum StakeCredKind {
+  Key,
+  Script,
+}
+/**
+* Careful: this enum doesn't include the network ID part of the header
+* ex: base address isn't 0b0000_0000 but instead 0b0000
+* Use `header_matches_kind` if you don't want to implement the bitwise operators yourself
+*/
+export enum AddressHeaderKind {
+  BasePaymentKeyStakeKey,
+  BasePaymentScriptStakeKey,
+  BasePaymentKeyStakeScript,
+  BasePaymentScriptStakeScript,
+  PointerKey,
+  PointerScript,
+  EnterpriseKey,
+  EnterpriseScript,
+  Byron,
+  RewardKey,
+  RewardScript,
 }
 /**
 */
-export enum MIRPot {
-  Reserves,
-  Treasury,
+export enum TransactionMetadatumKind {
+  MetadataMap,
+  MetadataList,
+  Int,
+  Bytes,
+  Text,
 }
 /**
 */
-export enum MIRKind {
-  ToOtherPot,
-  ToStakeCredentials,
-}
-/**
-*/
-export enum RelayKind {
-  SingleHostAddr,
-  SingleHostName,
-  MultiHostName,
-}
-/**
-*/
-export enum NativeScriptKind {
-  ScriptPubkey,
-  ScriptAll,
-  ScriptAny,
-  ScriptNOfK,
-  TimelockStart,
-  TimelockExpiry,
-}
-/**
-*/
-export enum NetworkIdKind {
-  Testnet,
-  Mainnet,
+export enum MetadataJsonSchema {
+  NoConversions,
+  BasicConversions,
+  DetailedSchema,
 }
 /**
 */
@@ -362,19 +359,35 @@ export enum PlutusDatumSchema {
 }
 /**
 */
-export enum TransactionMetadatumKind {
-  MetadataMap,
-  MetadataList,
-  Int,
-  Bytes,
-  Text,
+export enum CoinSelectionStrategyCIP2 {
+/**
+* Performs CIP2's Largest First ada-only selection. Will error if outputs contain non-ADA assets.
+*/
+  LargestFirst,
+/**
+* Performs CIP2's Random Improve ada-only selection. Will error if outputs contain non-ADA assets.
+*/
+  RandomImprove,
+/**
+* Same as LargestFirst, but before adding ADA, will insert by largest-first for each asset type.
+*/
+  LargestFirstMultiAsset,
+/**
+* Same as RandomImprove, but before adding ADA, will insert by random-improve for each asset type.
+*/
+  RandomImproveMultiAsset,
 }
 /**
 */
-export enum MetadataJsonSchema {
-  NoConversions,
-  BasicConversions,
-  DetailedSchema,
+export enum ChangeSelectionAlgo {
+  Default,
+}
+/**
+* Used to choose the schema for a script JSON string
+*/
+export enum ScriptSchema {
+  Wallet,
+  Node,
 }
 /**
 * Each new language uses a different namespace for hashing its script
@@ -410,64 +423,73 @@ export enum SpendingDataKind {
 }
 /**
 */
-export enum CoinSelectionStrategyCIP2 {
-/**
-* Performs CIP2's Largest First ada-only selection. Will error if outputs contain non-ADA assets.
-*/
-  LargestFirst,
-/**
-* Performs CIP2's Random Improve ada-only selection. Will error if outputs contain non-ADA assets.
-*/
-  RandomImprove,
-/**
-* Same as LargestFirst, but before adding ADA, will insert by largest-first for each asset type.
-*/
-  LargestFirstMultiAsset,
-/**
-* Same as RandomImprove, but before adding ADA, will insert by random-improve for each asset type.
-*/
-  RandomImproveMultiAsset,
+export enum DatumKind {
+  Hash,
+  Inline,
 }
 /**
 */
-export enum ChangeSelectionAlgo {
-  Default,
+export enum CertificateKind {
+  StakeRegistration,
+  StakeDeregistration,
+  StakeDelegation,
+  PoolRegistration,
+  PoolRetirement,
+  GenesisKeyDelegation,
+  MoveInstantaneousRewardsCert,
 }
 /**
 */
-export enum StakeCredKind {
-  Key,
-  Script,
+export enum MIRPot {
+  Reserves,
+  Treasury,
 }
 /**
-* Careful: this enum doesn't include the network ID part of the header
-* ex: base address isn't 0b0000_0000 but instead 0b0000
-* Use `header_matches_kind` if you don't want to implement the bitwise operators yourself
 */
-export enum AddressHeaderKind {
-  BasePaymentKeyStakeKey,
-  BasePaymentScriptStakeKey,
-  BasePaymentKeyStakeScript,
-  BasePaymentScriptStakeScript,
-  PointerKey,
-  PointerScript,
-  EnterpriseKey,
-  EnterpriseScript,
-  Byron,
-  RewardKey,
-  RewardScript,
+export enum MIRKind {
+  ToOtherPot,
+  ToStakeCredentials,
 }
 /**
-* Used to choose the schema for a script JSON string
 */
-export enum ScriptSchema {
-  Wallet,
-  Node,
+export enum RelayKind {
+  SingleHostAddr,
+  SingleHostName,
+  MultiHostName,
+}
+/**
+*/
+export enum NativeScriptKind {
+  ScriptPubkey,
+  ScriptAll,
+  ScriptAny,
+  ScriptNOfK,
+  TimelockStart,
+  TimelockExpiry,
+}
+/**
+*/
+export enum NetworkIdKind {
+  Testnet,
+  Mainnet,
 }
 /**
 */
 export class AddrAttributes {
   free(): void;
+/**
+* @param {HDAddressPayload | undefined} hdap
+* @param {ProtocolMagic | undefined} protocol_magic
+* @returns {AddrAttributes}
+*/
+  static new_bootstrap_era(hdap?: HDAddressPayload, protocol_magic?: ProtocolMagic): AddrAttributes;
+/**
+* @param {Bip32PublicKey} pubk
+* @param {HDAddressPayload | undefined} hdap
+* @param {ProtocolMagic} protocol_magic
+* @returns {AddrAttributes}
+*/
+  static new_single_key(pubk: Bip32PublicKey, hdap: HDAddressPayload | undefined, protocol_magic: ProtocolMagic): AddrAttributes;
 /**
 * @returns {Uint8Array}
 */
@@ -518,19 +540,6 @@ export class AddrAttributes {
 * @returns {AddrAttributes}
 */
   static new(): AddrAttributes;
-/**
-* @param {HDAddressPayload | undefined} hdap
-* @param {ProtocolMagic | undefined} protocol_magic
-* @returns {AddrAttributes}
-*/
-  static new_bootstrap_era(hdap?: HDAddressPayload, protocol_magic?: ProtocolMagic): AddrAttributes;
-/**
-* @param {Bip32PublicKey} pubk
-* @param {HDAddressPayload | undefined} hdap
-* @param {ProtocolMagic} protocol_magic
-* @returns {AddrAttributes}
-*/
-  static new_single_key(pubk: Bip32PublicKey, hdap: HDAddressPayload | undefined, protocol_magic: ProtocolMagic): AddrAttributes;
 }
 /**
 */
@@ -664,47 +673,6 @@ export class Address {
 export class AddressContent {
   free(): void;
 /**
-* @returns {Uint8Array}
-*/
-  to_bytes(): Uint8Array;
-/**
-* @param {Uint8Array} bytes
-* @returns {AddressContent}
-*/
-  static from_bytes(bytes: Uint8Array): AddressContent;
-/**
-* @returns {string}
-*/
-  to_json(): string;
-/**
-* @returns {any}
-*/
-  to_js_value(): any;
-/**
-* @param {string} json
-* @returns {AddressContent}
-*/
-  static from_json(json: string): AddressContent;
-/**
-* @returns {AddressId}
-*/
-  address_id(): AddressId;
-/**
-* @returns {AddrAttributes}
-*/
-  addr_attr(): AddrAttributes;
-/**
-* @returns {ByronAddrType}
-*/
-  addr_type(): ByronAddrType;
-/**
-* @param {AddressId} address_id
-* @param {AddrAttributes} addr_attr
-* @param {ByronAddrType} addr_type
-* @returns {AddressContent}
-*/
-  static new(address_id: AddressId, addr_attr: AddrAttributes, addr_type: ByronAddrType): AddressContent;
-/**
 * @param {ByronAddrType} addr_type
 * @param {SpendingData} spending_data
 * @param {AddrAttributes} attributes
@@ -749,11 +717,59 @@ export class AddressContent {
 * @returns {boolean}
 */
   identical_with_pubkey(xpub: Bip32PublicKey): boolean;
+/**
+* @returns {Uint8Array}
+*/
+  to_bytes(): Uint8Array;
+/**
+* @param {Uint8Array} bytes
+* @returns {AddressContent}
+*/
+  static from_bytes(bytes: Uint8Array): AddressContent;
+/**
+* @returns {string}
+*/
+  to_json(): string;
+/**
+* @returns {any}
+*/
+  to_js_value(): any;
+/**
+* @param {string} json
+* @returns {AddressContent}
+*/
+  static from_json(json: string): AddressContent;
+/**
+* @returns {AddressId}
+*/
+  address_id(): AddressId;
+/**
+* @returns {AddrAttributes}
+*/
+  addr_attr(): AddrAttributes;
+/**
+* @returns {ByronAddrType}
+*/
+  addr_type(): ByronAddrType;
+/**
+* @param {AddressId} address_id
+* @param {AddrAttributes} addr_attr
+* @param {ByronAddrType} addr_type
+* @returns {AddressContent}
+*/
+  static new(address_id: AddressId, addr_attr: AddrAttributes, addr_type: ByronAddrType): AddressContent;
 }
 /**
 */
 export class AddressId {
   free(): void;
+/**
+* @param {ByronAddrType} addr_type
+* @param {SpendingData} spending_data
+* @param {AddrAttributes} attrs
+* @returns {AddressId}
+*/
+  static new(addr_type: ByronAddrType, spending_data: SpendingData, attrs: AddrAttributes): AddressId;
 /**
 * @param {Uint8Array} bytes
 * @returns {AddressId}
@@ -782,13 +798,6 @@ export class AddressId {
 * @returns {AddressId}
 */
   static from_hex(hex: string): AddressId;
-/**
-* @param {ByronAddrType} addr_type
-* @param {SpendingData} spending_data
-* @param {AddrAttributes} attrs
-* @returns {AddressId}
-*/
-  static new(addr_type: ByronAddrType, spending_data: SpendingData, attrs: AddrAttributes): AddressId;
 }
 /**
 */
@@ -1569,6 +1578,17 @@ export class BootstrapWitnesses {
 }
 /**
 */
+export class Bound {
+  free(): void;
+/**
+*/
+  0: bigint;
+/**
+*/
+  1: bigint;
+}
+/**
+*/
 export class ByronAddrType {
   free(): void;
 /**
@@ -1615,6 +1635,33 @@ export class ByronAddrType {
 export class ByronAddress {
   free(): void;
 /**
+* @returns {string}
+*/
+  to_base58(): string;
+/**
+* @param {string} s
+* @returns {ByronAddress}
+*/
+  static from_base58(s: string): ByronAddress;
+/**
+* @returns {AddressContent}
+*/
+  address_content(): AddressContent;
+/**
+* @param {string} s
+* @returns {boolean}
+*/
+  static is_valid(s: string): boolean;
+/**
+* @returns {Address}
+*/
+  to_address(): Address;
+/**
+* @param {Address} addr
+* @returns {ByronAddress | undefined}
+*/
+  static from_address(addr: Address): ByronAddress | undefined;
+/**
 * @returns {Uint8Array}
 */
   to_bytes(): Uint8Array;
@@ -1655,33 +1702,6 @@ export class ByronAddress {
 * @returns {ByronAddress}
 */
   static new(addr: Uint8Array, crc32: Crc32): ByronAddress;
-/**
-* @returns {string}
-*/
-  to_base58(): string;
-/**
-* @param {string} s
-* @returns {ByronAddress}
-*/
-  static from_base58(s: string): ByronAddress;
-/**
-* @returns {AddressContent}
-*/
-  address_content(): AddressContent;
-/**
-* @param {string} s
-* @returns {boolean}
-*/
-  static is_valid(s: string): boolean;
-/**
-* @returns {Address}
-*/
-  to_address(): Address;
-/**
-* @param {Address} addr
-* @returns {ByronAddress | undefined}
-*/
-  static from_address(addr: Address): ByronAddress | undefined;
 }
 /**
 */
@@ -3801,6 +3821,34 @@ export class OperationalCert {
 * @returns {OperationalCert}
 */
   static new(hot_vkey: KESVKey, sequence_number: number, kes_period: number, sigma: Ed25519Signature): OperationalCert;
+}
+/**
+*/
+export class ParseError {
+  free(): void;
+/**
+* @param {number} start_line
+* @param {number} end_line
+* @param {number} start_col
+* @param {number} end_col
+* @param {string} error_message
+*/
+  constructor(start_line: number, end_line: number, start_col: number, end_col: number, error_message: string);
+/**
+*/
+  end_col: number;
+/**
+*/
+  end_line: number;
+/**
+*/
+  error_message: string;
+/**
+*/
+  start_col: number;
+/**
+*/
+  start_line: number;
 }
 /**
 * A partial Plutus witness
@@ -6273,6 +6321,11 @@ export class StakeDeregistration {
 export class StakeDistribution {
   free(): void;
 /**
+* @param {Bip32PublicKey} pubk
+* @returns {StakeDistribution}
+*/
+  static new_single_key(pubk: Bip32PublicKey): StakeDistribution;
+/**
 * @returns {Uint8Array}
 */
   to_bytes(): Uint8Array;
@@ -6315,11 +6368,6 @@ export class StakeDistribution {
 * @returns {SingleKeyDistr | undefined}
 */
   as_single_key_distr(): SingleKeyDistr | undefined;
-/**
-* @param {Bip32PublicKey} pubk
-* @returns {StakeDistribution}
-*/
-  static new_single_key(pubk: Bip32PublicKey): StakeDistribution;
 }
 /**
 */
@@ -6362,6 +6410,11 @@ export class StakeRegistration {
 export class StakeholderId {
   free(): void;
 /**
+* @param {Bip32PublicKey} pubk
+* @returns {StakeholderId}
+*/
+  static new(pubk: Bip32PublicKey): StakeholderId;
+/**
 * @param {Uint8Array} bytes
 * @returns {StakeholderId}
 */
@@ -6389,11 +6442,6 @@ export class StakeholderId {
 * @returns {StakeholderId}
 */
   static from_hex(hex: string): StakeholderId;
-/**
-* @param {Bip32PublicKey} pubk
-* @returns {StakeholderId}
-*/
-  static new(pubk: Bip32PublicKey): StakeholderId;
 }
 /**
 */
@@ -8182,6 +8230,195 @@ export class Vkeywitnesses {
 }
 /**
 */
+export class WASMMarloweStateMachine {
+  free(): void;
+/**
+* Takes an initialized (non-marlowe-extended) MarloweDSL contract as input.
+* @param {string} contract_dsl
+*/
+  constructor(contract_dsl: string);
+/**
+* @returns {any}
+*/
+  contract(): any;
+/**
+* @returns {any[]}
+*/
+  logs(): any[];
+/**
+* @returns {any}
+*/
+  payments(): any;
+/**
+* @returns {WasmState}
+*/
+  state(): WasmState;
+/**
+* @returns {any}
+*/
+  warnings(): any;
+/**
+* @param {string} bech32_addr
+* @param {string} token_name
+* @param {string} currency_symbol
+* @param {bigint} quantity
+*/
+  set_acc_of_addr(bech32_addr: string, token_name: string, currency_symbol: string, quantity: bigint): void;
+/**
+* @param {string} role
+* @param {string} token_name
+* @param {string} currency_symbol
+* @param {bigint} quantity
+*/
+  set_acc_of_role(role: string, token_name: string, currency_symbol: string, quantity: bigint): void;
+/**
+* @returns {string}
+*/
+  describe(): string;
+/**
+* @param {string} from_role
+* @param {string} to_role
+* @param {string} token_name
+* @param {string} currency_symbol
+* @param {bigint} quantity
+*/
+  apply_input_deposit_for_role(from_role: string, to_role: string, token_name: string, currency_symbol: string, quantity: bigint): void;
+/**
+* @param {string} from_bech32_addr
+* @param {string} to_bech32_addr
+* @param {string} token_name
+* @param {string} currency_symbol
+* @param {bigint} quantity
+*/
+  apply_input_deposit_for_addr(from_bech32_addr: string, to_bech32_addr: string, token_name: string, currency_symbol: string, quantity: bigint): void;
+/**
+* @param {string} choice_name
+* @param {string} role_name
+* @param {bigint} chosen_value
+*/
+  apply_input_choice_for_role(choice_name: string, role_name: string, chosen_value: bigint): void;
+/**
+* @param {string} choice_name
+* @param {string} bech32_addr
+* @param {bigint} chosen_value
+*/
+  apply_input_choice_for_addr(choice_name: string, bech32_addr: string, chosen_value: bigint): void;
+/**
+* @returns {string}
+*/
+  expected_inputs_json(): string;
+/**
+* @returns {string}
+*/
+  process(): string;
+}
+/**
+*/
+export class WasmAccount {
+  free(): void;
+/**
+*/
+  amount: bigint;
+/**
+*/
+  party: WasmParty;
+/**
+*/
+  token: WasmToken;
+}
+/**
+*/
+export class WasmAccounts {
+  free(): void;
+}
+/**
+*/
+export class WasmBoundValue {
+  free(): void;
+/**
+*/
+  name: string;
+/**
+*/
+  value: bigint;
+}
+/**
+*/
+export class WasmBoundValues {
+  free(): void;
+}
+/**
+*/
+export class WasmChoice {
+  free(): void;
+/**
+*/
+  choice_name: string;
+/**
+*/
+  choice_owner: WasmParty;
+/**
+*/
+  value: bigint;
+}
+/**
+*/
+export class WasmChoices {
+  free(): void;
+}
+/**
+*/
+export class WasmParty {
+  free(): void;
+/**
+* @returns {string}
+*/
+  value(): string;
+/**
+* @returns {number}
+*/
+  typ(): number;
+/**
+* @param {string} bech32_addr
+* @returns {WasmParty}
+*/
+  static new_addr(bech32_addr: string): WasmParty;
+/**
+* @param {string} role_token
+* @returns {WasmParty}
+*/
+  static new_role(role_token: string): WasmParty;
+}
+/**
+*/
+export class WasmState {
+  free(): void;
+/**
+*/
+  accounts: WasmAccounts;
+/**
+*/
+  bound_values: WasmBoundValues;
+/**
+*/
+  choices: WasmChoices;
+/**
+*/
+  min_time: bigint;
+}
+/**
+*/
+export class WasmToken {
+  free(): void;
+/**
+*/
+  name: string;
+/**
+*/
+  pol: string;
+}
+/**
+*/
 export class WithdrawalBuilderResult {
   free(): void;
 }
@@ -8240,33 +8477,922 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
+  readonly validate_dsl: (a: number, b: number) => number;
+  readonly parse_contract_dsl_to_json: (a: number, b: number) => number;
+  readonly parse_contract_dsl_to_cborhex: (a: number, b: number) => number;
+  readonly parse_contract_json_to_cborhex: (a: number, b: number) => number;
+  readonly parse_contract_json_to_dsl: (a: number, b: number) => number;
+  readonly parse_redeemer_from_cbor_to_json: (a: number, b: number) => number;
+  readonly parse_datum_from_cbor_to_json: (a: number, b: number) => number;
+  readonly __wbg_bound_free: (a: number) => void;
+  readonly __wbg_get_bound_0: (a: number) => number;
+  readonly __wbg_set_bound_0: (a: number, b: number) => void;
+  readonly __wbg_get_bound_1: (a: number) => number;
+  readonly __wbg_set_bound_1: (a: number, b: number) => void;
+  readonly __wbg_parseerror_free: (a: number) => void;
+  readonly __wbg_get_parseerror_start_line: (a: number) => number;
+  readonly __wbg_set_parseerror_start_line: (a: number, b: number) => void;
+  readonly __wbg_get_parseerror_end_line: (a: number) => number;
+  readonly __wbg_set_parseerror_end_line: (a: number, b: number) => void;
+  readonly __wbg_get_parseerror_start_col: (a: number) => number;
+  readonly __wbg_set_parseerror_start_col: (a: number, b: number) => void;
+  readonly __wbg_get_parseerror_end_col: (a: number) => number;
+  readonly __wbg_set_parseerror_end_col: (a: number, b: number) => void;
+  readonly __wbg_get_parseerror_error_message: (a: number, b: number) => void;
+  readonly __wbg_set_parseerror_error_message: (a: number, b: number, c: number) => void;
+  readonly parseerror_new: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
   readonly decode_marlowe_input_cbor_hex: (a: number, b: number, c: number) => void;
   readonly decode_marlowe_input_json: (a: number, b: number, c: number) => void;
-  readonly main: () => void;
+  readonly wasm_main: () => void;
   readonly marlowe_to_json: (a: number, b: number, c: number) => void;
-  readonly marlowe_to_json_with_inputs: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly marlowe_to_json_with_variables: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly parse_marlowe_with_variables: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly format_marlowe: (a: number, b: number, c: number) => void;
   readonly decode_cborhex_marlowe_plutus_datum: (a: number, b: number, c: number) => void;
   readonly decode_json_encoded_marlowe_plutus_datum: (a: number, b: number, c: number) => void;
   readonly cbor_hex_to_json_detailed_schema: (a: number, b: number, c: number) => void;
   readonly cbor_hex_to_json_basic_schema: (a: number, b: number, c: number) => void;
   readonly get_input_params_for_contract: (a: number, b: number, c: number) => void;
-  readonly list_inputs_params: (a: number, b: number, c: number) => void;
-  readonly get_expected_input_action: (a: number, b: number, c: number) => void;
-  readonly __wbg_unitinterval_free: (a: number) => void;
+  readonly get_marlowe_dsl_parser_errors: (a: number, b: number) => number;
+  readonly __wbg_wasmmarlowestatemachine_free: (a: number) => void;
+  readonly wasmmarlowestatemachine_create: (a: number, b: number, c: number) => void;
+  readonly wasmmarlowestatemachine_contract: (a: number) => number;
+  readonly wasmmarlowestatemachine_logs: (a: number, b: number) => void;
+  readonly wasmmarlowestatemachine_payments: (a: number) => number;
+  readonly wasmmarlowestatemachine_state: (a: number) => number;
+  readonly wasmmarlowestatemachine_warnings: (a: number) => number;
+  readonly wasmmarlowestatemachine_set_acc_of_addr: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
+  readonly wasmmarlowestatemachine_set_acc_of_role: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
+  readonly wasmmarlowestatemachine_describe: (a: number, b: number) => void;
+  readonly wasmmarlowestatemachine_apply_input_deposit_for_role: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => void;
+  readonly wasmmarlowestatemachine_apply_input_deposit_for_addr: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => void;
+  readonly wasmmarlowestatemachine_apply_input_choice_for_role: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+  readonly wasmmarlowestatemachine_apply_input_choice_for_addr: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+  readonly wasmmarlowestatemachine_expected_inputs_json: (a: number, b: number) => void;
+  readonly wasmmarlowestatemachine_process: (a: number, b: number) => void;
+  readonly __wbg_wasmtoken_free: (a: number) => void;
+  readonly __wbg_get_wasmtoken_name: (a: number, b: number) => void;
+  readonly __wbg_set_wasmtoken_name: (a: number, b: number, c: number) => void;
+  readonly __wbg_get_wasmtoken_pol: (a: number, b: number) => void;
+  readonly __wbg_set_wasmtoken_pol: (a: number, b: number, c: number) => void;
+  readonly __wbg_wasmaccount_free: (a: number) => void;
+  readonly __wbg_get_wasmaccount_party: (a: number) => number;
+  readonly __wbg_set_wasmaccount_party: (a: number, b: number) => void;
+  readonly __wbg_get_wasmaccount_token: (a: number) => number;
+  readonly __wbg_set_wasmaccount_token: (a: number, b: number) => void;
+  readonly __wbg_wasmchoice_free: (a: number) => void;
+  readonly __wbg_get_wasmchoice_choice_owner: (a: number) => number;
+  readonly __wbg_set_wasmchoice_choice_owner: (a: number, b: number) => void;
+  readonly __wbg_wasmboundvalue_free: (a: number) => void;
+  readonly __wbg_get_wasmboundvalue_name: (a: number, b: number) => void;
+  readonly __wbg_set_wasmboundvalue_name: (a: number, b: number, c: number) => void;
+  readonly __wbg_wasmaccounts_free: (a: number) => void;
+  readonly __wbg_wasmchoices_free: (a: number) => void;
+  readonly __wbg_wasmboundvalues_free: (a: number) => void;
+  readonly __wbg_wasmstate_free: (a: number) => void;
+  readonly __wbg_get_wasmstate_accounts: (a: number) => number;
+  readonly __wbg_set_wasmstate_accounts: (a: number, b: number) => void;
+  readonly __wbg_get_wasmstate_choices: (a: number) => number;
+  readonly __wbg_set_wasmstate_choices: (a: number, b: number) => void;
+  readonly __wbg_get_wasmstate_bound_values: (a: number) => number;
+  readonly __wbg_set_wasmstate_bound_values: (a: number, b: number) => void;
+  readonly __wbg_wasmparty_free: (a: number) => void;
+  readonly wasmparty_value: (a: number, b: number) => void;
+  readonly wasmparty_typ: (a: number) => number;
+  readonly wasmparty_new_addr: (a: number, b: number) => number;
+  readonly wasmparty_new_role: (a: number, b: number) => number;
+  readonly __wbg_set_wasmchoice_choice_name: (a: number, b: number, c: number) => void;
+  readonly __wbg_set_wasmstate_min_time: (a: number, b: number) => void;
+  readonly __wbg_set_wasmboundvalue_value: (a: number, b: number) => void;
+  readonly __wbg_set_wasmaccount_amount: (a: number, b: number) => void;
+  readonly __wbg_get_wasmaccount_amount: (a: number) => number;
+  readonly __wbg_set_wasmchoice_value: (a: number, b: number) => void;
+  readonly __wbg_get_wasmchoice_value: (a: number) => number;
+  readonly __wbg_get_wasmboundvalue_value: (a: number) => number;
+  readonly __wbg_get_wasmchoice_choice_name: (a: number, b: number) => void;
+  readonly __wbg_get_wasmstate_min_time: (a: number) => number;
+  readonly rust_psm_on_stack: (a: number, b: number, c: number, d: number) => void;
+  readonly rust_psm_stack_direction: () => number;
+  readonly rust_psm_stack_pointer: () => number;
+  readonly rust_psm_replace_stack: (a: number, b: number, c: number) => void;
+  readonly __wbg_networkinfo_free: (a: number) => void;
+  readonly networkinfo_new: (a: number, b: number) => number;
+  readonly networkinfo_network_id: (a: number) => number;
+  readonly networkinfo_testnet: () => number;
+  readonly networkinfo_mainnet: () => number;
+  readonly __wbg_stakecredential_free: (a: number) => void;
+  readonly stakecredential_from_keyhash: (a: number) => number;
+  readonly stakecredential_from_scripthash: (a: number) => number;
+  readonly stakecredential_to_keyhash: (a: number) => number;
+  readonly stakecredential_to_scripthash: (a: number) => number;
+  readonly stakecredential_to_bytes: (a: number, b: number) => void;
+  readonly stakecredential_from_bytes: (a: number, b: number, c: number) => void;
+  readonly stakecredential_to_json: (a: number, b: number) => void;
+  readonly stakecredential_to_js_value: (a: number, b: number) => void;
+  readonly stakecredential_from_json: (a: number, b: number, c: number) => void;
+  readonly __wbg_address_free: (a: number) => void;
+  readonly address_from_bytes: (a: number, b: number, c: number) => void;
+  readonly address_to_json: (a: number, b: number) => void;
+  readonly address_to_js_value: (a: number, b: number) => void;
+  readonly address_from_json: (a: number, b: number, c: number) => void;
+  readonly address_header: (a: number) => number;
+  readonly address_header_matches_kind: (a: number, b: number) => number;
+  readonly address_to_bytes: (a: number, b: number) => void;
+  readonly address_to_bech32: (a: number, b: number, c: number, d: number) => void;
+  readonly address_from_bech32: (a: number, b: number, c: number) => void;
+  readonly address_is_valid_bech32: (a: number, b: number) => number;
+  readonly address_is_valid_byron: (a: number, b: number) => number;
+  readonly address_is_valid: (a: number, b: number) => number;
+  readonly address_network_id: (a: number, b: number) => void;
+  readonly address_as_byron: (a: number) => number;
+  readonly address_as_reward: (a: number) => number;
+  readonly address_as_pointer: (a: number) => number;
+  readonly address_as_enterprise: (a: number) => number;
+  readonly address_as_base: (a: number) => number;
+  readonly address_payment_cred: (a: number) => number;
+  readonly address_staking_cred: (a: number) => number;
+  readonly __wbg_baseaddress_free: (a: number) => void;
+  readonly baseaddress_new: (a: number, b: number, c: number) => number;
+  readonly baseaddress_payment_cred: (a: number) => number;
+  readonly baseaddress_stake_cred: (a: number) => number;
+  readonly baseaddress_to_address: (a: number) => number;
+  readonly __wbg_enterpriseaddress_free: (a: number) => void;
+  readonly enterpriseaddress_new: (a: number, b: number) => number;
+  readonly enterpriseaddress_to_address: (a: number) => number;
+  readonly rewardaddress_new: (a: number, b: number) => number;
+  readonly rewardaddress_to_address: (a: number) => number;
+  readonly __wbg_pointer_free: (a: number) => void;
+  readonly pointer_new: (a: number, b: number, c: number) => number;
+  readonly pointer_slot: (a: number) => number;
+  readonly pointer_tx_index: (a: number) => number;
+  readonly pointer_cert_index: (a: number) => number;
+  readonly __wbg_pointeraddress_free: (a: number) => void;
+  readonly pointeraddress_new: (a: number, b: number, c: number) => number;
+  readonly pointeraddress_payment_cred: (a: number) => number;
+  readonly pointeraddress_stake_pointer: (a: number) => number;
+  readonly pointeraddress_to_address: (a: number) => number;
+  readonly __wbg_bip32privatekey_free: (a: number) => void;
+  readonly bip32privatekey_derive: (a: number, b: number) => number;
+  readonly bip32privatekey_from_128_xprv: (a: number, b: number, c: number) => void;
+  readonly bip32privatekey_to_128_xprv: (a: number, b: number) => void;
+  readonly bip32privatekey_generate_ed25519_bip32: (a: number) => void;
+  readonly bip32privatekey_to_raw_key: (a: number) => number;
+  readonly bip32privatekey_to_public: (a: number) => number;
+  readonly bip32privatekey_from_bytes: (a: number, b: number, c: number) => void;
+  readonly bip32privatekey_as_bytes: (a: number, b: number) => void;
+  readonly bip32privatekey_from_bech32: (a: number, b: number, c: number) => void;
+  readonly bip32privatekey_to_bech32: (a: number, b: number) => void;
+  readonly bip32privatekey_from_bip39_entropy: (a: number, b: number, c: number, d: number) => number;
+  readonly bip32privatekey_chaincode: (a: number, b: number) => void;
+  readonly __wbg_bip32publickey_free: (a: number) => void;
+  readonly bip32publickey_derive: (a: number, b: number, c: number) => void;
+  readonly bip32publickey_to_raw_key: (a: number) => number;
+  readonly bip32publickey_from_bytes: (a: number, b: number, c: number) => void;
+  readonly bip32publickey_as_bytes: (a: number, b: number) => void;
+  readonly bip32publickey_from_bech32: (a: number, b: number, c: number) => void;
+  readonly bip32publickey_to_bech32: (a: number, b: number) => void;
+  readonly bip32publickey_chaincode: (a: number, b: number) => void;
+  readonly __wbg_privatekey_free: (a: number) => void;
+  readonly privatekey_to_public: (a: number) => number;
+  readonly privatekey_generate_ed25519: (a: number) => void;
+  readonly privatekey_generate_ed25519extended: (a: number) => void;
+  readonly privatekey_from_bech32: (a: number, b: number, c: number) => void;
+  readonly privatekey_to_bech32: (a: number, b: number) => void;
+  readonly privatekey_as_bytes: (a: number, b: number) => void;
+  readonly privatekey_from_extended_bytes: (a: number, b: number, c: number) => void;
+  readonly privatekey_from_normal_bytes: (a: number, b: number, c: number) => void;
+  readonly privatekey_sign: (a: number, b: number, c: number) => number;
+  readonly __wbg_publickey_free: (a: number) => void;
+  readonly publickey_from_bech32: (a: number, b: number, c: number) => void;
+  readonly publickey_to_bech32: (a: number, b: number) => void;
+  readonly publickey_as_bytes: (a: number, b: number) => void;
+  readonly publickey_from_bytes: (a: number, b: number, c: number) => void;
+  readonly publickey_verify: (a: number, b: number, c: number, d: number) => number;
+  readonly publickey_hash: (a: number) => number;
+  readonly __wbg_vkey_free: (a: number) => void;
+  readonly vkey_to_bytes: (a: number, b: number) => void;
+  readonly vkey_from_bytes: (a: number, b: number, c: number) => void;
+  readonly vkey_new: (a: number) => number;
+  readonly vkeys_get: (a: number, b: number) => number;
+  readonly vkeys_add: (a: number, b: number) => void;
+  readonly __wbg_vkeywitness_free: (a: number) => void;
+  readonly vkeywitness_to_bytes: (a: number, b: number) => void;
+  readonly vkeywitness_from_bytes: (a: number, b: number, c: number) => void;
+  readonly vkeywitness_to_json: (a: number, b: number) => void;
+  readonly vkeywitness_to_js_value: (a: number, b: number) => void;
+  readonly vkeywitness_from_json: (a: number, b: number, c: number) => void;
+  readonly vkeywitness_new: (a: number, b: number) => number;
+  readonly vkeywitness_signature: (a: number) => number;
+  readonly __wbg_vkeywitnesses_free: (a: number) => void;
+  readonly vkeywitnesses_get: (a: number, b: number) => number;
+  readonly vkeywitnesses_add: (a: number, b: number) => void;
+  readonly __wbg_bootstrapwitness_free: (a: number) => void;
+  readonly bootstrapwitness_to_bytes: (a: number, b: number) => void;
+  readonly bootstrapwitness_from_bytes: (a: number, b: number, c: number) => void;
+  readonly bootstrapwitness_to_json: (a: number, b: number) => void;
+  readonly bootstrapwitness_to_js_value: (a: number, b: number) => void;
+  readonly bootstrapwitness_from_json: (a: number, b: number, c: number) => void;
+  readonly bootstrapwitness_vkey: (a: number) => number;
+  readonly bootstrapwitness_signature: (a: number) => number;
+  readonly bootstrapwitness_attributes: (a: number) => number;
+  readonly bootstrapwitness_new: (a: number, b: number, c: number, d: number, e: number) => number;
+  readonly bootstrapwitness_to_public_key: (a: number, b: number) => void;
+  readonly bootstrapwitness_to_address: (a: number, b: number) => void;
+  readonly __wbg_bootstrapwitnesses_free: (a: number) => void;
+  readonly bootstrapwitnesses_new: () => number;
+  readonly bootstrapwitnesses_get: (a: number, b: number) => number;
+  readonly bootstrapwitnesses_add: (a: number, b: number) => void;
+  readonly __wbg_publickeys_free: (a: number) => void;
+  readonly publickeys_new: () => number;
+  readonly publickeys_get: (a: number, b: number) => number;
+  readonly publickeys_add: (a: number, b: number) => void;
+  readonly __wbg_ed25519signature_free: (a: number) => void;
+  readonly ed25519signature_to_bytes: (a: number, b: number) => void;
+  readonly ed25519signature_to_bech32: (a: number, b: number) => void;
+  readonly ed25519signature_to_hex: (a: number, b: number) => void;
+  readonly ed25519signature_from_bech32: (a: number, b: number, c: number) => void;
+  readonly ed25519signature_from_hex: (a: number, b: number, c: number) => void;
+  readonly ed25519signature_from_bytes: (a: number, b: number, c: number) => void;
+  readonly __wbg_legacydaedalusprivatekey_free: (a: number) => void;
+  readonly legacydaedalusprivatekey_from_bytes: (a: number, b: number, c: number) => void;
+  readonly legacydaedalusprivatekey_as_bytes: (a: number, b: number) => void;
+  readonly legacydaedalusprivatekey_chaincode: (a: number, b: number) => void;
+  readonly ed25519keyhash_from_bytes: (a: number, b: number, c: number) => void;
+  readonly ed25519keyhash_from_bech32: (a: number, b: number, c: number) => void;
+  readonly ed25519keyhash_from_hex: (a: number, b: number, c: number) => void;
+  readonly scripthash_from_bytes: (a: number, b: number, c: number) => void;
+  readonly scripthash_from_bech32: (a: number, b: number, c: number) => void;
+  readonly scripthash_from_hex: (a: number, b: number, c: number) => void;
+  readonly transactionhash_from_bytes: (a: number, b: number, c: number) => void;
+  readonly transactionhash_from_bech32: (a: number, b: number, c: number) => void;
+  readonly transactionhash_from_hex: (a: number, b: number, c: number) => void;
+  readonly genesisdelegatehash_from_bytes: (a: number, b: number, c: number) => void;
+  readonly genesisdelegatehash_from_bech32: (a: number, b: number, c: number) => void;
+  readonly genesisdelegatehash_from_hex: (a: number, b: number, c: number) => void;
+  readonly genesishash_from_bytes: (a: number, b: number, c: number) => void;
+  readonly genesishash_from_bech32: (a: number, b: number, c: number) => void;
+  readonly genesishash_from_hex: (a: number, b: number, c: number) => void;
+  readonly __wbg_auxiliarydatahash_free: (a: number) => void;
+  readonly auxiliarydatahash_from_bytes: (a: number, b: number, c: number) => void;
+  readonly auxiliarydatahash_to_bytes: (a: number, b: number) => void;
+  readonly auxiliarydatahash_to_bech32: (a: number, b: number, c: number, d: number) => void;
+  readonly auxiliarydatahash_from_bech32: (a: number, b: number, c: number) => void;
+  readonly auxiliarydatahash_to_hex: (a: number, b: number) => void;
+  readonly auxiliarydatahash_from_hex: (a: number, b: number, c: number) => void;
+  readonly poolmetadatahash_from_bytes: (a: number, b: number, c: number) => void;
+  readonly poolmetadatahash_from_bech32: (a: number, b: number, c: number) => void;
+  readonly poolmetadatahash_from_hex: (a: number, b: number, c: number) => void;
+  readonly vrfkeyhash_from_bytes: (a: number, b: number, c: number) => void;
+  readonly vrfkeyhash_from_bech32: (a: number, b: number, c: number) => void;
+  readonly vrfkeyhash_from_hex: (a: number, b: number, c: number) => void;
+  readonly blockbodyhash_from_bytes: (a: number, b: number, c: number) => void;
+  readonly blockbodyhash_from_bech32: (a: number, b: number, c: number) => void;
+  readonly blockbodyhash_from_hex: (a: number, b: number, c: number) => void;
+  readonly blockheaderhash_from_bytes: (a: number, b: number, c: number) => void;
+  readonly blockheaderhash_from_bech32: (a: number, b: number, c: number) => void;
+  readonly blockheaderhash_from_hex: (a: number, b: number, c: number) => void;
+  readonly datahash_from_bytes: (a: number, b: number, c: number) => void;
+  readonly datahash_from_bech32: (a: number, b: number, c: number) => void;
+  readonly datahash_from_hex: (a: number, b: number, c: number) => void;
+  readonly scriptdatahash_from_bytes: (a: number, b: number, c: number) => void;
+  readonly scriptdatahash_from_bech32: (a: number, b: number, c: number) => void;
+  readonly scriptdatahash_from_hex: (a: number, b: number, c: number) => void;
+  readonly vrfvkey_from_bytes: (a: number, b: number, c: number) => void;
+  readonly vrfvkey_from_bech32: (a: number, b: number, c: number) => void;
+  readonly vrfvkey_from_hex: (a: number, b: number, c: number) => void;
+  readonly kesvkey_from_bytes: (a: number, b: number, c: number) => void;
+  readonly kesvkey_from_bech32: (a: number, b: number, c: number) => void;
+  readonly kesvkey_from_hex: (a: number, b: number, c: number) => void;
+  readonly kessignature_from_bytes: (a: number, b: number, c: number) => void;
+  readonly __wbg_nonce_free: (a: number) => void;
+  readonly nonce_to_bytes: (a: number, b: number) => void;
+  readonly nonce_from_bytes: (a: number, b: number, c: number) => void;
+  readonly nonce_new_identity: () => number;
+  readonly nonce_new_from_hash: (a: number, b: number, c: number) => void;
+  readonly nonce_get_hash: (a: number, b: number) => void;
+  readonly __wbg_vrfcert_free: (a: number) => void;
+  readonly vrfcert_to_bytes: (a: number, b: number) => void;
+  readonly vrfcert_from_bytes: (a: number, b: number, c: number) => void;
+  readonly vrfcert_to_json: (a: number, b: number) => void;
+  readonly vrfcert_to_js_value: (a: number, b: number) => void;
+  readonly vrfcert_from_json: (a: number, b: number, c: number) => void;
+  readonly vrfcert_proof: (a: number, b: number) => void;
+  readonly vrfcert_new: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly __wbg_metadatamap_free: (a: number) => void;
+  readonly metadatamap_to_bytes: (a: number, b: number) => void;
+  readonly metadatamap_from_bytes: (a: number, b: number, c: number) => void;
+  readonly metadatamap_insert: (a: number, b: number, c: number) => number;
+  readonly metadatamap_insert_str: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly metadatamap_insert_i32: (a: number, b: number, c: number) => number;
+  readonly metadatamap_get: (a: number, b: number, c: number) => void;
+  readonly metadatamap_get_str: (a: number, b: number, c: number, d: number) => void;
+  readonly metadatamap_get_i32: (a: number, b: number, c: number) => void;
+  readonly metadatamap_has: (a: number, b: number) => number;
+  readonly metadatamap_keys: (a: number) => number;
+  readonly __wbg_metadatalist_free: (a: number) => void;
+  readonly metadatalist_to_bytes: (a: number, b: number) => void;
+  readonly metadatalist_from_bytes: (a: number, b: number, c: number) => void;
+  readonly metadatalist_new: () => number;
+  readonly metadatalist_get: (a: number, b: number) => number;
+  readonly metadatalist_add: (a: number, b: number) => void;
+  readonly __wbg_transactionmetadatum_free: (a: number) => void;
+  readonly transactionmetadatum_to_bytes: (a: number, b: number) => void;
+  readonly transactionmetadatum_from_bytes: (a: number, b: number, c: number) => void;
+  readonly transactionmetadatum_new_map: (a: number) => number;
+  readonly transactionmetadatum_new_list: (a: number) => number;
+  readonly transactionmetadatum_new_int: (a: number) => number;
+  readonly transactionmetadatum_new_bytes: (a: number, b: number, c: number) => void;
+  readonly transactionmetadatum_new_text: (a: number, b: number, c: number) => void;
+  readonly transactionmetadatum_kind: (a: number) => number;
+  readonly transactionmetadatum_as_map: (a: number, b: number) => void;
+  readonly transactionmetadatum_as_list: (a: number, b: number) => void;
+  readonly transactionmetadatum_as_int: (a: number, b: number) => void;
+  readonly transactionmetadatum_as_bytes: (a: number, b: number) => void;
+  readonly transactionmetadatum_as_text: (a: number, b: number) => void;
+  readonly transactionmetadatumlabels_to_bytes: (a: number, b: number) => void;
+  readonly transactionmetadatumlabels_from_bytes: (a: number, b: number, c: number) => void;
+  readonly transactionmetadatumlabels_get: (a: number, b: number) => number;
+  readonly __wbg_generaltransactionmetadata_free: (a: number) => void;
+  readonly generaltransactionmetadata_to_bytes: (a: number, b: number) => void;
+  readonly generaltransactionmetadata_from_bytes: (a: number, b: number, c: number) => void;
+  readonly generaltransactionmetadata_to_json: (a: number, b: number) => void;
+  readonly generaltransactionmetadata_to_js_value: (a: number, b: number) => void;
+  readonly generaltransactionmetadata_from_json: (a: number, b: number, c: number) => void;
+  readonly generaltransactionmetadata_new: () => number;
+  readonly generaltransactionmetadata_insert: (a: number, b: number, c: number) => number;
+  readonly generaltransactionmetadata_get: (a: number, b: number) => number;
+  readonly generaltransactionmetadata_keys: (a: number) => number;
+  readonly __wbg_auxiliarydata_free: (a: number) => void;
+  readonly auxiliarydata_to_bytes: (a: number, b: number) => void;
+  readonly auxiliarydata_from_bytes: (a: number, b: number, c: number) => void;
+  readonly auxiliarydata_to_json: (a: number, b: number) => void;
+  readonly auxiliarydata_to_js_value: (a: number, b: number) => void;
+  readonly auxiliarydata_from_json: (a: number, b: number, c: number) => void;
+  readonly auxiliarydata_new: () => number;
+  readonly auxiliarydata_metadata: (a: number) => number;
+  readonly auxiliarydata_set_metadata: (a: number, b: number) => void;
+  readonly auxiliarydata_native_scripts: (a: number) => number;
+  readonly auxiliarydata_set_native_scripts: (a: number, b: number) => void;
+  readonly auxiliarydata_plutus_v1_scripts: (a: number) => number;
+  readonly auxiliarydata_set_plutus_v1_scripts: (a: number, b: number) => void;
+  readonly auxiliarydata_plutus_v2_scripts: (a: number) => number;
+  readonly auxiliarydata_set_plutus_v2_scripts: (a: number, b: number) => void;
+  readonly encode_arbitrary_bytes_as_metadatum: (a: number, b: number) => number;
+  readonly decode_arbitrary_bytes_from_metadatum: (a: number, b: number) => void;
+  readonly encode_json_str_to_metadatum: (a: number, b: number, c: number, d: number) => void;
+  readonly decode_metadatum_to_json_str: (a: number, b: number, c: number) => void;
+  readonly plutusv1script_to_bytes: (a: number, b: number) => void;
+  readonly plutusv1script_from_bytes: (a: number, b: number, c: number) => void;
+  readonly plutusv1script_from_json: (a: number, b: number, c: number) => void;
+  readonly plutusv1script_hash: (a: number) => number;
+  readonly plutusv1script_new: (a: number, b: number) => number;
+  readonly plutusv1scripts_to_bytes: (a: number, b: number) => void;
+  readonly plutusv1scripts_from_bytes: (a: number, b: number, c: number) => void;
+  readonly plutusv1scripts_from_json: (a: number, b: number, c: number) => void;
+  readonly plutusv1scripts_get: (a: number, b: number) => number;
+  readonly plutusv2script_to_bytes: (a: number, b: number) => void;
+  readonly plutusv2script_to_js_value: (a: number, b: number) => void;
+  readonly plutusv2script_from_json: (a: number, b: number, c: number) => void;
+  readonly plutusv2script_hash: (a: number) => number;
+  readonly plutusv2scripts_to_bytes: (a: number, b: number) => void;
+  readonly plutusv2scripts_from_bytes: (a: number, b: number, c: number) => void;
+  readonly plutusv2scripts_from_json: (a: number, b: number, c: number) => void;
+  readonly plutusv2scripts_get: (a: number, b: number) => number;
+  readonly __wbg_constrplutusdata_free: (a: number) => void;
+  readonly constrplutusdata_to_bytes: (a: number, b: number) => void;
+  readonly constrplutusdata_from_bytes: (a: number, b: number, c: number) => void;
+  readonly constrplutusdata_data: (a: number) => number;
+  readonly constrplutusdata_new: (a: number, b: number) => number;
+  readonly __wbg_costmodel_free: (a: number) => void;
+  readonly costmodel_to_bytes: (a: number, b: number) => void;
+  readonly costmodel_from_bytes: (a: number, b: number, c: number) => void;
+  readonly costmodel_to_json: (a: number, b: number) => void;
+  readonly costmodel_to_js_value: (a: number, b: number) => void;
+  readonly costmodel_from_json: (a: number, b: number, c: number) => void;
+  readonly costmodel_empty_model: (a: number) => number;
+  readonly costmodel_set: (a: number, b: number, c: number, d: number) => void;
+  readonly costmodel_get: (a: number, b: number, c: number) => void;
+  readonly costmodel_language: (a: number) => number;
+  readonly __wbg_costmdls_free: (a: number) => void;
+  readonly costmdls_to_bytes: (a: number, b: number) => void;
+  readonly costmdls_from_bytes: (a: number, b: number, c: number) => void;
+  readonly costmdls_to_json: (a: number, b: number) => void;
+  readonly costmdls_to_js_value: (a: number, b: number) => void;
+  readonly costmdls_from_json: (a: number, b: number, c: number) => void;
+  readonly costmdls_insert: (a: number, b: number) => number;
+  readonly costmdls_get: (a: number, b: number) => number;
+  readonly costmdls_keys: (a: number) => number;
+  readonly __wbg_plutusscript_free: (a: number) => void;
+  readonly plutusscript_from_v1: (a: number) => number;
+  readonly plutusscript_from_v2: (a: number) => number;
+  readonly plutusscript_hash: (a: number) => number;
+  readonly __wbg_exunitprices_free: (a: number) => void;
+  readonly exunitprices_to_bytes: (a: number, b: number) => void;
+  readonly exunitprices_from_bytes: (a: number, b: number, c: number) => void;
+  readonly exunitprices_to_json: (a: number, b: number) => void;
+  readonly exunitprices_to_js_value: (a: number, b: number) => void;
+  readonly exunitprices_from_json: (a: number, b: number, c: number) => void;
+  readonly exunitprices_mem_price: (a: number) => number;
+  readonly exunitprices_step_price: (a: number) => number;
+  readonly exunitprices_new: (a: number, b: number) => number;
+  readonly __wbg_exunits_free: (a: number) => void;
+  readonly exunits_to_bytes: (a: number, b: number) => void;
+  readonly exunits_from_bytes: (a: number, b: number, c: number) => void;
+  readonly exunits_to_json: (a: number, b: number) => void;
+  readonly exunits_to_js_value: (a: number, b: number) => void;
+  readonly exunits_from_json: (a: number, b: number, c: number) => void;
+  readonly exunits_steps: (a: number) => number;
+  readonly exunits_new: (a: number, b: number) => number;
+  readonly exunits_checked_add: (a: number, b: number, c: number) => void;
+  readonly exunits_dummy: () => number;
+  readonly __wbg_language_free: (a: number) => void;
+  readonly language_to_bytes: (a: number, b: number) => void;
+  readonly language_from_bytes: (a: number, b: number, c: number) => void;
+  readonly language_new_plutus_v1: () => number;
+  readonly language_new_plutus_v2: () => number;
+  readonly language_kind: (a: number) => number;
+  readonly __wbg_languages_free: (a: number) => void;
+  readonly languages_get: (a: number, b: number) => number;
+  readonly languages_add: (a: number, b: number) => void;
+  readonly __wbg_plutusmap_free: (a: number) => void;
+  readonly plutusmap_to_bytes: (a: number, b: number) => void;
+  readonly plutusmap_from_bytes: (a: number, b: number, c: number) => void;
+  readonly plutusmap_insert: (a: number, b: number, c: number) => number;
+  readonly plutusmap_get: (a: number, b: number) => number;
+  readonly plutusmap_keys: (a: number) => number;
+  readonly __wbg_plutusdata_free: (a: number) => void;
+  readonly plutusdata_to_bytes: (a: number, b: number) => void;
+  readonly plutusdata_from_bytes: (a: number, b: number, c: number) => void;
+  readonly plutusdata_new_constr_plutus_data: (a: number) => number;
+  readonly plutusdata_new_map: (a: number) => number;
+  readonly plutusdata_new_list: (a: number) => number;
+  readonly plutusdata_new_integer: (a: number) => number;
+  readonly plutusdata_new_bytes: (a: number, b: number) => number;
+  readonly plutusdata_kind: (a: number) => number;
+  readonly plutusdata_as_constr_plutus_data: (a: number) => number;
+  readonly plutusdata_as_map: (a: number) => number;
+  readonly plutusdata_as_list: (a: number) => number;
+  readonly plutusdata_as_integer: (a: number) => number;
+  readonly plutusdata_as_bytes: (a: number, b: number) => void;
+  readonly __wbg_plutuslist_free: (a: number) => void;
+  readonly plutuslist_to_bytes: (a: number, b: number) => void;
+  readonly plutuslist_from_bytes: (a: number, b: number, c: number) => void;
+  readonly plutuslist_new: () => number;
+  readonly plutuslist_get: (a: number, b: number) => number;
+  readonly plutuslist_add: (a: number, b: number) => void;
+  readonly __wbg_redeemer_free: (a: number) => void;
+  readonly redeemer_to_bytes: (a: number, b: number) => void;
+  readonly redeemer_from_bytes: (a: number, b: number, c: number) => void;
+  readonly redeemer_tag: (a: number) => number;
+  readonly redeemer_data: (a: number) => number;
+  readonly redeemer_ex_units: (a: number) => number;
+  readonly redeemer_new: (a: number, b: number, c: number, d: number) => number;
+  readonly __wbg_redeemertag_free: (a: number) => void;
+  readonly redeemertag_to_bytes: (a: number, b: number) => void;
+  readonly redeemertag_from_bytes: (a: number, b: number, c: number) => void;
+  readonly redeemertag_new_reward: () => number;
+  readonly redeemertag_kind: (a: number) => number;
+  readonly __wbg_redeemers_free: (a: number) => void;
+  readonly redeemers_to_bytes: (a: number, b: number) => void;
+  readonly redeemers_from_bytes: (a: number, b: number, c: number) => void;
+  readonly redeemers_get: (a: number, b: number) => number;
+  readonly redeemers_add: (a: number, b: number) => void;
+  readonly redeemers_get_total_ex_units: (a: number, b: number) => void;
+  readonly strings_get: (a: number, b: number, c: number) => void;
+  readonly strings_add: (a: number, b: number, c: number) => void;
+  readonly __wbg_script_free: (a: number) => void;
+  readonly script_to_bytes: (a: number, b: number) => void;
+  readonly script_from_bytes: (a: number, b: number, c: number) => void;
+  readonly script_to_json: (a: number, b: number) => void;
+  readonly script_to_js_value: (a: number, b: number) => void;
+  readonly script_from_json: (a: number, b: number, c: number) => void;
+  readonly script_new_native: (a: number) => number;
+  readonly script_new_plutus_v1: (a: number) => number;
+  readonly script_new_plutus_v2: (a: number) => number;
+  readonly script_kind: (a: number) => number;
+  readonly script_as_native: (a: number) => number;
+  readonly script_as_plutus_v1: (a: number) => number;
+  readonly script_as_plutus_v2: (a: number) => number;
+  readonly script_hash: (a: number) => number;
+  readonly __wbg_scriptref_free: (a: number) => void;
+  readonly scriptref_new: (a: number) => number;
+  readonly scriptref_script: (a: number) => number;
+  readonly scriptref_to_bytes: (a: number, b: number) => void;
+  readonly scriptref_from_bytes: (a: number, b: number, c: number) => void;
+  readonly scriptref_from_json: (a: number, b: number, c: number) => void;
+  readonly encode_json_str_to_plutus_datum: (a: number, b: number, c: number, d: number) => void;
+  readonly decode_plutus_datum_to_json_str: (a: number, b: number, c: number) => void;
+  readonly __wbg_certificatebuilderresult_free: (a: number) => void;
+  readonly __wbg_singlecertificatebuilder_free: (a: number) => void;
+  readonly singlecertificatebuilder_new: (a: number) => number;
+  readonly singlecertificatebuilder_skip_witness: (a: number) => number;
+  readonly singlecertificatebuilder_payment_key: (a: number, b: number) => void;
+  readonly singlecertificatebuilder_native_script: (a: number, b: number, c: number, d: number) => void;
+  readonly singlecertificatebuilder_plutus_script: (a: number, b: number, c: number, d: number) => void;
+  readonly __wbg_inputbuilderresult_free: (a: number) => void;
+  readonly __wbg_singleinputbuilder_free: (a: number) => void;
+  readonly singleinputbuilder_new: (a: number, b: number) => number;
+  readonly singleinputbuilder_payment_key: (a: number, b: number) => void;
+  readonly singleinputbuilder_native_script: (a: number, b: number, c: number, d: number) => void;
+  readonly singleinputbuilder_plutus_script: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly __wbg_redeemerwitnesskey_free: (a: number) => void;
+  readonly redeemerwitnesskey_tag: (a: number) => number;
+  readonly redeemerwitnesskey_new: (a: number, b: number) => number;
+  readonly __wbg_untaggedredeemer_free: (a: number) => void;
+  readonly untaggedredeemer_ex_units: (a: number) => number;
+  readonly untaggedredeemer_new: (a: number, b: number) => number;
+  readonly __wbg_transactionoutputbuilder_free: (a: number) => void;
+  readonly transactionoutputbuilder_new: () => number;
+  readonly transactionoutputbuilder_with_address: (a: number, b: number) => number;
+  readonly transactionoutputbuilder_with_communication_data: (a: number, b: number) => number;
+  readonly transactionoutputbuilder_with_data: (a: number, b: number) => number;
+  readonly transactionoutputbuilder_with_reference_script: (a: number, b: number) => number;
+  readonly transactionoutputbuilder_next: (a: number, b: number) => void;
+  readonly __wbg_transactionoutputamountbuilder_free: (a: number) => void;
+  readonly transactionoutputamountbuilder_with_value: (a: number, b: number) => number;
+  readonly transactionoutputamountbuilder_with_coin: (a: number, b: number) => number;
+  readonly transactionoutputamountbuilder_with_coin_and_asset: (a: number, b: number, c: number) => number;
+  readonly transactionoutputamountbuilder_with_asset_and_min_required_coin: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly transactionoutputamountbuilder_build: (a: number, b: number) => void;
+  readonly __wbg_singleoutputbuilderresult_free: (a: number) => void;
+  readonly singleoutputbuilderresult_new: (a: number) => number;
+  readonly singleoutputbuilderresult_set_communication_datum: (a: number, b: number) => void;
+  readonly singleoutputbuilderresult_output: (a: number) => number;
+  readonly singleoutputbuilderresult_communication_datum: (a: number) => number;
+  readonly __wbg_transactionbuilderconfig_free: (a: number) => void;
+  readonly __wbg_transactionbuilderconfigbuilder_free: (a: number) => void;
+  readonly transactionbuilderconfigbuilder_new: () => number;
+  readonly transactionbuilderconfigbuilder_fee_algo: (a: number, b: number) => number;
+  readonly transactionbuilderconfigbuilder_coins_per_utxo_byte: (a: number, b: number) => number;
+  readonly transactionbuilderconfigbuilder_coins_per_utxo_word: (a: number, b: number) => number;
+  readonly transactionbuilderconfigbuilder_pool_deposit: (a: number, b: number) => number;
+  readonly transactionbuilderconfigbuilder_key_deposit: (a: number, b: number) => number;
+  readonly transactionbuilderconfigbuilder_max_value_size: (a: number, b: number) => number;
+  readonly transactionbuilderconfigbuilder_max_tx_size: (a: number, b: number) => number;
+  readonly transactionbuilderconfigbuilder_prefer_pure_change: (a: number, b: number) => number;
+  readonly transactionbuilderconfigbuilder_ex_unit_prices: (a: number, b: number) => number;
+  readonly transactionbuilderconfigbuilder_costmdls: (a: number, b: number) => number;
+  readonly transactionbuilderconfigbuilder_collateral_percentage: (a: number, b: number) => number;
+  readonly transactionbuilderconfigbuilder_max_collateral_inputs: (a: number, b: number) => number;
+  readonly transactionbuilderconfigbuilder_build: (a: number, b: number) => void;
+  readonly __wbg_transactionbuilder_free: (a: number) => void;
+  readonly transactionbuilder_select_utxos: (a: number, b: number, c: number) => void;
+  readonly transactionbuilder_add_input: (a: number, b: number, c: number) => void;
+  readonly transactionbuilder_add_utxo: (a: number, b: number) => void;
+  readonly transactionbuilder_fee_for_input: (a: number, b: number, c: number) => void;
+  readonly transactionbuilder_add_reference_input: (a: number, b: number) => void;
+  readonly transactionbuilder_add_output: (a: number, b: number, c: number) => void;
+  readonly transactionbuilder_fee_for_output: (a: number, b: number, c: number) => void;
+  readonly transactionbuilder_set_fee: (a: number, b: number) => void;
+  readonly transactionbuilder_set_ttl: (a: number, b: number) => void;
+  readonly transactionbuilder_set_validity_start_interval: (a: number, b: number) => void;
+  readonly transactionbuilder_get_certs: (a: number) => number;
+  readonly transactionbuilder_add_cert: (a: number, b: number) => void;
+  readonly transactionbuilder_get_withdrawals: (a: number) => number;
+  readonly transactionbuilder_add_withdrawal: (a: number, b: number) => void;
+  readonly transactionbuilder_get_auxiliary_data: (a: number) => number;
+  readonly transactionbuilder_set_auxiliary_data: (a: number, b: number) => void;
+  readonly transactionbuilder_add_auxiliary_data: (a: number, b: number) => void;
+  readonly transactionbuilder_add_mint: (a: number, b: number) => void;
+  readonly transactionbuilder_get_mint: (a: number) => number;
+  readonly transactionbuilder_new: (a: number) => number;
+  readonly transactionbuilder_add_collateral: (a: number, b: number, c: number) => void;
+  readonly transactionbuilder_collateral: (a: number) => number;
+  readonly transactionbuilder_add_required_signer: (a: number, b: number) => void;
+  readonly transactionbuilder_required_signers: (a: number) => number;
+  readonly transactionbuilder_set_network_id: (a: number, b: number) => void;
+  readonly transactionbuilder_network_id: (a: number) => number;
+  readonly transactionbuilder_get_explicit_input: (a: number, b: number) => void;
+  readonly transactionbuilder_get_implicit_input: (a: number, b: number) => void;
+  readonly transactionbuilder_get_total_input: (a: number, b: number) => void;
+  readonly transactionbuilder_get_total_output: (a: number, b: number) => void;
+  readonly transactionbuilder_get_explicit_output: (a: number, b: number) => void;
+  readonly transactionbuilder_get_deposit: (a: number, b: number) => void;
+  readonly transactionbuilder_get_fee_if_set: (a: number) => number;
+  readonly transactionbuilder_set_collateral_return: (a: number, b: number) => void;
+  readonly transactionbuilder_full_size: (a: number, b: number) => void;
+  readonly transactionbuilder_output_sizes: (a: number, b: number) => void;
+  readonly transactionbuilder_build_for_evaluation: (a: number, b: number, c: number, d: number) => void;
+  readonly transactionbuilder_build: (a: number, b: number, c: number, d: number) => void;
+  readonly transactionbuilder_set_exunits: (a: number, b: number, c: number) => void;
+  readonly transactionbuilder_min_fee: (a: number, b: number, c: number) => void;
+  readonly __wbg_txredeemerbuilder_free: (a: number) => void;
+  readonly txredeemerbuilder_build: (a: number, b: number) => void;
+  readonly txredeemerbuilder_set_exunits: (a: number, b: number, c: number) => void;
+  readonly txredeemerbuilder_auxiliary_data: (a: number) => number;
+  readonly txredeemerbuilder_draft_tx: (a: number) => number;
+  readonly __wbg_signedtxbuilder_free: (a: number) => void;
+  readonly signedtxbuilder_new_with_data: (a: number, b: number, c: number, d: number) => number;
+  readonly signedtxbuilder_new_without_data: (a: number, b: number, c: number) => number;
+  readonly signedtxbuilder_build_checked: (a: number, b: number) => void;
+  readonly signedtxbuilder_build_unchecked: (a: number) => number;
+  readonly signedtxbuilder_add_vkey: (a: number, b: number) => void;
+  readonly signedtxbuilder_add_bootstrap: (a: number, b: number) => void;
+  readonly signedtxbuilder_body: (a: number) => number;
+  readonly signedtxbuilder_witness_set: (a: number) => number;
+  readonly signedtxbuilder_is_valid: (a: number) => number;
+  readonly signedtxbuilder_auxiliary_data: (a: number) => number;
+  readonly __wbg_plutusscriptwitness_free: (a: number) => void;
+  readonly plutusscriptwitness_from_script: (a: number) => number;
+  readonly plutusscriptwitness_from_ref: (a: number) => number;
+  readonly plutusscriptwitness_script: (a: number) => number;
+  readonly plutusscriptwitness_hash: (a: number) => number;
+  readonly __wbg_partialplutuswitness_free: (a: number) => void;
+  readonly partialplutuswitness_new: (a: number, b: number) => number;
+  readonly partialplutuswitness_script: (a: number) => number;
+  readonly partialplutuswitness_data: (a: number) => number;
+  readonly __wbg_requiredwitnessset_free: (a: number) => void;
+  readonly requiredwitnessset_add_vkey: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_vkey_key: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_vkey_key_hash: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_bootstrap: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_script_ref: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_native_script: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_script_hash: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_plutus_script: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_plutus_datum: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_plutus_datum_hash: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_redeemer: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_redeemer_tag: (a: number, b: number) => void;
+  readonly requiredwitnessset_add_all: (a: number, b: number) => void;
+  readonly requiredwitnessset_new: () => number;
+  readonly __wbg_transactionwitnesssetbuilder_free: (a: number) => void;
+  readonly transactionwitnesssetbuilder_get_vkeys: (a: number) => number;
+  readonly transactionwitnesssetbuilder_add_vkey: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_add_bootstrap: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_get_bootstraps: (a: number) => number;
+  readonly transactionwitnesssetbuilder_add_script: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_add_native_script: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_get_native_script: (a: number) => number;
+  readonly transactionwitnesssetbuilder_add_plutus_v1_script: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_get_plutus_v1_script: (a: number) => number;
+  readonly transactionwitnesssetbuilder_add_plutus_v2_script: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_get_plutus_v2_script: (a: number) => number;
+  readonly transactionwitnesssetbuilder_add_plutus_datum: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_get_plutus_datum: (a: number) => number;
+  readonly transactionwitnesssetbuilder_add_redeemer: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_add_redeemers: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_get_redeemer: (a: number) => number;
+  readonly transactionwitnesssetbuilder_add_required_wits: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_new: () => number;
+  readonly transactionwitnesssetbuilder_add_existing: (a: number, b: number) => void;
+  readonly transactionwitnesssetbuilder_build: (a: number) => number;
+  readonly transactionwitnesssetbuilder_remaining_wits: (a: number) => number;
+  readonly transactionwitnesssetbuilder_try_build: (a: number, b: number) => void;
+  readonly __wbg_nativescriptwitnessinfo_free: (a: number) => void;
+  readonly nativescriptwitnessinfo_num_signatures: (a: number) => number;
+  readonly nativescriptwitnessinfo_vkeys: (a: number) => number;
+  readonly nativescriptwitnessinfo_assume_signature_count: () => number;
+  readonly __wbg_withdrawalbuilderresult_free: (a: number) => void;
+  readonly __wbg_singlewithdrawalbuilder_free: (a: number) => void;
+  readonly singlewithdrawalbuilder_new: (a: number, b: number) => number;
+  readonly singlewithdrawalbuilder_payment_key: (a: number, b: number) => void;
+  readonly singlewithdrawalbuilder_native_script: (a: number, b: number, c: number, d: number) => void;
+  readonly singlewithdrawalbuilder_plutus_script: (a: number, b: number, c: number, d: number) => void;
+  readonly __wbg_mintbuilderresult_free: (a: number) => void;
+  readonly __wbg_singlemintbuilder_free: (a: number) => void;
+  readonly singlemintbuilder_new: (a: number) => number;
+  readonly singlemintbuilder_native_script: (a: number, b: number, c: number) => number;
+  readonly singlemintbuilder_plutus_script: (a: number, b: number, c: number) => number;
+  readonly generaltransactionmetadata_add: (a: number, b: number) => void;
+  readonly generaltransactionmetadata_add_json_metadatum_with_schema: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+  readonly auxiliarydata_add_metadatum: (a: number, b: number, c: number) => void;
+  readonly auxiliarydata_add_json_metadatum_with_schema: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+  readonly auxiliarydata_add: (a: number, b: number) => void;
+  readonly encrypt_with_password: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
+  readonly decrypt_with_password: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly linearfee_new: (a: number, b: number) => number;
+  readonly min_script_fee: (a: number, b: number, c: number) => void;
+  readonly min_no_script_fee: (a: number, b: number, c: number) => void;
+  readonly min_fee: (a: number, b: number, c: number, d: number) => void;
+  readonly __wbg_bignum_free: (a: number) => void;
+  readonly bignum_to_bytes: (a: number, b: number) => void;
+  readonly bignum_from_bytes: (a: number, b: number, c: number) => void;
+  readonly bignum_from_str: (a: number, b: number, c: number) => void;
+  readonly bignum_to_str: (a: number, b: number) => void;
+  readonly bignum_zero: () => number;
+  readonly bignum_is_zero: (a: number) => number;
+  readonly bignum_checked_mul: (a: number, b: number, c: number) => void;
+  readonly bignum_checked_add: (a: number, b: number, c: number) => void;
+  readonly bignum_checked_sub: (a: number, b: number, c: number) => void;
+  readonly bignum_clamped_sub: (a: number, b: number) => number;
+  readonly bignum_checked_div: (a: number, b: number, c: number) => void;
+  readonly bignum_checked_div_ceil: (a: number, b: number, c: number) => void;
+  readonly bignum_compare: (a: number, b: number) => number;
+  readonly __wbg_value_free: (a: number) => void;
+  readonly value_to_bytes: (a: number, b: number) => void;
+  readonly value_from_bytes: (a: number, b: number, c: number) => void;
+  readonly value_to_json: (a: number, b: number) => void;
+  readonly value_to_js_value: (a: number, b: number) => void;
+  readonly value_from_json: (a: number, b: number, c: number) => void;
+  readonly value_new: (a: number) => number;
+  readonly value_new_from_assets: (a: number) => number;
+  readonly value_zero: () => number;
+  readonly value_is_zero: (a: number) => number;
+  readonly value_set_coin: (a: number, b: number) => void;
+  readonly value_multiasset: (a: number) => number;
+  readonly value_set_multiasset: (a: number, b: number) => void;
+  readonly value_checked_add: (a: number, b: number, c: number) => void;
+  readonly value_checked_sub: (a: number, b: number, c: number) => void;
+  readonly value_clamped_sub: (a: number, b: number) => number;
+  readonly value_compare: (a: number, b: number) => number;
+  readonly __wbg_int_free: (a: number) => void;
+  readonly int_to_bytes: (a: number, b: number) => void;
+  readonly int_from_bytes: (a: number, b: number, c: number) => void;
+  readonly int_new: (a: number) => number;
+  readonly int_new_negative: (a: number) => number;
+  readonly int_new_i32: (a: number) => number;
+  readonly int_is_positive: (a: number) => number;
+  readonly int_as_positive: (a: number) => number;
+  readonly int_as_negative: (a: number) => number;
+  readonly int_as_i32: (a: number, b: number) => void;
+  readonly int_as_i32_or_fail: (a: number, b: number) => void;
+  readonly int_to_str: (a: number, b: number) => void;
+  readonly int_from_str: (a: number, b: number, c: number) => void;
+  readonly __wbg_bigint_free: (a: number) => void;
+  readonly bigint_to_bytes: (a: number, b: number) => void;
+  readonly bigint_from_bytes: (a: number, b: number, c: number) => void;
+  readonly bigint_as_u64: (a: number) => number;
+  readonly bigint_as_int: (a: number) => number;
+  readonly bigint_from_str: (a: number, b: number, c: number) => void;
+  readonly bigint_to_str: (a: number, b: number) => void;
+  readonly transactionunspentoutput_to_bytes: (a: number, b: number) => void;
+  readonly transactionunspentoutput_from_bytes: (a: number, b: number, c: number) => void;
+  readonly transactionunspentoutput_new: (a: number, b: number) => number;
+  readonly transactionunspentoutput_input: (a: number) => number;
+  readonly transactionunspentoutput_output: (a: number) => number;
+  readonly __wbg_transactionunspentoutputs_free: (a: number) => void;
+  readonly transactionunspentoutputs_is_empty: (a: number) => number;
+  readonly transactionunspentoutputs_get: (a: number, b: number) => number;
+  readonly transactionunspentoutputs_add: (a: number, b: number) => void;
+  readonly encode_json_str_to_native_script: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
+  readonly hash_auxiliary_data: (a: number) => number;
+  readonly hash_transaction: (a: number) => number;
+  readonly hash_plutus_data: (a: number) => number;
+  readonly hash_script_data: (a: number, b: number, c: number) => number;
+  readonly calc_script_data_hash: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly get_implicit_input: (a: number, b: number, c: number, d: number) => void;
+  readonly get_deposit: (a: number, b: number, c: number, d: number) => void;
+  readonly compatible_min_ada_required: (a: number, b: number, c: number, d: number) => void;
+  readonly min_ada_required: (a: number, b: number, c: number) => void;
+  readonly make_daedalus_bootstrap_witness: (a: number, b: number, c: number) => number;
+  readonly make_icarus_bootstrap_witness: (a: number, b: number, c: number) => number;
+  readonly make_vkey_witness: (a: number, b: number) => number;
+  readonly stakedistribution_new_single_key: (a: number) => number;
+  readonly stakeholderid_new: (a: number) => number;
+  readonly addrattributes_new_bootstrap_era: (a: number, b: number) => number;
+  readonly addrattributes_new_single_key: (a: number, b: number, c: number) => number;
+  readonly addressid_new: (a: number, b: number, c: number) => number;
+  readonly addresscontent_hash_and_create: (a: number, b: number, c: number) => number;
+  readonly addresscontent_new_redeem: (a: number, b: number) => number;
+  readonly addresscontent_new_simple: (a: number, b: number) => number;
+  readonly addresscontent_to_address: (a: number) => number;
+  readonly addresscontent_byron_protocol_magic: (a: number) => number;
+  readonly addresscontent_network_id: (a: number, b: number) => void;
+  readonly addresscontent_icarus_from_key: (a: number, b: number) => number;
+  readonly addresscontent_identical_with_pubkey: (a: number, b: number) => number;
+  readonly byronaddress_to_base58: (a: number, b: number) => void;
+  readonly byronaddress_from_base58: (a: number, b: number, c: number) => void;
+  readonly byronaddress_address_content: (a: number) => number;
+  readonly byronaddress_to_address: (a: number) => number;
+  readonly __wbg_crc32_free: (a: number) => void;
+  readonly crc32_to_bytes: (a: number, b: number) => void;
+  readonly crc32_from_bytes: (a: number, b: number, c: number) => void;
+  readonly crc32_to_json: (a: number, b: number) => void;
+  readonly crc32_to_js_value: (a: number, b: number) => void;
+  readonly crc32_from_json: (a: number, b: number, c: number) => void;
+  readonly crc32_from_val: (a: number) => number;
+  readonly crc32_val: (a: number) => number;
+  readonly hdaddresspayload_to_bytes: (a: number, b: number) => void;
+  readonly hdaddresspayload_from_bytes: (a: number, b: number, c: number) => void;
+  readonly stakeholderid_from_bytes: (a: number, b: number, c: number) => void;
+  readonly stakeholderid_from_bech32: (a: number, b: number, c: number) => void;
+  readonly stakeholderid_from_hex: (a: number, b: number, c: number) => void;
+  readonly __wbg_addressid_free: (a: number) => void;
+  readonly addressid_from_bytes: (a: number, b: number, c: number) => void;
+  readonly addressid_to_bytes: (a: number, b: number) => void;
+  readonly addressid_to_bech32: (a: number, b: number, c: number, d: number) => void;
+  readonly addressid_from_bech32: (a: number, b: number, c: number) => void;
+  readonly addressid_to_hex: (a: number, b: number) => void;
+  readonly addressid_from_hex: (a: number, b: number, c: number) => void;
+  readonly __wbg_addrattributes_free: (a: number) => void;
+  readonly addrattributes_to_bytes: (a: number, b: number) => void;
+  readonly addrattributes_from_bytes: (a: number, b: number, c: number) => void;
+  readonly addrattributes_to_json: (a: number, b: number) => void;
+  readonly addrattributes_to_js_value: (a: number, b: number) => void;
+  readonly addrattributes_from_json: (a: number, b: number, c: number) => void;
+  readonly addrattributes_set_stake_distribution: (a: number, b: number) => void;
+  readonly addrattributes_stake_distribution: (a: number) => number;
+  readonly addrattributes_set_derivation_path: (a: number, b: number) => void;
+  readonly addrattributes_derivation_path: (a: number) => number;
+  readonly addrattributes_set_protocol_magic: (a: number, b: number) => void;
+  readonly addrattributes_protocol_magic: (a: number) => number;
+  readonly addrattributes_new: () => number;
+  readonly stakedistribution_to_bytes: (a: number, b: number) => void;
+  readonly stakedistribution_from_bytes: (a: number, b: number, c: number) => void;
+  readonly stakedistribution_to_json: (a: number, b: number) => void;
+  readonly stakedistribution_to_js_value: (a: number, b: number) => void;
+  readonly stakedistribution_from_json: (a: number, b: number, c: number) => void;
+  readonly stakedistribution_new_bootstrap_era_distr: () => number;
+  readonly stakedistribution_as_bootstrap_era_distr: (a: number) => number;
+  readonly stakedistribution_as_single_key_distr: (a: number) => number;
+  readonly __wbg_byronaddress_free: (a: number) => void;
+  readonly byronaddress_to_bytes: (a: number, b: number) => void;
+  readonly byronaddress_from_bytes: (a: number, b: number, c: number) => void;
+  readonly byronaddress_to_json: (a: number, b: number) => void;
+  readonly byronaddress_to_js_value: (a: number, b: number) => void;
+  readonly byronaddress_from_json: (a: number, b: number, c: number) => void;
+  readonly byronaddress_crc32: (a: number) => number;
+  readonly byronaddress_checksum_from_bytes: (a: number, b: number) => number;
+  readonly byronaddress_new: (a: number, b: number, c: number, d: number) => void;
+  readonly __wbg_addresscontent_free: (a: number) => void;
+  readonly addresscontent_to_bytes: (a: number, b: number) => void;
+  readonly addresscontent_from_bytes: (a: number, b: number, c: number) => void;
+  readonly addresscontent_to_json: (a: number, b: number) => void;
+  readonly addresscontent_to_js_value: (a: number, b: number) => void;
+  readonly addresscontent_from_json: (a: number, b: number, c: number) => void;
+  readonly addresscontent_address_id: (a: number) => number;
+  readonly addresscontent_addr_attr: (a: number) => number;
+  readonly addresscontent_addr_type: (a: number) => number;
+  readonly addresscontent_new: (a: number, b: number, c: number) => number;
+  readonly __wbg_byronaddrtype_free: (a: number) => void;
+  readonly byronaddrtype_to_bytes: (a: number, b: number) => void;
+  readonly byronaddrtype_from_bytes: (a: number, b: number, c: number) => void;
+  readonly byronaddrtype_to_json: (a: number, b: number) => void;
+  readonly byronaddrtype_to_js_value: (a: number, b: number) => void;
+  readonly byronaddrtype_from_json: (a: number, b: number, c: number) => void;
+  readonly byronaddrtype_new_ATPubKey: () => number;
+  readonly byronaddrtype_new_ATScript: () => number;
+  readonly byronaddrtype_new_ATRedeem: () => number;
+  readonly byronaddrtype_kind: (a: number) => number;
+  readonly __wbg_bootstraperadistr_free: (a: number) => void;
+  readonly bootstraperadistr_to_bytes: (a: number, b: number) => void;
+  readonly bootstraperadistr_from_bytes: (a: number, b: number, c: number) => void;
+  readonly bootstraperadistr_to_json: (a: number, b: number) => void;
+  readonly bootstraperadistr_to_js_value: (a: number, b: number) => void;
+  readonly bootstraperadistr_from_json: (a: number, b: number, c: number) => void;
+  readonly bootstraperadistr_new: () => number;
+  readonly singlekeydistr_to_bytes: (a: number, b: number) => void;
+  readonly singlekeydistr_from_bytes: (a: number, b: number, c: number) => void;
+  readonly singlekeydistr_to_json: (a: number, b: number) => void;
+  readonly singlekeydistr_to_js_value: (a: number, b: number) => void;
+  readonly singlekeydistr_from_json: (a: number, b: number, c: number) => void;
+  readonly byronscript_to_bytes: (a: number, b: number) => void;
+  readonly byronscript_from_bytes: (a: number, b: number, c: number) => void;
+  readonly spendingdata_to_bytes: (a: number, b: number) => void;
+  readonly spendingdata_from_bytes: (a: number, b: number, c: number) => void;
+  readonly spendingdata_to_json: (a: number, b: number) => void;
+  readonly spendingdata_to_js_value: (a: number, b: number) => void;
+  readonly spendingdata_from_json: (a: number, b: number, c: number) => void;
+  readonly spendingdata_new_spending_data_pub_key: (a: number) => number;
+  readonly spendingdata_new_spending_data_script: (a: number) => number;
+  readonly spendingdata_new_spending_data_redeem: (a: number) => number;
+  readonly spendingdata_kind: (a: number) => number;
+  readonly spendingdata_as_spending_data_pub_key: (a: number) => number;
+  readonly spendingdata_as_spending_data_script: (a: number) => number;
+  readonly spendingdata_as_spending_data_redeem: (a: number) => number;
+  readonly spendingdatapubkeyasd_to_bytes: (a: number, b: number) => void;
+  readonly spendingdatapubkeyasd_from_bytes: (a: number, b: number, c: number) => void;
+  readonly spendingdatapubkeyasd_to_json: (a: number, b: number) => void;
+  readonly spendingdatapubkeyasd_to_js_value: (a: number, b: number) => void;
+  readonly spendingdatapubkeyasd_from_json: (a: number, b: number, c: number) => void;
+  readonly spendingdatapubkeyasd_public_ed25519_bip32: (a: number) => number;
+  readonly spendingdatapubkeyasd_new: (a: number) => number;
+  readonly spendingdataredeemasd_to_bytes: (a: number, b: number) => void;
+  readonly spendingdataredeemasd_from_bytes: (a: number, b: number, c: number) => void;
+  readonly spendingdataredeemasd_to_json: (a: number, b: number) => void;
+  readonly spendingdataredeemasd_to_js_value: (a: number, b: number) => void;
+  readonly spendingdataredeemasd_from_json: (a: number, b: number, c: number) => void;
+  readonly spendingdataredeemasd_public_ed25519: (a: number) => number;
+  readonly spendingdataredeemasd_new: (a: number) => number;
+  readonly __wbg_spendingdatascriptasd_free: (a: number) => void;
+  readonly spendingdatascriptasd_to_bytes: (a: number, b: number) => void;
+  readonly spendingdatascriptasd_from_bytes: (a: number, b: number, c: number) => void;
+  readonly spendingdatascriptasd_to_json: (a: number, b: number) => void;
+  readonly spendingdatascriptasd_to_js_value: (a: number, b: number) => void;
+  readonly spendingdatascriptasd_from_json: (a: number, b: number, c: number) => void;
+  readonly spendingdatascriptasd_script: (a: number) => number;
+  readonly spendingdatascriptasd_new: (a: number) => number;
+  readonly byrontxout_to_bytes: (a: number, b: number) => void;
+  readonly byrontxout_from_bytes: (a: number, b: number, c: number) => void;
+  readonly byrontxout_to_json: (a: number, b: number) => void;
+  readonly byrontxout_to_js_value: (a: number, b: number) => void;
+  readonly byrontxout_from_json: (a: number, b: number, c: number) => void;
+  readonly __wbg_byrontxout_free: (a: number) => void;
+  readonly byrontxout_address: (a: number) => number;
+  readonly byrontxout_amount: (a: number) => number;
+  readonly byrontxout_new: (a: number, b: number) => number;
   readonly unitinterval_to_bytes: (a: number, b: number) => void;
   readonly unitinterval_from_bytes: (a: number, b: number, c: number) => void;
   readonly unitinterval_to_json: (a: number, b: number) => void;
   readonly unitinterval_to_js_value: (a: number, b: number) => void;
   readonly unitinterval_from_json: (a: number, b: number, c: number) => void;
-  readonly unitinterval_new: (a: number, b: number) => number;
   readonly __wbg_transaction_free: (a: number) => void;
   readonly transaction_to_bytes: (a: number, b: number) => void;
   readonly transaction_from_bytes: (a: number, b: number, c: number) => void;
   readonly transaction_to_json: (a: number, b: number) => void;
   readonly transaction_to_js_value: (a: number, b: number) => void;
   readonly transaction_from_json: (a: number, b: number, c: number) => void;
-  readonly transaction_body: (a: number) => number;
   readonly transaction_witness_set: (a: number) => number;
   readonly transaction_is_valid: (a: number) => number;
   readonly transaction_auxiliary_data: (a: number) => number;
@@ -8367,8 +9493,8 @@ export interface InitOutput {
   readonly transactionoutput_new: (a: number, b: number) => number;
   readonly stakeregistration_to_bytes: (a: number, b: number) => void;
   readonly stakeregistration_from_bytes: (a: number, b: number, c: number) => void;
-  readonly stakeregistration_to_js_value: (a: number, b: number) => void;
   readonly stakeregistration_from_json: (a: number, b: number, c: number) => void;
+  readonly __wbg_stakederegistration_free: (a: number) => void;
   readonly stakederegistration_to_bytes: (a: number, b: number) => void;
   readonly stakederegistration_from_bytes: (a: number, b: number, c: number) => void;
   readonly stakederegistration_to_json: (a: number, b: number) => void;
@@ -8409,18 +9535,18 @@ export interface InitOutput {
   readonly poolparams_from_json: (a: number, b: number, c: number) => void;
   readonly poolparams_operator: (a: number) => number;
   readonly poolparams_vrf_keyhash: (a: number) => number;
-  readonly poolparams_cost: (a: number) => number;
-  readonly poolparams_margin: (a: number) => number;
   readonly poolparams_reward_account: (a: number) => number;
   readonly poolparams_pool_owners: (a: number) => number;
   readonly poolparams_relays: (a: number) => number;
   readonly poolparams_pool_metadata: (a: number) => number;
   readonly poolparams_new: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => number;
+  readonly __wbg_poolregistration_free: (a: number) => void;
   readonly poolregistration_to_bytes: (a: number, b: number) => void;
   readonly poolregistration_from_bytes: (a: number, b: number, c: number) => void;
   readonly poolregistration_to_json: (a: number, b: number) => void;
   readonly poolregistration_to_js_value: (a: number, b: number) => void;
   readonly poolregistration_from_json: (a: number, b: number, c: number) => void;
+  readonly poolregistration_pool_params: (a: number) => number;
   readonly poolregistration_new: (a: number) => number;
   readonly __wbg_poolretirement_free: (a: number) => void;
   readonly poolretirement_to_bytes: (a: number, b: number) => void;
@@ -8440,12 +9566,14 @@ export interface InitOutput {
   readonly genesiskeydelegation_genesis_delegate_hash: (a: number) => number;
   readonly genesiskeydelegation_vrf_keyhash: (a: number) => number;
   readonly genesiskeydelegation_new: (a: number, b: number, c: number) => number;
+  readonly __wbg_moveinstantaneousrewardscert_free: (a: number) => void;
   readonly moveinstantaneousrewardscert_to_bytes: (a: number, b: number) => void;
   readonly moveinstantaneousrewardscert_from_bytes: (a: number, b: number, c: number) => void;
   readonly moveinstantaneousrewardscert_to_json: (a: number, b: number) => void;
   readonly moveinstantaneousrewardscert_to_js_value: (a: number, b: number) => void;
   readonly moveinstantaneousrewardscert_from_json: (a: number, b: number, c: number) => void;
   readonly moveinstantaneousrewardscert_move_instantaneous_reward: (a: number) => number;
+  readonly moveinstantaneousrewardscert_new: (a: number) => number;
   readonly __wbg_certificate_free: (a: number) => void;
   readonly certificate_to_bytes: (a: number, b: number) => void;
   readonly certificate_from_bytes: (a: number, b: number, c: number) => void;
@@ -8507,6 +9635,7 @@ export interface InitOutput {
   readonly url_to_bytes: (a: number, b: number) => void;
   readonly url_from_bytes: (a: number, b: number, c: number) => void;
   readonly url_new: (a: number, b: number, c: number) => void;
+  readonly __wbg_dnsrecordaoraaaa_free: (a: number) => void;
   readonly dnsrecordaoraaaa_to_bytes: (a: number, b: number) => void;
   readonly dnsrecordaoraaaa_from_bytes: (a: number, b: number, c: number) => void;
   readonly dnsrecordaoraaaa_new: (a: number, b: number, c: number) => void;
@@ -8514,6 +9643,7 @@ export interface InitOutput {
   readonly dnsrecordsrv_to_bytes: (a: number, b: number) => void;
   readonly dnsrecordsrv_from_bytes: (a: number, b: number, c: number) => void;
   readonly dnsrecordsrv_new: (a: number, b: number, c: number) => void;
+  readonly __wbg_singlehostaddr_free: (a: number) => void;
   readonly singlehostaddr_to_bytes: (a: number, b: number) => void;
   readonly singlehostaddr_from_bytes: (a: number, b: number, c: number) => void;
   readonly singlehostaddr_to_json: (a: number, b: number) => void;
@@ -8531,6 +9661,7 @@ export interface InitOutput {
   readonly singlehostname_from_json: (a: number, b: number, c: number) => void;
   readonly singlehostname_port: (a: number) => number;
   readonly singlehostname_new: (a: number, b: number) => number;
+  readonly __wbg_multihostname_free: (a: number) => void;
   readonly multihostname_to_bytes: (a: number, b: number) => void;
   readonly multihostname_from_bytes: (a: number, b: number, c: number) => void;
   readonly multihostname_to_json: (a: number, b: number) => void;
@@ -8612,6 +9743,7 @@ export interface InitOutput {
   readonly scriptpubkey_to_js_value: (a: number, b: number) => void;
   readonly scriptpubkey_from_json: (a: number, b: number, c: number) => void;
   readonly scriptpubkey_new: (a: number) => number;
+  readonly __wbg_scriptall_free: (a: number) => void;
   readonly scriptall_to_bytes: (a: number, b: number) => void;
   readonly scriptall_from_bytes: (a: number, b: number, c: number) => void;
   readonly scriptall_to_json: (a: number, b: number) => void;
@@ -8621,7 +9753,6 @@ export interface InitOutput {
   readonly scriptall_new: (a: number) => number;
   readonly scriptany_to_bytes: (a: number, b: number) => void;
   readonly scriptany_from_bytes: (a: number, b: number, c: number) => void;
-  readonly scriptany_to_js_value: (a: number, b: number) => void;
   readonly scriptany_from_json: (a: number, b: number, c: number) => void;
   readonly __wbg_scriptnofk_free: (a: number) => void;
   readonly scriptnofk_to_bytes: (a: number, b: number) => void;
@@ -8633,9 +9764,7 @@ export interface InitOutput {
   readonly scriptnofk_new: (a: number, b: number) => number;
   readonly timelockstart_to_bytes: (a: number, b: number) => void;
   readonly timelockstart_from_bytes: (a: number, b: number, c: number) => void;
-  readonly timelockstart_to_js_value: (a: number, b: number) => void;
   readonly timelockstart_from_json: (a: number, b: number, c: number) => void;
-  readonly __wbg_timelockexpiry_free: (a: number) => void;
   readonly timelockexpiry_to_bytes: (a: number, b: number) => void;
   readonly timelockexpiry_from_bytes: (a: number, b: number, c: number) => void;
   readonly timelockexpiry_to_json: (a: number, b: number) => void;
@@ -8676,18 +9805,12 @@ export interface InitOutput {
   readonly update_new: (a: number, b: number) => number;
   readonly genesishashes_to_bytes: (a: number, b: number) => void;
   readonly genesishashes_from_bytes: (a: number, b: number, c: number) => void;
-  readonly genesishashes_to_json: (a: number, b: number) => void;
-  readonly genesishashes_to_js_value: (a: number, b: number) => void;
   readonly genesishashes_from_json: (a: number, b: number, c: number) => void;
   readonly genesishashes_get: (a: number, b: number) => number;
-  readonly genesishashes_add: (a: number, b: number) => void;
   readonly scripthashes_to_bytes: (a: number, b: number) => void;
   readonly scripthashes_from_bytes: (a: number, b: number, c: number) => void;
-  readonly scripthashes_to_json: (a: number, b: number) => void;
-  readonly scripthashes_to_js_value: (a: number, b: number) => void;
   readonly scripthashes_from_json: (a: number, b: number, c: number) => void;
   readonly scripthashes_get: (a: number, b: number) => number;
-  readonly scripthashes_add: (a: number, b: number) => void;
   readonly __wbg_proposedprotocolparameterupdates_free: (a: number) => void;
   readonly proposedprotocolparameterupdates_to_bytes: (a: number, b: number) => void;
   readonly proposedprotocolparameterupdates_from_bytes: (a: number, b: number, c: number) => void;
@@ -8703,6 +9826,7 @@ export interface InitOutput {
   readonly protocolversion_to_json: (a: number, b: number) => void;
   readonly protocolversion_to_js_value: (a: number, b: number) => void;
   readonly protocolversion_from_json: (a: number, b: number, c: number) => void;
+  readonly protocolversion_new: (a: number, b: number) => number;
   readonly __wbg_protocolparamupdate_free: (a: number) => void;
   readonly protocolparamupdate_to_bytes: (a: number, b: number) => void;
   readonly protocolparamupdate_from_bytes: (a: number, b: number, c: number) => void;
@@ -8813,7 +9937,6 @@ export interface InitOutput {
   readonly operationalcert_to_js_value: (a: number, b: number) => void;
   readonly operationalcert_from_json: (a: number, b: number, c: number) => void;
   readonly operationalcert_hot_vkey: (a: number) => number;
-  readonly operationalcert_sequence_number: (a: number) => number;
   readonly operationalcert_kes_period: (a: number) => number;
   readonly operationalcert_sigma: (a: number) => number;
   readonly operationalcert_new: (a: number, b: number, c: number, d: number) => number;
@@ -8824,7 +9947,6 @@ export interface InitOutput {
   readonly headerbody_to_js_value: (a: number, b: number) => void;
   readonly headerbody_from_json: (a: number, b: number, c: number) => void;
   readonly headerbody_block_number: (a: number) => number;
-  readonly headerbody_slot: (a: number) => number;
   readonly headerbody_prev_hash: (a: number) => number;
   readonly headerbody_issuer_vkey: (a: number) => number;
   readonly headerbody_vrf_vkey: (a: number) => number;
@@ -8874,7 +9996,6 @@ export interface InitOutput {
   readonly multiasset_get: (a: number, b: number) => number;
   readonly multiasset_set_asset: (a: number, b: number, c: number, d: number) => number;
   readonly multiasset_get_asset: (a: number, b: number, c: number) => number;
-  readonly multiasset_keys: (a: number) => number;
   readonly multiasset_sub: (a: number, b: number) => number;
   readonly __wbg_mintassets_free: (a: number) => void;
   readonly mintassets_new_from_entry: (a: number, b: number) => number;
@@ -8887,6 +10008,7 @@ export interface InitOutput {
   readonly mint_to_json: (a: number, b: number) => void;
   readonly mint_to_js_value: (a: number, b: number) => void;
   readonly mint_from_json: (a: number, b: number, c: number) => void;
+  readonly mint_new: () => number;
   readonly mint_new_from_entry: (a: number, b: number) => number;
   readonly mint_insert: (a: number, b: number, c: number) => number;
   readonly mint_get: (a: number, b: number) => number;
@@ -8898,52 +10020,234 @@ export interface InitOutput {
   readonly networkid_to_json: (a: number, b: number) => void;
   readonly networkid_to_js_value: (a: number, b: number) => void;
   readonly networkid_from_json: (a: number, b: number, c: number) => void;
+  readonly enterpriseaddress_from_address: (a: number) => number;
+  readonly rewardaddress_from_address: (a: number) => number;
+  readonly int_as_i32_or_nothing: (a: number, b: number) => void;
+  readonly baseaddress_from_address: (a: number) => number;
   readonly networkid_testnet: () => number;
   readonly networkid_mainnet: () => number;
-  readonly networkid_kind: (a: number) => number;
-  readonly __wbg_url_free: (a: number) => void;
-  readonly __wbg_dnsrecordsrv_free: (a: number) => void;
-  readonly __wbg_multihostname_free: (a: number) => void;
-  readonly __wbg_dnsrecordaoraaaa_free: (a: number) => void;
-  readonly poolregistration_pool_params: (a: number) => number;
-  readonly transactionoutputs_len: (a: number) => number;
-  readonly transactioninputs_len: (a: number) => number;
-  readonly ed25519keyhashes_len: (a: number) => number;
-  readonly relays_len: (a: number) => number;
-  readonly stakecredentials_len: (a: number) => number;
-  readonly rewardaddresses_len: (a: number) => number;
-  readonly withdrawals_len: (a: number) => number;
-  readonly scriptnofk_n: (a: number) => number;
-  readonly nativescripts_len: (a: number) => number;
-  readonly genesishashes_len: (a: number) => number;
-  readonly scripthashes_len: (a: number) => number;
-  readonly proposedprotocolparameterupdates_len: (a: number) => number;
-  readonly protocolversion_major: (a: number) => number;
-  readonly transactionbodies_len: (a: number) => number;
-  readonly transactionwitnesssets_len: (a: number) => number;
-  readonly transactionindexes_len: (a: number) => number;
-  readonly mirtostakecredentials_len: (a: number) => number;
-  readonly poolretirement_epoch: (a: number) => number;
-  readonly protocolversion_minor: (a: number) => number;
-  readonly certificates_len: (a: number) => number;
-  readonly assets_len: (a: number) => number;
-  readonly multiasset_len: (a: number) => number;
-  readonly mintassets_len: (a: number) => number;
-  readonly mint_len: (a: number) => number;
-  readonly protocolversion_new: (a: number, b: number) => number;
-  readonly stakeregistration_stake_credential: (a: number) => number;
-  readonly stakederegistration_stake_credential: (a: number) => number;
-  readonly __wbg_poolregistration_free: (a: number) => void;
-  readonly url_url: (a: number, b: number) => void;
-  readonly dnsrecordsrv_record: (a: number, b: number) => void;
+  readonly transactionbody_multiassets: (a: number) => number;
+  readonly byronaddress_is_valid: (a: number, b: number) => number;
+  readonly unitinterval_new: (a: number, b: number) => number;
+  readonly pointeraddress_from_address: (a: number) => number;
+  readonly byronaddress_from_address: (a: number) => number;
+  readonly timelockstart_new: (a: number) => number;
+  readonly scriptany_new: (a: number) => number;
   readonly withdrawals_new: () => number;
-  readonly proposedprotocolparameterupdates_new: () => number;
   readonly mirtostakecredentials_new: () => number;
-  readonly scriptpubkey_addr_keyhash: (a: number) => number;
+  readonly proposedprotocolparameterupdates_new: () => number;
+  readonly metadatamap_new: () => number;
+  readonly protocolmagic_new: (a: number) => number;
+  readonly redeemertag_new_cert: () => number;
+  readonly redeemertag_new_mint: () => number;
+  readonly redeemertag_new_spend: () => number;
+  readonly plutusv2script_to_json: (a: number, b: number) => void;
+  readonly vkeywitnesses_new: () => number;
+  readonly plutusmap_new: () => number;
+  readonly strings_new: () => number;
+  readonly transactionunspentoutputs_new: () => number;
+  readonly costmdls_new: () => number;
+  readonly plutusv2script_from_bytes: (a: number, b: number, c: number) => void;
+  readonly __wbg_ed25519keyhash_free: (a: number) => void;
+  readonly __wbg_kesvkey_free: (a: number) => void;
+  readonly __wbg_scriptdatahash_free: (a: number) => void;
+  readonly __wbg_blockheaderhash_free: (a: number) => void;
+  readonly __wbg_dnsrecordsrv_free: (a: number) => void;
+  readonly __wbg_datahash_free: (a: number) => void;
+  readonly __wbg_kessignature_free: (a: number) => void;
+  readonly __wbg_url_free: (a: number) => void;
+  readonly __wbg_protocolmagic_free: (a: number) => void;
+  readonly __wbg_unitinterval_free: (a: number) => void;
+  readonly __wbg_genesisdelegatehash_free: (a: number) => void;
+  readonly __wbg_genesishash_free: (a: number) => void;
+  readonly __wbg_stakedistribution_free: (a: number) => void;
+  readonly __wbg_linearfee_free: (a: number) => void;
+  readonly __wbg_vrfkeyhash_free: (a: number) => void;
+  readonly __wbg_stakeholderid_free: (a: number) => void;
+  readonly __wbg_plutusv1script_free: (a: number) => void;
+  readonly __wbg_scripthashes_free: (a: number) => void;
+  readonly __wbg_networkid_free: (a: number) => void;
+  readonly __wbg_scripthash_free: (a: number) => void;
+  readonly __wbg_timelockstart_free: (a: number) => void;
+  readonly __wbg_transactionmetadatumlabels_free: (a: number) => void;
+  readonly __wbg_vrfvkey_free: (a: number) => void;
+  readonly __wbg_spendingdataredeemasd_free: (a: number) => void;
+  readonly __wbg_spendingdata_free: (a: number) => void;
+  readonly __wbg_byronscript_free: (a: number) => void;
+  readonly __wbg_transactionunspentoutput_free: (a: number) => void;
+  readonly __wbg_singlekeydistr_free: (a: number) => void;
+  readonly __wbg_genesishashes_free: (a: number) => void;
+  readonly __wbg_stakeregistration_free: (a: number) => void;
   readonly __wbg_scriptany_free: (a: number) => void;
-  readonly __wbg_scriptall_free: (a: number) => void;
-  readonly transactionoutputs_new: () => number;
+  readonly __wbg_poolmetadatahash_free: (a: number) => void;
+  readonly __wbg_transactionhash_free: (a: number) => void;
+  readonly __wbg_blockbodyhash_free: (a: number) => void;
+  readonly __wbg_hdaddresspayload_free: (a: number) => void;
+  readonly __wbg_vkeys_free: (a: number) => void;
+  readonly __wbg_rewardaddress_free: (a: number) => void;
+  readonly __wbg_plutusv2script_free: (a: number) => void;
+  readonly __wbg_spendingdatapubkeyasd_free: (a: number) => void;
+  readonly relays_len: (a: number) => number;
+  readonly transactionmetadatumlabels_len: (a: number) => number;
+  readonly vkeys_len: (a: number) => number;
+  readonly mint_len: (a: number) => number;
+  readonly kessignature_to_bytes: (a: number, b: number) => void;
+  readonly nativescripts_len: (a: number) => number;
+  readonly transactionoutputs_len: (a: number) => number;
+  readonly vrfkeyhash_to_hex: (a: number, b: number) => void;
+  readonly vrfkeyhash_to_bech32: (a: number, b: number, c: number, d: number) => void;
+  readonly vrfkeyhash_to_bytes: (a: number, b: number) => void;
+  readonly redeemer_index: (a: number) => number;
+  readonly networkinfo_protocol_magic: (a: number) => number;
+  readonly scriptnofk_n: (a: number) => number;
+  readonly transactionunspentoutputs_len: (a: number) => number;
+  readonly proposedprotocolparameterupdates_len: (a: number) => number;
+  readonly scriptdatahash_to_hex: (a: number, b: number) => void;
+  readonly scriptdatahash_to_bech32: (a: number, b: number, c: number, d: number) => void;
+  readonly scriptdatahash_to_bytes: (a: number, b: number) => void;
+  readonly poolmetadatahash_to_hex: (a: number, b: number) => void;
+  readonly poolmetadatahash_to_bech32: (a: number, b: number, c: number, d: number) => void;
+  readonly poolmetadatahash_to_bytes: (a: number, b: number) => void;
+  readonly headerbody_slot: (a: number) => number;
+  readonly stakeholderid_to_hex: (a: number, b: number) => void;
+  readonly stakeholderid_to_bech32: (a: number, b: number, c: number, d: number) => void;
+  readonly stakeholderid_to_bytes: (a: number, b: number) => void;
+  readonly rewardaddresses_len: (a: number) => number;
+  readonly metadatamap_len: (a: number) => number;
+  readonly poolretirement_epoch: (a: number) => number;
+  readonly mirtostakecredentials_len: (a: number) => number;
+  readonly stakeregistration_stake_credential: (a: number) => number;
+  readonly stakeregistration_to_js_value: (a: number, b: number) => void;
+  readonly stakeregistration_to_json: (a: number, b: number) => void;
+  readonly operationalcert_sequence_number: (a: number) => number;
+  readonly rewardaddress_payment_cred: (a: number) => number;
+  readonly timelockstart_slot: (a: number) => number;
+  readonly timelockstart_to_js_value: (a: number, b: number) => void;
+  readonly timelockstart_to_json: (a: number, b: number) => void;
+  readonly __wbg_timelockexpiry_free: (a: number) => void;
+  readonly mintassets_len: (a: number) => number;
+  readonly strings_len: (a: number) => number;
+  readonly redeemers_len: (a: number) => number;
+  readonly unitinterval_numerator: (a: number) => number;
+  readonly plutusv2script_bytes: (a: number, b: number) => void;
+  readonly redeemerwitnesskey_index: (a: number) => number;
+  readonly datahash_to_hex: (a: number, b: number) => void;
+  readonly datahash_to_bech32: (a: number, b: number, c: number, d: number) => void;
+  readonly datahash_to_bytes: (a: number, b: number) => void;
+  readonly stakecredentials_len: (a: number) => number;
+  readonly languages_len: (a: number) => number;
+  readonly timelockexpiry_slot: (a: number) => number;
+  readonly multiasset_len: (a: number) => number;
+  readonly bootstrapwitness_chain_code: (a: number, b: number) => void;
+  readonly transactionhash_to_hex: (a: number, b: number) => void;
+  readonly transactionhash_to_bech32: (a: number, b: number, c: number, d: number) => void;
+  readonly transactionhash_to_bytes: (a: number, b: number) => void;
+  readonly vrfvkey_to_hex: (a: number, b: number) => void;
+  readonly vrfvkey_to_bech32: (a: number, b: number, c: number, d: number) => void;
+  readonly vrfvkey_to_bytes: (a: number, b: number) => void;
+  readonly transactionbodies_len: (a: number) => number;
+  readonly scriptany_to_js_value: (a: number, b: number) => void;
+  readonly scriptany_to_json: (a: number, b: number) => void;
+  readonly plutusv1script_bytes: (a: number, b: number) => void;
+  readonly plutusv1script_to_json: (a: number, b: number) => void;
+  readonly url_url: (a: number, b: number) => void;
+  readonly unitinterval_denominator: (a: number) => number;
+  readonly exunits_mem: (a: number) => number;
+  readonly plutuslist_len: (a: number) => number;
+  readonly bootstrapwitnesses_len: (a: number) => number;
+  readonly transactionmetadatumlabels_add: (a: number, b: number) => void;
+  readonly transactionindexes_len: (a: number) => number;
+  readonly transactioninput_index: (a: number) => number;
+  readonly scripthashes_len: (a: number) => number;
+  readonly genesisdelegatehash_to_hex: (a: number, b: number) => void;
+  readonly genesisdelegatehash_to_bech32: (a: number, b: number, c: number, d: number) => void;
+  readonly genesisdelegatehash_to_bytes: (a: number, b: number) => void;
+  readonly transactionwitnesssets_len: (a: number) => number;
+  readonly vkeywitnesses_len: (a: number) => number;
+  readonly dnsrecordsrv_record: (a: number, b: number) => void;
+  readonly generaltransactionmetadata_len: (a: number) => number;
+  readonly singlekeydistr_new: (a: number) => number;
+  readonly ed25519keyhash_to_hex: (a: number, b: number) => void;
+  readonly ed25519keyhash_to_bech32: (a: number, b: number, c: number, d: number) => void;
+  readonly ed25519keyhash_to_bytes: (a: number, b: number) => void;
+  readonly genesishash_to_hex: (a: number, b: number) => void;
+  readonly genesishash_to_bech32: (a: number, b: number, c: number, d: number) => void;
+  readonly genesishash_to_bytes: (a: number, b: number) => void;
+  readonly ed25519keyhashes_len: (a: number) => number;
+  readonly scripthashes_to_js_value: (a: number, b: number) => void;
+  readonly scripthashes_to_json: (a: number, b: number) => void;
+  readonly genesishashes_len: (a: number) => number;
+  readonly genesishashes_to_js_value: (a: number, b: number) => void;
+  readonly genesishashes_to_json: (a: number, b: number) => void;
+  readonly transactioninputs_len: (a: number) => number;
+  readonly plutusv2scripts_len: (a: number) => number;
+  readonly byronaddress_addr: (a: number, b: number) => void;
+  readonly publickeys_size: (a: number) => number;
+  readonly vkey_public_key: (a: number) => number;
+  readonly singlekeydistr_stakeholder_id: (a: number) => number;
+  readonly txredeemerbuilder_draft_body: (a: number) => number;
+  readonly stakederegistration_stake_credential: (a: number) => number;
+  readonly singlehostname_dns_name: (a: number) => number;
+  readonly scriptpubkey_addr_keyhash: (a: number) => number;
+  readonly plutusv1scripts_len: (a: number) => number;
+  readonly plutusv2scripts_to_js_value: (a: number, b: number) => void;
+  readonly plutusv2scripts_to_json: (a: number, b: number) => void;
+  readonly untaggedredeemer_datum: (a: number) => number;
+  readonly blockheaderhash_to_hex: (a: number, b: number) => void;
+  readonly blockheaderhash_to_bech32: (a: number, b: number, c: number, d: number) => void;
+  readonly blockheaderhash_to_bytes: (a: number, b: number) => void;
+  readonly enterpriseaddress_payment_cred: (a: number) => number;
+  readonly poolmetadata_url: (a: number) => number;
+  readonly blockbodyhash_to_hex: (a: number, b: number) => void;
+  readonly blockbodyhash_to_bech32: (a: number, b: number, c: number, d: number) => void;
+  readonly blockbodyhash_to_bytes: (a: number, b: number) => void;
+  readonly metadatalist_len: (a: number) => number;
+  readonly scriptany_native_scripts: (a: number) => number;
+  readonly linearfee_coefficient: (a: number) => number;
+  readonly linearfee_constant: (a: number) => number;
+  readonly timelockexpiry_new: (a: number) => number;
+  readonly protocolmagic_value: (a: number) => number;
+  readonly withdrawals_len: (a: number) => number;
+  readonly stakedistribution_kind: (a: number) => number;
+  readonly protocolversion_minor: (a: number) => number;
+  readonly protocolversion_major: (a: number) => number;
+  readonly value_coin: (a: number) => number;
+  readonly transactionbody_fee: (a: number) => number;
+  readonly plutusmap_len: (a: number) => number;
+  readonly certificates_len: (a: number) => number;
+  readonly costmdls_len: (a: number) => number;
+  readonly constrplutusdata_alternative: (a: number) => number;
+  readonly assets_len: (a: number) => number;
+  readonly plutusv1scripts_to_js_value: (a: number, b: number) => void;
+  readonly plutusv1scripts_to_json: (a: number, b: number) => void;
+  readonly kesvkey_to_hex: (a: number, b: number) => void;
+  readonly kesvkey_to_bech32: (a: number, b: number, c: number, d: number) => void;
+  readonly kesvkey_to_bytes: (a: number, b: number) => void;
+  readonly networkid_kind: (a: number) => number;
+  readonly vrfcert_output: (a: number, b: number) => void;
+  readonly vkeywitness_vkey: (a: number) => number;
+  readonly transaction_body: (a: number) => number;
+  readonly scriptref_to_js_value: (a: number, b: number) => void;
+  readonly scriptref_to_json: (a: number, b: number) => void;
+  readonly stakeregistration_new: (a: number) => number;
+  readonly stakecredential_kind: (a: number) => number;
+  readonly scripthash_to_hex: (a: number, b: number) => void;
+  readonly scripthash_to_bech32: (a: number, b: number, c: number, d: number) => void;
+  readonly scripthash_to_bytes: (a: number, b: number) => void;
+  readonly stakedistribution_new_single_key_distr: (a: number) => number;
+  readonly poolparams_margin: (a: number) => number;
+  readonly poolparams_cost: (a: number) => number;
+  readonly poolparams_pledge: (a: number) => number;
+  readonly relays_new: () => number;
+  readonly transactionmetadatumlabels_new: () => number;
+  readonly plutusv2script_new: (a: number, b: number) => number;
+  readonly plutusv2scripts_new: () => number;
+  readonly redeemers_new: () => number;
   readonly transactioninputs_new: () => number;
+  readonly transactionoutputs_new: () => number;
+  readonly vkeys_new: () => number;
+  readonly languages_new: () => number;
+  readonly plutusv1scripts_new: () => number;
   readonly stakecredentials_new: () => number;
   readonly rewardaddresses_new: () => number;
   readonly nativescripts_new: () => number;
@@ -8952,1015 +10256,35 @@ export interface InitOutput {
   readonly transactionbodies_new: () => number;
   readonly transactionwitnesssets_new: () => number;
   readonly transactionindexes_new: () => number;
-  readonly relays_new: () => number;
   readonly multiasset_new: () => number;
   readonly mintassets_new: () => number;
-  readonly mint_new: () => number;
-  readonly __wbg_stakeregistration_free: (a: number) => void;
-  readonly __wbg_stakederegistration_free: (a: number) => void;
-  readonly __wbg_singlehostaddr_free: (a: number) => void;
-  readonly __wbg_timelockstart_free: (a: number) => void;
-  readonly __wbg_networkid_free: (a: number) => void;
-  readonly singlehostname_dns_name: (a: number) => number;
-  readonly poolmetadata_url: (a: number) => number;
-  readonly scriptany_native_scripts: (a: number) => number;
-  readonly scriptany_new: (a: number) => number;
-  readonly unitinterval_numerator: (a: number) => number;
-  readonly transactioninput_index: (a: number) => number;
-  readonly transactionbody_fee: (a: number) => number;
-  readonly unitinterval_denominator: (a: number) => number;
-  readonly timelockstart_slot: (a: number) => number;
-  readonly timelockstart_new: (a: number) => number;
-  readonly timelockexpiry_slot: (a: number) => number;
-  readonly timelockexpiry_new: (a: number) => number;
-  readonly poolparams_pledge: (a: number) => number;
-  readonly __wbg_genesishashes_free: (a: number) => void;
-  readonly __wbg_scripthashes_free: (a: number) => void;
-  readonly stakeregistration_new: (a: number) => number;
-  readonly transactionbody_multiassets: (a: number) => number;
-  readonly __wbg_moveinstantaneousrewardscert_free: (a: number) => void;
-  readonly moveinstantaneousrewardscert_new: (a: number) => number;
-  readonly stakeregistration_to_json: (a: number, b: number) => void;
-  readonly scriptany_to_json: (a: number, b: number) => void;
-  readonly timelockstart_to_json: (a: number, b: number) => void;
-  readonly plutusv1script_to_bytes: (a: number, b: number) => void;
-  readonly plutusv1script_from_bytes: (a: number, b: number, c: number) => void;
-  readonly plutusv1script_to_json: (a: number, b: number) => void;
   readonly plutusv1script_to_js_value: (a: number, b: number) => void;
-  readonly plutusv1script_from_json: (a: number, b: number, c: number) => void;
-  readonly plutusv1script_hash: (a: number) => number;
-  readonly plutusv1script_new: (a: number, b: number) => number;
-  readonly plutusv1script_bytes: (a: number, b: number) => void;
-  readonly __wbg_plutusv1scripts_free: (a: number) => void;
-  readonly plutusv1scripts_to_bytes: (a: number, b: number) => void;
-  readonly plutusv1scripts_from_bytes: (a: number, b: number, c: number) => void;
-  readonly plutusv1scripts_to_json: (a: number, b: number) => void;
-  readonly plutusv1scripts_to_js_value: (a: number, b: number) => void;
-  readonly plutusv1scripts_from_json: (a: number, b: number, c: number) => void;
-  readonly plutusv1scripts_new: () => number;
-  readonly plutusv1scripts_get: (a: number, b: number) => number;
-  readonly plutusv1scripts_add: (a: number, b: number) => void;
-  readonly plutusv2script_to_bytes: (a: number, b: number) => void;
-  readonly plutusv2script_to_js_value: (a: number, b: number) => void;
-  readonly plutusv2script_from_json: (a: number, b: number, c: number) => void;
-  readonly plutusv2script_hash: (a: number) => number;
-  readonly plutusv2scripts_to_bytes: (a: number, b: number) => void;
-  readonly plutusv2scripts_from_bytes: (a: number, b: number, c: number) => void;
-  readonly plutusv2scripts_to_json: (a: number, b: number) => void;
-  readonly plutusv2scripts_to_js_value: (a: number, b: number) => void;
-  readonly plutusv2scripts_from_json: (a: number, b: number, c: number) => void;
-  readonly plutusv2scripts_get: (a: number, b: number) => number;
-  readonly plutusv2scripts_add: (a: number, b: number) => void;
-  readonly __wbg_constrplutusdata_free: (a: number) => void;
-  readonly constrplutusdata_to_bytes: (a: number, b: number) => void;
-  readonly constrplutusdata_from_bytes: (a: number, b: number, c: number) => void;
-  readonly constrplutusdata_alternative: (a: number) => number;
-  readonly constrplutusdata_data: (a: number) => number;
-  readonly constrplutusdata_new: (a: number, b: number) => number;
-  readonly __wbg_costmodel_free: (a: number) => void;
-  readonly costmodel_to_bytes: (a: number, b: number) => void;
-  readonly costmodel_from_bytes: (a: number, b: number, c: number) => void;
-  readonly costmodel_to_json: (a: number, b: number) => void;
-  readonly costmodel_to_js_value: (a: number, b: number) => void;
-  readonly costmodel_from_json: (a: number, b: number, c: number) => void;
-  readonly costmodel_empty_model: (a: number) => number;
-  readonly costmodel_set: (a: number, b: number, c: number, d: number) => void;
-  readonly costmodel_get: (a: number, b: number, c: number) => void;
-  readonly costmodel_language: (a: number) => number;
-  readonly __wbg_costmdls_free: (a: number) => void;
-  readonly costmdls_to_bytes: (a: number, b: number) => void;
-  readonly costmdls_from_bytes: (a: number, b: number, c: number) => void;
-  readonly costmdls_to_json: (a: number, b: number) => void;
-  readonly costmdls_to_js_value: (a: number, b: number) => void;
-  readonly costmdls_from_json: (a: number, b: number, c: number) => void;
-  readonly costmdls_new: () => number;
-  readonly costmdls_len: (a: number) => number;
-  readonly costmdls_insert: (a: number, b: number) => number;
-  readonly costmdls_get: (a: number, b: number) => number;
-  readonly costmdls_keys: (a: number) => number;
-  readonly __wbg_plutusscript_free: (a: number) => void;
-  readonly plutusscript_from_v1: (a: number) => number;
-  readonly plutusscript_from_v2: (a: number) => number;
-  readonly plutusscript_hash: (a: number) => number;
-  readonly __wbg_exunitprices_free: (a: number) => void;
-  readonly exunitprices_to_bytes: (a: number, b: number) => void;
-  readonly exunitprices_from_bytes: (a: number, b: number, c: number) => void;
-  readonly exunitprices_to_json: (a: number, b: number) => void;
-  readonly exunitprices_to_js_value: (a: number, b: number) => void;
-  readonly exunitprices_from_json: (a: number, b: number, c: number) => void;
-  readonly exunitprices_mem_price: (a: number) => number;
-  readonly exunitprices_step_price: (a: number) => number;
-  readonly exunitprices_new: (a: number, b: number) => number;
-  readonly __wbg_exunits_free: (a: number) => void;
-  readonly exunits_to_bytes: (a: number, b: number) => void;
-  readonly exunits_from_bytes: (a: number, b: number, c: number) => void;
-  readonly exunits_to_json: (a: number, b: number) => void;
-  readonly exunits_to_js_value: (a: number, b: number) => void;
-  readonly exunits_from_json: (a: number, b: number, c: number) => void;
-  readonly exunits_steps: (a: number) => number;
-  readonly exunits_new: (a: number, b: number) => number;
-  readonly exunits_checked_add: (a: number, b: number, c: number) => void;
-  readonly exunits_dummy: () => number;
-  readonly __wbg_language_free: (a: number) => void;
-  readonly language_to_bytes: (a: number, b: number) => void;
-  readonly language_from_bytes: (a: number, b: number, c: number) => void;
-  readonly language_new_plutus_v1: () => number;
-  readonly language_new_plutus_v2: () => number;
-  readonly language_kind: (a: number) => number;
-  readonly __wbg_languages_free: (a: number) => void;
-  readonly languages_new: () => number;
-  readonly languages_get: (a: number, b: number) => number;
-  readonly languages_add: (a: number, b: number) => void;
-  readonly __wbg_plutusmap_free: (a: number) => void;
-  readonly plutusmap_to_bytes: (a: number, b: number) => void;
-  readonly plutusmap_from_bytes: (a: number, b: number, c: number) => void;
-  readonly plutusmap_insert: (a: number, b: number, c: number) => number;
-  readonly plutusmap_get: (a: number, b: number) => number;
-  readonly plutusmap_keys: (a: number) => number;
-  readonly __wbg_plutusdata_free: (a: number) => void;
-  readonly plutusdata_to_bytes: (a: number, b: number) => void;
-  readonly plutusdata_from_bytes: (a: number, b: number, c: number) => void;
-  readonly plutusdata_new_constr_plutus_data: (a: number) => number;
-  readonly plutusdata_new_map: (a: number) => number;
-  readonly plutusdata_new_list: (a: number) => number;
-  readonly plutusdata_new_integer: (a: number) => number;
-  readonly plutusdata_new_bytes: (a: number, b: number) => number;
-  readonly plutusdata_kind: (a: number) => number;
-  readonly plutusdata_as_constr_plutus_data: (a: number) => number;
-  readonly plutusdata_as_map: (a: number) => number;
-  readonly plutusdata_as_list: (a: number) => number;
-  readonly plutusdata_as_integer: (a: number) => number;
-  readonly plutusdata_as_bytes: (a: number, b: number) => void;
-  readonly __wbg_plutuslist_free: (a: number) => void;
-  readonly plutuslist_to_bytes: (a: number, b: number) => void;
-  readonly plutuslist_from_bytes: (a: number, b: number, c: number) => void;
-  readonly plutuslist_new: () => number;
-  readonly plutuslist_get: (a: number, b: number) => number;
-  readonly plutuslist_add: (a: number, b: number) => void;
-  readonly __wbg_redeemer_free: (a: number) => void;
-  readonly redeemer_to_bytes: (a: number, b: number) => void;
-  readonly redeemer_from_bytes: (a: number, b: number, c: number) => void;
-  readonly redeemer_tag: (a: number) => number;
-  readonly redeemer_data: (a: number) => number;
-  readonly redeemer_ex_units: (a: number) => number;
-  readonly redeemer_new: (a: number, b: number, c: number, d: number) => number;
-  readonly redeemertag_to_bytes: (a: number, b: number) => void;
-  readonly redeemertag_from_bytes: (a: number, b: number, c: number) => void;
-  readonly redeemertag_new_cert: () => number;
-  readonly redeemertag_new_reward: () => number;
-  readonly redeemertag_kind: (a: number) => number;
-  readonly __wbg_redeemers_free: (a: number) => void;
-  readonly redeemers_to_bytes: (a: number, b: number) => void;
-  readonly redeemers_from_bytes: (a: number, b: number, c: number) => void;
-  readonly redeemers_new: () => number;
-  readonly redeemers_get: (a: number, b: number) => number;
-  readonly redeemers_add: (a: number, b: number) => void;
-  readonly redeemers_get_total_ex_units: (a: number, b: number) => void;
-  readonly strings_get: (a: number, b: number, c: number) => void;
-  readonly strings_add: (a: number, b: number, c: number) => void;
-  readonly __wbg_script_free: (a: number) => void;
-  readonly script_to_bytes: (a: number, b: number) => void;
-  readonly script_from_bytes: (a: number, b: number, c: number) => void;
-  readonly script_to_json: (a: number, b: number) => void;
-  readonly script_to_js_value: (a: number, b: number) => void;
-  readonly script_from_json: (a: number, b: number, c: number) => void;
-  readonly script_new_native: (a: number) => number;
-  readonly script_new_plutus_v1: (a: number) => number;
-  readonly script_new_plutus_v2: (a: number) => number;
-  readonly script_kind: (a: number) => number;
-  readonly script_as_native: (a: number) => number;
-  readonly script_as_plutus_v1: (a: number) => number;
-  readonly script_as_plutus_v2: (a: number) => number;
-  readonly script_hash: (a: number) => number;
-  readonly __wbg_scriptref_free: (a: number) => void;
-  readonly scriptref_new: (a: number) => number;
-  readonly scriptref_script: (a: number) => number;
-  readonly scriptref_to_bytes: (a: number, b: number) => void;
-  readonly scriptref_from_bytes: (a: number, b: number, c: number) => void;
-  readonly scriptref_to_js_value: (a: number, b: number) => void;
-  readonly scriptref_from_json: (a: number, b: number, c: number) => void;
-  readonly encode_json_str_to_plutus_datum: (a: number, b: number, c: number, d: number) => void;
-  readonly decode_plutus_datum_to_json_str: (a: number, b: number, c: number) => void;
-  readonly __wbg_plutusv2script_free: (a: number) => void;
-  readonly __wbg_plutusv1script_free: (a: number) => void;
-  readonly plutusv2script_new: (a: number, b: number) => number;
-  readonly plutusv2scripts_len: (a: number) => number;
-  readonly plutusv1scripts_len: (a: number) => number;
-  readonly languages_len: (a: number) => number;
-  readonly plutusmap_len: (a: number) => number;
-  readonly plutuslist_len: (a: number) => number;
-  readonly redeemers_len: (a: number) => number;
-  readonly strings_len: (a: number) => number;
-  readonly redeemertag_new_spend: () => number;
-  readonly redeemertag_new_mint: () => number;
-  readonly plutusv2script_to_json: (a: number, b: number) => void;
-  readonly scriptref_to_json: (a: number, b: number) => void;
-  readonly __wbg_plutusv2scripts_free: (a: number) => void;
   readonly __wbg_strings_free: (a: number) => void;
-  readonly plutusv2scripts_new: () => number;
-  readonly strings_new: () => number;
-  readonly plutusmap_new: () => number;
-  readonly plutusv2script_from_bytes: (a: number, b: number, c: number) => void;
-  readonly __wbg_redeemertag_free: (a: number) => void;
-  readonly exunits_mem: (a: number) => number;
-  readonly redeemer_index: (a: number) => number;
-  readonly plutusv2script_bytes: (a: number, b: number) => void;
-  readonly __wbg_inputbuilderresult_free: (a: number) => void;
-  readonly __wbg_singleinputbuilder_free: (a: number) => void;
-  readonly singleinputbuilder_new: (a: number, b: number) => number;
-  readonly singleinputbuilder_payment_key: (a: number, b: number) => void;
-  readonly singleinputbuilder_native_script: (a: number, b: number, c: number, d: number) => void;
-  readonly singleinputbuilder_plutus_script: (a: number, b: number, c: number, d: number, e: number) => void;
-  readonly __wbg_plutusscriptwitness_free: (a: number) => void;
-  readonly plutusscriptwitness_from_script: (a: number) => number;
-  readonly plutusscriptwitness_from_ref: (a: number) => number;
-  readonly plutusscriptwitness_script: (a: number) => number;
-  readonly plutusscriptwitness_hash: (a: number) => number;
-  readonly __wbg_partialplutuswitness_free: (a: number) => void;
-  readonly partialplutuswitness_new: (a: number, b: number) => number;
-  readonly partialplutuswitness_script: (a: number) => number;
-  readonly partialplutuswitness_data: (a: number) => number;
-  readonly __wbg_requiredwitnessset_free: (a: number) => void;
-  readonly requiredwitnessset_add_vkey: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_vkey_key_hash: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_bootstrap: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_script_ref: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_native_script: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_script_hash: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_plutus_script: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_plutus_datum: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_plutus_datum_hash: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_redeemer: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_redeemer_tag: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_all: (a: number, b: number) => void;
-  readonly requiredwitnessset_new: () => number;
-  readonly __wbg_transactionwitnesssetbuilder_free: (a: number) => void;
-  readonly transactionwitnesssetbuilder_get_vkeys: (a: number) => number;
-  readonly transactionwitnesssetbuilder_add_vkey: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_add_bootstrap: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_get_bootstraps: (a: number) => number;
-  readonly transactionwitnesssetbuilder_add_script: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_add_native_script: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_get_native_script: (a: number) => number;
-  readonly transactionwitnesssetbuilder_add_plutus_v1_script: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_get_plutus_v1_script: (a: number) => number;
-  readonly transactionwitnesssetbuilder_add_plutus_v2_script: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_get_plutus_v2_script: (a: number) => number;
-  readonly transactionwitnesssetbuilder_add_plutus_datum: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_get_plutus_datum: (a: number) => number;
-  readonly transactionwitnesssetbuilder_add_redeemer: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_add_redeemers: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_get_redeemer: (a: number) => number;
-  readonly transactionwitnesssetbuilder_add_required_wits: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_new: () => number;
-  readonly transactionwitnesssetbuilder_add_existing: (a: number, b: number) => void;
-  readonly transactionwitnesssetbuilder_build: (a: number) => number;
-  readonly transactionwitnesssetbuilder_remaining_wits: (a: number) => number;
-  readonly transactionwitnesssetbuilder_try_build: (a: number, b: number) => void;
-  readonly __wbg_nativescriptwitnessinfo_free: (a: number) => void;
-  readonly nativescriptwitnessinfo_num_signatures: (a: number) => number;
-  readonly nativescriptwitnessinfo_vkeys: (a: number) => number;
-  readonly nativescriptwitnessinfo_assume_signature_count: () => number;
-  readonly __wbg_mintbuilderresult_free: (a: number) => void;
-  readonly __wbg_singlemintbuilder_free: (a: number) => void;
-  readonly singlemintbuilder_new: (a: number) => number;
-  readonly singlemintbuilder_native_script: (a: number, b: number, c: number) => number;
-  readonly singlemintbuilder_plutus_script: (a: number, b: number, c: number) => number;
-  readonly __wbg_bignum_free: (a: number) => void;
-  readonly bignum_to_bytes: (a: number, b: number) => void;
-  readonly bignum_from_bytes: (a: number, b: number, c: number) => void;
-  readonly bignum_from_str: (a: number, b: number, c: number) => void;
-  readonly bignum_to_str: (a: number, b: number) => void;
-  readonly bignum_zero: () => number;
-  readonly bignum_is_zero: (a: number) => number;
-  readonly bignum_checked_mul: (a: number, b: number, c: number) => void;
-  readonly bignum_checked_add: (a: number, b: number, c: number) => void;
-  readonly bignum_checked_sub: (a: number, b: number, c: number) => void;
-  readonly bignum_clamped_sub: (a: number, b: number) => number;
-  readonly bignum_checked_div: (a: number, b: number, c: number) => void;
-  readonly bignum_checked_div_ceil: (a: number, b: number, c: number) => void;
-  readonly bignum_compare: (a: number, b: number) => number;
-  readonly __wbg_value_free: (a: number) => void;
-  readonly value_to_bytes: (a: number, b: number) => void;
-  readonly value_from_bytes: (a: number, b: number, c: number) => void;
-  readonly value_to_json: (a: number, b: number) => void;
-  readonly value_to_js_value: (a: number, b: number) => void;
-  readonly value_from_json: (a: number, b: number, c: number) => void;
-  readonly value_new: (a: number) => number;
-  readonly value_new_from_assets: (a: number) => number;
-  readonly value_zero: () => number;
-  readonly value_is_zero: (a: number) => number;
-  readonly value_coin: (a: number) => number;
-  readonly value_set_coin: (a: number, b: number) => void;
-  readonly value_multiasset: (a: number) => number;
-  readonly value_set_multiasset: (a: number, b: number) => void;
-  readonly value_checked_add: (a: number, b: number, c: number) => void;
-  readonly value_checked_sub: (a: number, b: number, c: number) => void;
-  readonly value_clamped_sub: (a: number, b: number) => number;
-  readonly value_compare: (a: number, b: number) => number;
-  readonly __wbg_int_free: (a: number) => void;
-  readonly int_to_bytes: (a: number, b: number) => void;
-  readonly int_from_bytes: (a: number, b: number, c: number) => void;
-  readonly int_new: (a: number) => number;
-  readonly int_new_negative: (a: number) => number;
-  readonly int_new_i32: (a: number) => number;
-  readonly int_is_positive: (a: number) => number;
-  readonly int_as_positive: (a: number) => number;
-  readonly int_as_negative: (a: number) => number;
-  readonly int_as_i32: (a: number, b: number) => void;
-  readonly int_as_i32_or_fail: (a: number, b: number) => void;
-  readonly int_to_str: (a: number, b: number) => void;
-  readonly int_from_str: (a: number, b: number, c: number) => void;
-  readonly __wbg_bigint_free: (a: number) => void;
-  readonly bigint_to_bytes: (a: number, b: number) => void;
-  readonly bigint_from_bytes: (a: number, b: number, c: number) => void;
-  readonly bigint_as_u64: (a: number) => number;
-  readonly bigint_as_int: (a: number) => number;
-  readonly bigint_from_str: (a: number, b: number, c: number) => void;
-  readonly bigint_to_str: (a: number, b: number) => void;
-  readonly __wbg_crc32_free: (a: number) => void;
-  readonly crc32_to_bytes: (a: number, b: number) => void;
-  readonly crc32_from_bytes: (a: number, b: number, c: number) => void;
-  readonly crc32_to_json: (a: number, b: number) => void;
-  readonly crc32_to_js_value: (a: number, b: number) => void;
-  readonly crc32_from_json: (a: number, b: number, c: number) => void;
-  readonly crc32_val: (a: number) => number;
-  readonly int_as_i32_or_nothing: (a: number, b: number) => void;
-  readonly requiredwitnessset_add_vkey_key: (a: number, b: number) => void;
-  readonly crc32_from_val: (a: number) => number;
-  readonly __wbg_metadatamap_free: (a: number) => void;
-  readonly metadatamap_to_bytes: (a: number, b: number) => void;
-  readonly metadatamap_from_bytes: (a: number, b: number, c: number) => void;
-  readonly metadatamap_insert: (a: number, b: number, c: number) => number;
-  readonly metadatamap_insert_str: (a: number, b: number, c: number, d: number, e: number) => void;
-  readonly metadatamap_insert_i32: (a: number, b: number, c: number) => number;
-  readonly metadatamap_get: (a: number, b: number, c: number) => void;
-  readonly metadatamap_get_str: (a: number, b: number, c: number, d: number) => void;
-  readonly metadatamap_get_i32: (a: number, b: number, c: number) => void;
-  readonly metadatamap_has: (a: number, b: number) => number;
-  readonly metadatamap_keys: (a: number) => number;
-  readonly __wbg_metadatalist_free: (a: number) => void;
-  readonly metadatalist_to_bytes: (a: number, b: number) => void;
-  readonly metadatalist_from_bytes: (a: number, b: number, c: number) => void;
-  readonly metadatalist_new: () => number;
-  readonly metadatalist_len: (a: number) => number;
-  readonly metadatalist_get: (a: number, b: number) => number;
-  readonly metadatalist_add: (a: number, b: number) => void;
-  readonly __wbg_transactionmetadatum_free: (a: number) => void;
-  readonly transactionmetadatum_to_bytes: (a: number, b: number) => void;
-  readonly transactionmetadatum_from_bytes: (a: number, b: number, c: number) => void;
-  readonly transactionmetadatum_new_map: (a: number) => number;
-  readonly transactionmetadatum_new_list: (a: number) => number;
-  readonly transactionmetadatum_new_int: (a: number) => number;
-  readonly transactionmetadatum_new_bytes: (a: number, b: number, c: number) => void;
-  readonly transactionmetadatum_new_text: (a: number, b: number, c: number) => void;
-  readonly transactionmetadatum_kind: (a: number) => number;
-  readonly transactionmetadatum_as_map: (a: number, b: number) => void;
-  readonly transactionmetadatum_as_list: (a: number, b: number) => void;
-  readonly transactionmetadatum_as_int: (a: number, b: number) => void;
-  readonly transactionmetadatum_as_bytes: (a: number, b: number) => void;
-  readonly transactionmetadatum_as_text: (a: number, b: number) => void;
-  readonly __wbg_transactionmetadatumlabels_free: (a: number) => void;
-  readonly transactionmetadatumlabels_to_bytes: (a: number, b: number) => void;
-  readonly transactionmetadatumlabels_from_bytes: (a: number, b: number, c: number) => void;
-  readonly transactionmetadatumlabels_get: (a: number, b: number) => number;
-  readonly transactionmetadatumlabels_add: (a: number, b: number) => void;
-  readonly __wbg_generaltransactionmetadata_free: (a: number) => void;
-  readonly generaltransactionmetadata_to_bytes: (a: number, b: number) => void;
-  readonly generaltransactionmetadata_from_bytes: (a: number, b: number, c: number) => void;
-  readonly generaltransactionmetadata_to_json: (a: number, b: number) => void;
-  readonly generaltransactionmetadata_to_js_value: (a: number, b: number) => void;
-  readonly generaltransactionmetadata_from_json: (a: number, b: number, c: number) => void;
-  readonly generaltransactionmetadata_new: () => number;
-  readonly generaltransactionmetadata_len: (a: number) => number;
-  readonly generaltransactionmetadata_insert: (a: number, b: number, c: number) => number;
-  readonly generaltransactionmetadata_get: (a: number, b: number) => number;
-  readonly generaltransactionmetadata_keys: (a: number) => number;
-  readonly __wbg_auxiliarydata_free: (a: number) => void;
-  readonly auxiliarydata_to_bytes: (a: number, b: number) => void;
-  readonly auxiliarydata_from_bytes: (a: number, b: number, c: number) => void;
-  readonly auxiliarydata_to_json: (a: number, b: number) => void;
-  readonly auxiliarydata_to_js_value: (a: number, b: number) => void;
-  readonly auxiliarydata_from_json: (a: number, b: number, c: number) => void;
-  readonly auxiliarydata_new: () => number;
-  readonly auxiliarydata_metadata: (a: number) => number;
-  readonly auxiliarydata_set_metadata: (a: number, b: number) => void;
-  readonly auxiliarydata_native_scripts: (a: number) => number;
-  readonly auxiliarydata_set_native_scripts: (a: number, b: number) => void;
-  readonly auxiliarydata_plutus_v1_scripts: (a: number) => number;
-  readonly auxiliarydata_set_plutus_v1_scripts: (a: number, b: number) => void;
-  readonly auxiliarydata_plutus_v2_scripts: (a: number) => number;
-  readonly auxiliarydata_set_plutus_v2_scripts: (a: number, b: number) => void;
-  readonly encode_arbitrary_bytes_as_metadatum: (a: number, b: number) => number;
-  readonly decode_arbitrary_bytes_from_metadatum: (a: number, b: number) => void;
-  readonly encode_json_str_to_metadatum: (a: number, b: number, c: number, d: number) => void;
-  readonly decode_metadatum_to_json_str: (a: number, b: number, c: number) => void;
-  readonly __wbg_redeemerwitnesskey_free: (a: number) => void;
-  readonly redeemerwitnesskey_tag: (a: number) => number;
-  readonly redeemerwitnesskey_index: (a: number) => number;
-  readonly redeemerwitnesskey_new: (a: number, b: number) => number;
-  readonly __wbg_untaggedredeemer_free: (a: number) => void;
-  readonly untaggedredeemer_datum: (a: number) => number;
-  readonly untaggedredeemer_ex_units: (a: number) => number;
-  readonly untaggedredeemer_new: (a: number, b: number) => number;
-  readonly __wbg_withdrawalbuilderresult_free: (a: number) => void;
-  readonly __wbg_singlewithdrawalbuilder_free: (a: number) => void;
-  readonly singlewithdrawalbuilder_new: (a: number, b: number) => number;
-  readonly singlewithdrawalbuilder_payment_key: (a: number, b: number) => void;
-  readonly singlewithdrawalbuilder_native_script: (a: number, b: number, c: number, d: number) => void;
-  readonly singlewithdrawalbuilder_plutus_script: (a: number, b: number, c: number, d: number) => void;
-  readonly generaltransactionmetadata_add: (a: number, b: number) => void;
-  readonly generaltransactionmetadata_add_json_metadatum_with_schema: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
-  readonly auxiliarydata_add_metadatum: (a: number, b: number, c: number) => void;
-  readonly auxiliarydata_add_json_metadatum_with_schema: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
-  readonly auxiliarydata_add: (a: number, b: number) => void;
-  readonly transactionmetadatumlabels_len: (a: number) => number;
-  readonly metadatamap_len: (a: number) => number;
-  readonly metadatamap_new: () => number;
-  readonly transactionmetadatumlabels_new: () => number;
-  readonly __wbg_transactionunspentoutput_free: (a: number) => void;
-  readonly transactionunspentoutput_to_bytes: (a: number, b: number) => void;
-  readonly transactionunspentoutput_from_bytes: (a: number, b: number, c: number) => void;
-  readonly transactionunspentoutput_new: (a: number, b: number) => number;
-  readonly transactionunspentoutput_input: (a: number) => number;
-  readonly transactionunspentoutput_output: (a: number) => number;
-  readonly __wbg_transactionunspentoutputs_free: (a: number) => void;
-  readonly transactionunspentoutputs_new: () => number;
-  readonly transactionunspentoutputs_is_empty: (a: number) => number;
-  readonly transactionunspentoutputs_len: (a: number) => number;
-  readonly transactionunspentoutputs_get: (a: number, b: number) => number;
-  readonly transactionunspentoutputs_add: (a: number, b: number) => void;
-  readonly hash_auxiliary_data: (a: number) => number;
-  readonly hash_transaction: (a: number) => number;
-  readonly hash_plutus_data: (a: number) => number;
-  readonly hash_script_data: (a: number, b: number, c: number) => number;
-  readonly calc_script_data_hash: (a: number, b: number, c: number, d: number, e: number) => void;
-  readonly make_daedalus_bootstrap_witness: (a: number, b: number, c: number) => number;
-  readonly make_icarus_bootstrap_witness: (a: number, b: number, c: number) => number;
-  readonly __wbg_hdaddresspayload_free: (a: number) => void;
-  readonly hdaddresspayload_to_bytes: (a: number, b: number) => void;
-  readonly hdaddresspayload_from_bytes: (a: number, b: number, c: number) => void;
-  readonly stakeholderid_from_bytes: (a: number, b: number, c: number) => void;
-  readonly stakeholderid_from_bech32: (a: number, b: number, c: number) => void;
-  readonly stakeholderid_from_hex: (a: number, b: number, c: number) => void;
-  readonly __wbg_addressid_free: (a: number) => void;
-  readonly addressid_from_bytes: (a: number, b: number, c: number) => void;
-  readonly addressid_to_bytes: (a: number, b: number) => void;
-  readonly addressid_to_bech32: (a: number, b: number, c: number, d: number) => void;
-  readonly addressid_from_bech32: (a: number, b: number, c: number) => void;
-  readonly addressid_to_hex: (a: number, b: number) => void;
-  readonly addressid_from_hex: (a: number, b: number, c: number) => void;
-  readonly __wbg_addrattributes_free: (a: number) => void;
-  readonly addrattributes_to_bytes: (a: number, b: number) => void;
-  readonly addrattributes_from_bytes: (a: number, b: number, c: number) => void;
-  readonly addrattributes_to_json: (a: number, b: number) => void;
-  readonly addrattributes_to_js_value: (a: number, b: number) => void;
-  readonly addrattributes_from_json: (a: number, b: number, c: number) => void;
-  readonly addrattributes_set_stake_distribution: (a: number, b: number) => void;
-  readonly addrattributes_stake_distribution: (a: number) => number;
-  readonly addrattributes_set_derivation_path: (a: number, b: number) => void;
-  readonly addrattributes_derivation_path: (a: number) => number;
-  readonly addrattributes_set_protocol_magic: (a: number, b: number) => void;
-  readonly addrattributes_protocol_magic: (a: number) => number;
-  readonly addrattributes_new: () => number;
-  readonly stakedistribution_to_bytes: (a: number, b: number) => void;
-  readonly stakedistribution_from_bytes: (a: number, b: number, c: number) => void;
-  readonly stakedistribution_to_json: (a: number, b: number) => void;
-  readonly stakedistribution_to_js_value: (a: number, b: number) => void;
-  readonly stakedistribution_from_json: (a: number, b: number, c: number) => void;
-  readonly stakedistribution_new_bootstrap_era_distr: () => number;
-  readonly stakedistribution_new_single_key_distr: (a: number) => number;
-  readonly stakedistribution_kind: (a: number) => number;
-  readonly stakedistribution_as_bootstrap_era_distr: (a: number) => number;
-  readonly stakedistribution_as_single_key_distr: (a: number) => number;
-  readonly __wbg_byronaddress_free: (a: number) => void;
-  readonly byronaddress_to_bytes: (a: number, b: number) => void;
-  readonly byronaddress_from_bytes: (a: number, b: number, c: number) => void;
-  readonly byronaddress_to_json: (a: number, b: number) => void;
-  readonly byronaddress_to_js_value: (a: number, b: number) => void;
-  readonly byronaddress_from_json: (a: number, b: number, c: number) => void;
-  readonly byronaddress_addr: (a: number, b: number) => void;
-  readonly byronaddress_crc32: (a: number) => number;
-  readonly byronaddress_checksum_from_bytes: (a: number, b: number) => number;
-  readonly byronaddress_new: (a: number, b: number, c: number, d: number) => void;
-  readonly __wbg_addresscontent_free: (a: number) => void;
-  readonly addresscontent_to_bytes: (a: number, b: number) => void;
-  readonly addresscontent_from_bytes: (a: number, b: number, c: number) => void;
-  readonly addresscontent_to_json: (a: number, b: number) => void;
-  readonly addresscontent_to_js_value: (a: number, b: number) => void;
-  readonly addresscontent_from_json: (a: number, b: number, c: number) => void;
-  readonly addresscontent_address_id: (a: number) => number;
-  readonly addresscontent_addr_attr: (a: number) => number;
-  readonly addresscontent_addr_type: (a: number) => number;
-  readonly addresscontent_new: (a: number, b: number, c: number) => number;
-  readonly __wbg_byronaddrtype_free: (a: number) => void;
-  readonly byronaddrtype_to_bytes: (a: number, b: number) => void;
-  readonly byronaddrtype_from_bytes: (a: number, b: number, c: number) => void;
-  readonly byronaddrtype_to_json: (a: number, b: number) => void;
-  readonly byronaddrtype_to_js_value: (a: number, b: number) => void;
-  readonly byronaddrtype_from_json: (a: number, b: number, c: number) => void;
-  readonly byronaddrtype_new_ATPubKey: () => number;
-  readonly byronaddrtype_new_ATScript: () => number;
-  readonly byronaddrtype_new_ATRedeem: () => number;
-  readonly byronaddrtype_kind: (a: number) => number;
-  readonly bootstraperadistr_to_bytes: (a: number, b: number) => void;
-  readonly bootstraperadistr_from_bytes: (a: number, b: number, c: number) => void;
-  readonly bootstraperadistr_to_json: (a: number, b: number) => void;
-  readonly bootstraperadistr_to_js_value: (a: number, b: number) => void;
-  readonly bootstraperadistr_from_json: (a: number, b: number, c: number) => void;
-  readonly singlekeydistr_to_bytes: (a: number, b: number) => void;
-  readonly singlekeydistr_from_bytes: (a: number, b: number, c: number) => void;
-  readonly singlekeydistr_to_json: (a: number, b: number) => void;
-  readonly singlekeydistr_to_js_value: (a: number, b: number) => void;
-  readonly singlekeydistr_from_json: (a: number, b: number, c: number) => void;
-  readonly singlekeydistr_new: (a: number) => number;
-  readonly __wbg_byronscript_free: (a: number) => void;
-  readonly byronscript_to_bytes: (a: number, b: number) => void;
-  readonly byronscript_from_bytes: (a: number, b: number, c: number) => void;
-  readonly __wbg_spendingdata_free: (a: number) => void;
-  readonly spendingdata_to_bytes: (a: number, b: number) => void;
-  readonly spendingdata_from_bytes: (a: number, b: number, c: number) => void;
-  readonly spendingdata_to_json: (a: number, b: number) => void;
-  readonly spendingdata_to_js_value: (a: number, b: number) => void;
-  readonly spendingdata_from_json: (a: number, b: number, c: number) => void;
-  readonly spendingdata_new_spending_data_pub_key: (a: number) => number;
-  readonly spendingdata_new_spending_data_script: (a: number) => number;
-  readonly spendingdata_new_spending_data_redeem: (a: number) => number;
-  readonly spendingdata_as_spending_data_pub_key: (a: number) => number;
-  readonly spendingdata_as_spending_data_script: (a: number) => number;
-  readonly spendingdata_as_spending_data_redeem: (a: number) => number;
-  readonly __wbg_spendingdatapubkeyasd_free: (a: number) => void;
-  readonly spendingdatapubkeyasd_to_bytes: (a: number, b: number) => void;
-  readonly spendingdatapubkeyasd_from_bytes: (a: number, b: number, c: number) => void;
-  readonly spendingdatapubkeyasd_to_json: (a: number, b: number) => void;
-  readonly spendingdatapubkeyasd_to_js_value: (a: number, b: number) => void;
-  readonly spendingdatapubkeyasd_from_json: (a: number, b: number, c: number) => void;
-  readonly spendingdatapubkeyasd_public_ed25519_bip32: (a: number) => number;
-  readonly spendingdatapubkeyasd_new: (a: number) => number;
-  readonly spendingdataredeemasd_to_bytes: (a: number, b: number) => void;
-  readonly spendingdataredeemasd_from_bytes: (a: number, b: number, c: number) => void;
-  readonly spendingdataredeemasd_to_json: (a: number, b: number) => void;
-  readonly spendingdataredeemasd_to_js_value: (a: number, b: number) => void;
-  readonly spendingdataredeemasd_from_json: (a: number, b: number, c: number) => void;
-  readonly spendingdataredeemasd_public_ed25519: (a: number) => number;
-  readonly spendingdataredeemasd_new: (a: number) => number;
-  readonly spendingdatascriptasd_to_bytes: (a: number, b: number) => void;
-  readonly spendingdatascriptasd_from_bytes: (a: number, b: number, c: number) => void;
-  readonly spendingdatascriptasd_to_json: (a: number, b: number) => void;
-  readonly spendingdatascriptasd_to_js_value: (a: number, b: number) => void;
-  readonly spendingdatascriptasd_from_json: (a: number, b: number, c: number) => void;
-  readonly byrontxout_to_bytes: (a: number, b: number) => void;
-  readonly byrontxout_from_bytes: (a: number, b: number, c: number) => void;
-  readonly byrontxout_to_json: (a: number, b: number) => void;
-  readonly byrontxout_to_js_value: (a: number, b: number) => void;
-  readonly byrontxout_from_json: (a: number, b: number, c: number) => void;
-  readonly __wbg_byrontxout_free: (a: number) => void;
-  readonly byrontxout_address: (a: number) => number;
-  readonly byrontxout_amount: (a: number) => number;
-  readonly byrontxout_new: (a: number, b: number) => number;
-  readonly stakeholderid_to_hex: (a: number, b: number) => void;
-  readonly spendingdata_kind: (a: number) => number;
-  readonly singlekeydistr_stakeholder_id: (a: number) => number;
-  readonly spendingdatascriptasd_script: (a: number) => number;
-  readonly spendingdatascriptasd_new: (a: number) => number;
-  readonly bootstraperadistr_new: () => number;
-  readonly __wbg_bootstraperadistr_free: (a: number) => void;
-  readonly __wbg_stakeholderid_free: (a: number) => void;
-  readonly __wbg_protocolmagic_free: (a: number) => void;
-  readonly __wbg_singlekeydistr_free: (a: number) => void;
-  readonly __wbg_stakedistribution_free: (a: number) => void;
-  readonly __wbg_spendingdataredeemasd_free: (a: number) => void;
-  readonly __wbg_spendingdatascriptasd_free: (a: number) => void;
-  readonly stakeholderid_to_bytes: (a: number, b: number) => void;
-  readonly stakeholderid_to_bech32: (a: number, b: number, c: number, d: number) => void;
-  readonly __wbg_transactionoutputbuilder_free: (a: number) => void;
-  readonly transactionoutputbuilder_new: () => number;
-  readonly transactionoutputbuilder_with_address: (a: number, b: number) => number;
-  readonly transactionoutputbuilder_with_communication_data: (a: number, b: number) => number;
-  readonly transactionoutputbuilder_with_data: (a: number, b: number) => number;
-  readonly transactionoutputbuilder_with_reference_script: (a: number, b: number) => number;
-  readonly transactionoutputbuilder_next: (a: number, b: number) => void;
-  readonly __wbg_transactionoutputamountbuilder_free: (a: number) => void;
-  readonly transactionoutputamountbuilder_with_value: (a: number, b: number) => number;
-  readonly transactionoutputamountbuilder_with_coin: (a: number, b: number) => number;
-  readonly transactionoutputamountbuilder_with_coin_and_asset: (a: number, b: number, c: number) => number;
-  readonly transactionoutputamountbuilder_with_asset_and_min_required_coin: (a: number, b: number, c: number, d: number, e: number) => void;
-  readonly transactionoutputamountbuilder_build: (a: number, b: number) => void;
-  readonly __wbg_singleoutputbuilderresult_free: (a: number) => void;
-  readonly singleoutputbuilderresult_new: (a: number) => number;
-  readonly singleoutputbuilderresult_set_communication_datum: (a: number, b: number) => void;
-  readonly singleoutputbuilderresult_output: (a: number) => number;
-  readonly singleoutputbuilderresult_communication_datum: (a: number) => number;
-  readonly encrypt_with_password: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number) => void;
-  readonly decrypt_with_password: (a: number, b: number, c: number, d: number, e: number) => void;
-  readonly __wbg_certificatebuilderresult_free: (a: number) => void;
-  readonly __wbg_singlecertificatebuilder_free: (a: number) => void;
-  readonly singlecertificatebuilder_new: (a: number) => number;
-  readonly singlecertificatebuilder_skip_witness: (a: number) => number;
-  readonly singlecertificatebuilder_payment_key: (a: number, b: number) => void;
-  readonly singlecertificatebuilder_native_script: (a: number, b: number, c: number, d: number) => void;
-  readonly singlecertificatebuilder_plutus_script: (a: number, b: number, c: number, d: number) => void;
-  readonly __wbg_transactionbuilderconfig_free: (a: number) => void;
-  readonly __wbg_transactionbuilderconfigbuilder_free: (a: number) => void;
-  readonly transactionbuilderconfigbuilder_new: () => number;
-  readonly transactionbuilderconfigbuilder_fee_algo: (a: number, b: number) => number;
-  readonly transactionbuilderconfigbuilder_coins_per_utxo_byte: (a: number, b: number) => number;
-  readonly transactionbuilderconfigbuilder_coins_per_utxo_word: (a: number, b: number) => number;
-  readonly transactionbuilderconfigbuilder_pool_deposit: (a: number, b: number) => number;
-  readonly transactionbuilderconfigbuilder_key_deposit: (a: number, b: number) => number;
-  readonly transactionbuilderconfigbuilder_max_value_size: (a: number, b: number) => number;
-  readonly transactionbuilderconfigbuilder_max_tx_size: (a: number, b: number) => number;
-  readonly transactionbuilderconfigbuilder_prefer_pure_change: (a: number, b: number) => number;
-  readonly transactionbuilderconfigbuilder_ex_unit_prices: (a: number, b: number) => number;
-  readonly transactionbuilderconfigbuilder_costmdls: (a: number, b: number) => number;
-  readonly transactionbuilderconfigbuilder_collateral_percentage: (a: number, b: number) => number;
-  readonly transactionbuilderconfigbuilder_max_collateral_inputs: (a: number, b: number) => number;
-  readonly transactionbuilderconfigbuilder_build: (a: number, b: number) => void;
-  readonly __wbg_transactionbuilder_free: (a: number) => void;
-  readonly transactionbuilder_select_utxos: (a: number, b: number, c: number) => void;
-  readonly transactionbuilder_add_input: (a: number, b: number, c: number) => void;
-  readonly transactionbuilder_add_utxo: (a: number, b: number) => void;
-  readonly transactionbuilder_fee_for_input: (a: number, b: number, c: number) => void;
-  readonly transactionbuilder_add_reference_input: (a: number, b: number) => void;
-  readonly transactionbuilder_add_output: (a: number, b: number, c: number) => void;
-  readonly transactionbuilder_fee_for_output: (a: number, b: number, c: number) => void;
-  readonly transactionbuilder_set_fee: (a: number, b: number) => void;
-  readonly transactionbuilder_set_ttl: (a: number, b: number) => void;
-  readonly transactionbuilder_set_validity_start_interval: (a: number, b: number) => void;
-  readonly transactionbuilder_get_certs: (a: number) => number;
-  readonly transactionbuilder_add_cert: (a: number, b: number) => void;
-  readonly transactionbuilder_get_withdrawals: (a: number) => number;
-  readonly transactionbuilder_add_withdrawal: (a: number, b: number) => void;
-  readonly transactionbuilder_get_auxiliary_data: (a: number) => number;
-  readonly transactionbuilder_set_auxiliary_data: (a: number, b: number) => void;
-  readonly transactionbuilder_add_auxiliary_data: (a: number, b: number) => void;
-  readonly transactionbuilder_add_mint: (a: number, b: number) => void;
-  readonly transactionbuilder_get_mint: (a: number) => number;
-  readonly transactionbuilder_new: (a: number) => number;
-  readonly transactionbuilder_add_collateral: (a: number, b: number, c: number) => void;
-  readonly transactionbuilder_collateral: (a: number) => number;
-  readonly transactionbuilder_add_required_signer: (a: number, b: number) => void;
-  readonly transactionbuilder_required_signers: (a: number) => number;
-  readonly transactionbuilder_set_network_id: (a: number, b: number) => void;
-  readonly transactionbuilder_network_id: (a: number) => number;
-  readonly transactionbuilder_get_explicit_input: (a: number, b: number) => void;
-  readonly transactionbuilder_get_implicit_input: (a: number, b: number) => void;
-  readonly transactionbuilder_get_total_input: (a: number, b: number) => void;
-  readonly transactionbuilder_get_total_output: (a: number, b: number) => void;
-  readonly transactionbuilder_get_explicit_output: (a: number, b: number) => void;
-  readonly transactionbuilder_get_deposit: (a: number, b: number) => void;
-  readonly transactionbuilder_get_fee_if_set: (a: number) => number;
-  readonly transactionbuilder_set_collateral_return: (a: number, b: number) => void;
-  readonly transactionbuilder_full_size: (a: number, b: number) => void;
-  readonly transactionbuilder_output_sizes: (a: number, b: number) => void;
-  readonly transactionbuilder_build_for_evaluation: (a: number, b: number, c: number, d: number) => void;
-  readonly transactionbuilder_build: (a: number, b: number, c: number, d: number) => void;
-  readonly transactionbuilder_set_exunits: (a: number, b: number, c: number) => void;
-  readonly transactionbuilder_min_fee: (a: number, b: number, c: number) => void;
-  readonly __wbg_txredeemerbuilder_free: (a: number) => void;
-  readonly txredeemerbuilder_build: (a: number, b: number) => void;
-  readonly txredeemerbuilder_set_exunits: (a: number, b: number, c: number) => void;
-  readonly txredeemerbuilder_auxiliary_data: (a: number) => number;
-  readonly txredeemerbuilder_draft_tx: (a: number) => number;
-  readonly __wbg_signedtxbuilder_free: (a: number) => void;
-  readonly signedtxbuilder_new_with_data: (a: number, b: number, c: number, d: number) => number;
-  readonly signedtxbuilder_new_without_data: (a: number, b: number, c: number) => number;
-  readonly signedtxbuilder_build_checked: (a: number, b: number) => void;
-  readonly signedtxbuilder_build_unchecked: (a: number) => number;
-  readonly signedtxbuilder_add_vkey: (a: number, b: number) => void;
-  readonly signedtxbuilder_add_bootstrap: (a: number, b: number) => void;
-  readonly signedtxbuilder_body: (a: number) => number;
-  readonly signedtxbuilder_witness_set: (a: number) => number;
-  readonly signedtxbuilder_is_valid: (a: number) => number;
-  readonly signedtxbuilder_auxiliary_data: (a: number) => number;
-  readonly compatible_min_ada_required: (a: number, b: number, c: number, d: number) => void;
-  readonly min_ada_required: (a: number, b: number, c: number) => void;
-  readonly stakedistribution_new_single_key: (a: number) => number;
-  readonly stakeholderid_new: (a: number) => number;
-  readonly addrattributes_new_bootstrap_era: (a: number, b: number) => number;
-  readonly addrattributes_new_single_key: (a: number, b: number, c: number) => number;
-  readonly addressid_new: (a: number, b: number, c: number) => number;
-  readonly addresscontent_hash_and_create: (a: number, b: number, c: number) => number;
-  readonly addresscontent_new_redeem: (a: number, b: number) => number;
-  readonly addresscontent_new_simple: (a: number, b: number) => number;
-  readonly addresscontent_to_address: (a: number) => number;
-  readonly addresscontent_byron_protocol_magic: (a: number) => number;
-  readonly addresscontent_network_id: (a: number, b: number) => void;
-  readonly addresscontent_icarus_from_key: (a: number, b: number) => number;
-  readonly addresscontent_identical_with_pubkey: (a: number, b: number) => number;
-  readonly byronaddress_to_base58: (a: number, b: number) => void;
-  readonly byronaddress_from_base58: (a: number, b: number, c: number) => void;
-  readonly byronaddress_address_content: (a: number) => number;
-  readonly byronaddress_is_valid: (a: number, b: number) => number;
-  readonly byronaddress_to_address: (a: number) => number;
-  readonly byronaddress_from_address: (a: number) => number;
-  readonly protocolmagic_new: (a: number) => number;
-  readonly protocolmagic_value: (a: number) => number;
-  readonly txredeemerbuilder_draft_body: (a: number) => number;
-  readonly __wbg_networkinfo_free: (a: number) => void;
-  readonly networkinfo_new: (a: number, b: number) => number;
-  readonly networkinfo_network_id: (a: number) => number;
-  readonly networkinfo_protocol_magic: (a: number) => number;
-  readonly networkinfo_testnet: () => number;
-  readonly networkinfo_mainnet: () => number;
-  readonly stakecredential_from_keyhash: (a: number) => number;
-  readonly stakecredential_from_scripthash: (a: number) => number;
-  readonly stakecredential_to_keyhash: (a: number) => number;
-  readonly stakecredential_to_scripthash: (a: number) => number;
-  readonly stakecredential_kind: (a: number) => number;
-  readonly stakecredential_to_bytes: (a: number, b: number) => void;
-  readonly stakecredential_from_bytes: (a: number, b: number, c: number) => void;
-  readonly stakecredential_to_json: (a: number, b: number) => void;
-  readonly stakecredential_to_js_value: (a: number, b: number) => void;
-  readonly stakecredential_from_json: (a: number, b: number, c: number) => void;
-  readonly __wbg_address_free: (a: number) => void;
-  readonly address_from_bytes: (a: number, b: number, c: number) => void;
-  readonly address_to_json: (a: number, b: number) => void;
-  readonly address_to_js_value: (a: number, b: number) => void;
-  readonly address_from_json: (a: number, b: number, c: number) => void;
-  readonly address_header: (a: number) => number;
-  readonly address_header_matches_kind: (a: number, b: number) => number;
-  readonly address_to_bytes: (a: number, b: number) => void;
-  readonly address_to_bech32: (a: number, b: number, c: number, d: number) => void;
-  readonly address_from_bech32: (a: number, b: number, c: number) => void;
-  readonly address_is_valid_bech32: (a: number, b: number) => number;
-  readonly address_is_valid_byron: (a: number, b: number) => number;
-  readonly address_is_valid: (a: number, b: number) => number;
-  readonly address_network_id: (a: number, b: number) => void;
-  readonly address_as_byron: (a: number) => number;
-  readonly address_as_reward: (a: number) => number;
-  readonly address_as_pointer: (a: number) => number;
-  readonly address_as_enterprise: (a: number) => number;
-  readonly address_as_base: (a: number) => number;
-  readonly address_payment_cred: (a: number) => number;
-  readonly address_staking_cred: (a: number) => number;
-  readonly __wbg_baseaddress_free: (a: number) => void;
-  readonly baseaddress_new: (a: number, b: number, c: number) => number;
-  readonly baseaddress_payment_cred: (a: number) => number;
-  readonly baseaddress_stake_cred: (a: number) => number;
-  readonly baseaddress_to_address: (a: number) => number;
-  readonly __wbg_enterpriseaddress_free: (a: number) => void;
-  readonly enterpriseaddress_new: (a: number, b: number) => number;
-  readonly enterpriseaddress_to_address: (a: number) => number;
-  readonly rewardaddress_to_address: (a: number) => number;
-  readonly __wbg_pointer_free: (a: number) => void;
-  readonly pointer_new: (a: number, b: number, c: number) => number;
-  readonly pointer_slot: (a: number) => number;
-  readonly pointer_tx_index: (a: number) => number;
-  readonly pointer_cert_index: (a: number) => number;
-  readonly __wbg_pointeraddress_free: (a: number) => void;
-  readonly pointeraddress_new: (a: number, b: number, c: number) => number;
-  readonly pointeraddress_payment_cred: (a: number) => number;
-  readonly pointeraddress_stake_pointer: (a: number) => number;
-  readonly pointeraddress_to_address: (a: number) => number;
-  readonly __wbg_linearfee_free: (a: number) => void;
-  readonly linearfee_constant: (a: number) => number;
-  readonly linearfee_coefficient: (a: number) => number;
-  readonly linearfee_new: (a: number, b: number) => number;
-  readonly min_script_fee: (a: number, b: number, c: number) => void;
-  readonly min_no_script_fee: (a: number, b: number, c: number) => void;
-  readonly min_fee: (a: number, b: number, c: number, d: number) => void;
-  readonly baseaddress_from_address: (a: number) => number;
-  readonly __wbg_stakecredential_free: (a: number) => void;
-  readonly __wbg_rewardaddress_free: (a: number) => void;
-  readonly rewardaddress_new: (a: number, b: number) => number;
-  readonly enterpriseaddress_payment_cred: (a: number) => number;
-  readonly rewardaddress_payment_cred: (a: number) => number;
-  readonly pointeraddress_from_address: (a: number) => number;
-  readonly enterpriseaddress_from_address: (a: number) => number;
-  readonly rewardaddress_from_address: (a: number) => number;
-  readonly __wbg_bip32privatekey_free: (a: number) => void;
-  readonly bip32privatekey_derive: (a: number, b: number) => number;
-  readonly bip32privatekey_from_128_xprv: (a: number, b: number, c: number) => void;
-  readonly bip32privatekey_to_128_xprv: (a: number, b: number) => void;
-  readonly bip32privatekey_generate_ed25519_bip32: (a: number) => void;
-  readonly bip32privatekey_to_raw_key: (a: number) => number;
-  readonly bip32privatekey_to_public: (a: number) => number;
-  readonly bip32privatekey_from_bytes: (a: number, b: number, c: number) => void;
-  readonly bip32privatekey_as_bytes: (a: number, b: number) => void;
-  readonly bip32privatekey_from_bech32: (a: number, b: number, c: number) => void;
-  readonly bip32privatekey_to_bech32: (a: number, b: number) => void;
-  readonly bip32privatekey_from_bip39_entropy: (a: number, b: number, c: number, d: number) => number;
-  readonly bip32privatekey_chaincode: (a: number, b: number) => void;
-  readonly __wbg_bip32publickey_free: (a: number) => void;
-  readonly bip32publickey_derive: (a: number, b: number, c: number) => void;
-  readonly bip32publickey_to_raw_key: (a: number) => number;
-  readonly bip32publickey_from_bytes: (a: number, b: number, c: number) => void;
-  readonly bip32publickey_as_bytes: (a: number, b: number) => void;
-  readonly bip32publickey_from_bech32: (a: number, b: number, c: number) => void;
-  readonly bip32publickey_to_bech32: (a: number, b: number) => void;
-  readonly bip32publickey_chaincode: (a: number, b: number) => void;
-  readonly __wbg_privatekey_free: (a: number) => void;
-  readonly privatekey_to_public: (a: number) => number;
-  readonly privatekey_generate_ed25519: (a: number) => void;
-  readonly privatekey_generate_ed25519extended: (a: number) => void;
-  readonly privatekey_from_bech32: (a: number, b: number, c: number) => void;
-  readonly privatekey_to_bech32: (a: number, b: number) => void;
-  readonly privatekey_as_bytes: (a: number, b: number) => void;
-  readonly privatekey_from_extended_bytes: (a: number, b: number, c: number) => void;
-  readonly privatekey_from_normal_bytes: (a: number, b: number, c: number) => void;
-  readonly privatekey_sign: (a: number, b: number, c: number) => number;
-  readonly publickey_from_bech32: (a: number, b: number, c: number) => void;
-  readonly publickey_to_bech32: (a: number, b: number) => void;
-  readonly publickey_from_bytes: (a: number, b: number, c: number) => void;
-  readonly publickey_verify: (a: number, b: number, c: number, d: number) => number;
-  readonly publickey_hash: (a: number) => number;
-  readonly vkey_to_bytes: (a: number, b: number) => void;
-  readonly vkey_from_bytes: (a: number, b: number, c: number) => void;
-  readonly vkey_new: (a: number) => number;
-  readonly vkeys_get: (a: number, b: number) => number;
-  readonly vkeys_add: (a: number, b: number) => void;
-  readonly vkeywitness_to_bytes: (a: number, b: number) => void;
-  readonly vkeywitness_from_bytes: (a: number, b: number, c: number) => void;
-  readonly vkeywitness_to_json: (a: number, b: number) => void;
-  readonly vkeywitness_to_js_value: (a: number, b: number) => void;
-  readonly vkeywitness_from_json: (a: number, b: number, c: number) => void;
-  readonly vkeywitness_new: (a: number, b: number) => number;
-  readonly vkeywitness_signature: (a: number) => number;
-  readonly __wbg_vkeywitnesses_free: (a: number) => void;
-  readonly vkeywitnesses_get: (a: number, b: number) => number;
-  readonly vkeywitnesses_add: (a: number, b: number) => void;
-  readonly __wbg_bootstrapwitness_free: (a: number) => void;
-  readonly bootstrapwitness_to_bytes: (a: number, b: number) => void;
-  readonly bootstrapwitness_from_bytes: (a: number, b: number, c: number) => void;
-  readonly bootstrapwitness_to_json: (a: number, b: number) => void;
-  readonly bootstrapwitness_to_js_value: (a: number, b: number) => void;
-  readonly bootstrapwitness_from_json: (a: number, b: number, c: number) => void;
-  readonly bootstrapwitness_vkey: (a: number) => number;
-  readonly bootstrapwitness_signature: (a: number) => number;
-  readonly bootstrapwitness_chain_code: (a: number, b: number) => void;
-  readonly bootstrapwitness_attributes: (a: number) => number;
-  readonly bootstrapwitness_new: (a: number, b: number, c: number, d: number, e: number) => number;
-  readonly bootstrapwitness_to_public_key: (a: number, b: number) => void;
-  readonly bootstrapwitness_to_address: (a: number, b: number) => void;
-  readonly __wbg_bootstrapwitnesses_free: (a: number) => void;
-  readonly bootstrapwitnesses_new: () => number;
-  readonly bootstrapwitnesses_len: (a: number) => number;
-  readonly bootstrapwitnesses_get: (a: number, b: number) => number;
-  readonly bootstrapwitnesses_add: (a: number, b: number) => void;
-  readonly __wbg_publickeys_free: (a: number) => void;
-  readonly publickeys_new: () => number;
-  readonly publickeys_get: (a: number, b: number) => number;
-  readonly publickeys_add: (a: number, b: number) => void;
-  readonly ed25519signature_to_bytes: (a: number, b: number) => void;
-  readonly ed25519signature_to_bech32: (a: number, b: number) => void;
-  readonly ed25519signature_to_hex: (a: number, b: number) => void;
-  readonly ed25519signature_from_bech32: (a: number, b: number, c: number) => void;
-  readonly ed25519signature_from_hex: (a: number, b: number, c: number) => void;
-  readonly ed25519signature_from_bytes: (a: number, b: number, c: number) => void;
-  readonly __wbg_legacydaedalusprivatekey_free: (a: number) => void;
-  readonly legacydaedalusprivatekey_from_bytes: (a: number, b: number, c: number) => void;
-  readonly legacydaedalusprivatekey_as_bytes: (a: number, b: number) => void;
-  readonly legacydaedalusprivatekey_chaincode: (a: number, b: number) => void;
-  readonly __wbg_ed25519keyhash_free: (a: number) => void;
-  readonly ed25519keyhash_from_bytes: (a: number, b: number, c: number) => void;
-  readonly ed25519keyhash_to_bytes: (a: number, b: number) => void;
-  readonly ed25519keyhash_to_bech32: (a: number, b: number, c: number, d: number) => void;
-  readonly ed25519keyhash_from_bech32: (a: number, b: number, c: number) => void;
-  readonly ed25519keyhash_to_hex: (a: number, b: number) => void;
-  readonly ed25519keyhash_from_hex: (a: number, b: number, c: number) => void;
-  readonly scripthash_from_bytes: (a: number, b: number, c: number) => void;
-  readonly scripthash_from_bech32: (a: number, b: number, c: number) => void;
-  readonly scripthash_from_hex: (a: number, b: number, c: number) => void;
-  readonly transactionhash_from_bytes: (a: number, b: number, c: number) => void;
-  readonly transactionhash_from_bech32: (a: number, b: number, c: number) => void;
-  readonly transactionhash_from_hex: (a: number, b: number, c: number) => void;
-  readonly genesisdelegatehash_from_bytes: (a: number, b: number, c: number) => void;
-  readonly genesisdelegatehash_from_bech32: (a: number, b: number, c: number) => void;
-  readonly genesisdelegatehash_from_hex: (a: number, b: number, c: number) => void;
-  readonly genesishash_from_bytes: (a: number, b: number, c: number) => void;
-  readonly genesishash_from_bech32: (a: number, b: number, c: number) => void;
-  readonly genesishash_from_hex: (a: number, b: number, c: number) => void;
-  readonly __wbg_auxiliarydatahash_free: (a: number) => void;
-  readonly auxiliarydatahash_from_bytes: (a: number, b: number, c: number) => void;
-  readonly auxiliarydatahash_to_bytes: (a: number, b: number) => void;
-  readonly auxiliarydatahash_to_bech32: (a: number, b: number, c: number, d: number) => void;
-  readonly auxiliarydatahash_from_bech32: (a: number, b: number, c: number) => void;
-  readonly auxiliarydatahash_to_hex: (a: number, b: number) => void;
-  readonly auxiliarydatahash_from_hex: (a: number, b: number, c: number) => void;
-  readonly poolmetadatahash_from_bytes: (a: number, b: number, c: number) => void;
-  readonly poolmetadatahash_from_bech32: (a: number, b: number, c: number) => void;
-  readonly poolmetadatahash_from_hex: (a: number, b: number, c: number) => void;
-  readonly vrfkeyhash_from_bytes: (a: number, b: number, c: number) => void;
-  readonly vrfkeyhash_from_bech32: (a: number, b: number, c: number) => void;
-  readonly vrfkeyhash_from_hex: (a: number, b: number, c: number) => void;
-  readonly blockbodyhash_from_bytes: (a: number, b: number, c: number) => void;
-  readonly blockbodyhash_from_bech32: (a: number, b: number, c: number) => void;
-  readonly blockbodyhash_from_hex: (a: number, b: number, c: number) => void;
-  readonly blockheaderhash_from_bytes: (a: number, b: number, c: number) => void;
-  readonly blockheaderhash_from_bech32: (a: number, b: number, c: number) => void;
-  readonly blockheaderhash_from_hex: (a: number, b: number, c: number) => void;
-  readonly datahash_from_bytes: (a: number, b: number, c: number) => void;
-  readonly datahash_from_bech32: (a: number, b: number, c: number) => void;
-  readonly datahash_from_hex: (a: number, b: number, c: number) => void;
-  readonly scriptdatahash_from_bytes: (a: number, b: number, c: number) => void;
-  readonly scriptdatahash_from_bech32: (a: number, b: number, c: number) => void;
-  readonly scriptdatahash_from_hex: (a: number, b: number, c: number) => void;
-  readonly vrfvkey_from_bytes: (a: number, b: number, c: number) => void;
-  readonly vrfvkey_from_bech32: (a: number, b: number, c: number) => void;
-  readonly vrfvkey_from_hex: (a: number, b: number, c: number) => void;
-  readonly kesvkey_from_bytes: (a: number, b: number, c: number) => void;
-  readonly kesvkey_from_bech32: (a: number, b: number, c: number) => void;
-  readonly kesvkey_from_hex: (a: number, b: number, c: number) => void;
-  readonly __wbg_kessignature_free: (a: number) => void;
-  readonly kessignature_from_bytes: (a: number, b: number, c: number) => void;
-  readonly __wbg_nonce_free: (a: number) => void;
-  readonly nonce_to_bytes: (a: number, b: number) => void;
-  readonly nonce_from_bytes: (a: number, b: number, c: number) => void;
-  readonly nonce_new_identity: () => number;
-  readonly nonce_new_from_hash: (a: number, b: number, c: number) => void;
-  readonly nonce_get_hash: (a: number, b: number) => void;
-  readonly __wbg_vrfcert_free: (a: number) => void;
-  readonly vrfcert_to_bytes: (a: number, b: number) => void;
-  readonly vrfcert_from_bytes: (a: number, b: number, c: number) => void;
-  readonly vrfcert_to_json: (a: number, b: number) => void;
-  readonly vrfcert_to_js_value: (a: number, b: number) => void;
-  readonly vrfcert_from_json: (a: number, b: number, c: number) => void;
-  readonly vrfcert_proof: (a: number, b: number) => void;
-  readonly vrfcert_new: (a: number, b: number, c: number, d: number, e: number) => void;
-  readonly scripthash_to_hex: (a: number, b: number) => void;
-  readonly genesisdelegatehash_to_hex: (a: number, b: number) => void;
-  readonly genesishash_to_hex: (a: number, b: number) => void;
-  readonly transactionhash_to_hex: (a: number, b: number) => void;
-  readonly poolmetadatahash_to_hex: (a: number, b: number) => void;
-  readonly vrfkeyhash_to_hex: (a: number, b: number) => void;
-  readonly blockbodyhash_to_hex: (a: number, b: number) => void;
-  readonly blockheaderhash_to_hex: (a: number, b: number) => void;
-  readonly datahash_to_hex: (a: number, b: number) => void;
-  readonly scriptdatahash_to_hex: (a: number, b: number) => void;
-  readonly vrfvkey_to_hex: (a: number, b: number) => void;
-  readonly kesvkey_to_hex: (a: number, b: number) => void;
-  readonly vkeywitnesses_len: (a: number) => number;
-  readonly vkeys_len: (a: number) => number;
-  readonly publickeys_size: (a: number) => number;
-  readonly __wbg_vkeys_free: (a: number) => void;
-  readonly vkey_public_key: (a: number) => number;
-  readonly vkeywitness_vkey: (a: number) => number;
-  readonly vkeywitnesses_new: () => number;
-  readonly vkeys_new: () => number;
-  readonly __wbg_vkey_free: (a: number) => void;
-  readonly __wbg_ed25519signature_free: (a: number) => void;
-  readonly __wbg_vkeywitness_free: (a: number) => void;
-  readonly __wbg_scripthash_free: (a: number) => void;
-  readonly __wbg_transactionhash_free: (a: number) => void;
-  readonly __wbg_genesisdelegatehash_free: (a: number) => void;
-  readonly __wbg_genesishash_free: (a: number) => void;
-  readonly __wbg_publickey_free: (a: number) => void;
-  readonly __wbg_poolmetadatahash_free: (a: number) => void;
-  readonly __wbg_vrfkeyhash_free: (a: number) => void;
-  readonly __wbg_blockbodyhash_free: (a: number) => void;
-  readonly __wbg_blockheaderhash_free: (a: number) => void;
-  readonly __wbg_datahash_free: (a: number) => void;
-  readonly __wbg_scriptdatahash_free: (a: number) => void;
-  readonly __wbg_vrfvkey_free: (a: number) => void;
-  readonly __wbg_kesvkey_free: (a: number) => void;
-  readonly scripthash_to_bytes: (a: number, b: number) => void;
-  readonly transactionhash_to_bytes: (a: number, b: number) => void;
-  readonly genesisdelegatehash_to_bytes: (a: number, b: number) => void;
-  readonly genesishash_to_bytes: (a: number, b: number) => void;
-  readonly publickey_as_bytes: (a: number, b: number) => void;
-  readonly poolmetadatahash_to_bytes: (a: number, b: number) => void;
-  readonly vrfkeyhash_to_bytes: (a: number, b: number) => void;
-  readonly blockbodyhash_to_bytes: (a: number, b: number) => void;
-  readonly blockheaderhash_to_bytes: (a: number, b: number) => void;
-  readonly datahash_to_bytes: (a: number, b: number) => void;
-  readonly scriptdatahash_to_bytes: (a: number, b: number) => void;
-  readonly vrfvkey_to_bytes: (a: number, b: number) => void;
-  readonly kesvkey_to_bytes: (a: number, b: number) => void;
-  readonly kessignature_to_bytes: (a: number, b: number) => void;
-  readonly vrfcert_output: (a: number, b: number) => void;
-  readonly scripthash_to_bech32: (a: number, b: number, c: number, d: number) => void;
-  readonly genesisdelegatehash_to_bech32: (a: number, b: number, c: number, d: number) => void;
-  readonly genesishash_to_bech32: (a: number, b: number, c: number, d: number) => void;
-  readonly vrfkeyhash_to_bech32: (a: number, b: number, c: number, d: number) => void;
-  readonly poolmetadatahash_to_bech32: (a: number, b: number, c: number, d: number) => void;
-  readonly transactionhash_to_bech32: (a: number, b: number, c: number, d: number) => void;
-  readonly blockbodyhash_to_bech32: (a: number, b: number, c: number, d: number) => void;
-  readonly blockheaderhash_to_bech32: (a: number, b: number, c: number, d: number) => void;
-  readonly datahash_to_bech32: (a: number, b: number, c: number, d: number) => void;
-  readonly scriptdatahash_to_bech32: (a: number, b: number, c: number, d: number) => void;
-  readonly vrfvkey_to_bech32: (a: number, b: number, c: number, d: number) => void;
-  readonly kesvkey_to_bech32: (a: number, b: number, c: number, d: number) => void;
-  readonly encode_json_str_to_native_script: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
-  readonly get_implicit_input: (a: number, b: number, c: number, d: number) => void;
-  readonly get_deposit: (a: number, b: number, c: number, d: number) => void;
-  readonly make_vkey_witness: (a: number, b: number) => number;
-  readonly __wbindgen_malloc: (a: number) => number;
-  readonly __wbindgen_realloc: (a: number, b: number, c: number) => number;
+  readonly __wbg_plutusv2scripts_free: (a: number) => void;
+  readonly __wbg_plutusv1scripts_free: (a: number) => void;
+  readonly scripthashes_add: (a: number, b: number) => void;
+  readonly genesishashes_add: (a: number, b: number) => void;
+  readonly plutusv2scripts_add: (a: number, b: number) => void;
+  readonly plutusv1scripts_add: (a: number, b: number) => void;
+  readonly multiasset_keys: (a: number) => number;
+  readonly __wbindgen_export_0: (a: number) => number;
+  readonly __wbindgen_export_1: (a: number, b: number, c: number) => number;
   readonly __wbindgen_add_to_stack_pointer: (a: number) => number;
-  readonly __wbindgen_free: (a: number, b: number) => void;
-  readonly __wbindgen_exn_store: (a: number) => void;
+  readonly __wbindgen_export_2: (a: number, b: number) => void;
+  readonly __wbindgen_export_3: (a: number) => void;
   readonly __wbindgen_start: () => void;
 }
 
+export type SyncInitInput = BufferSource | WebAssembly.Module;
 /**
-* Synchronously compiles the given `bytes` and instantiates the WebAssembly module.
+* Instantiates the given `module`, which can either be bytes or
+* a precompiled `WebAssembly.Module`.
 *
-* @param {BufferSource} bytes
+* @param {SyncInitInput} module
 *
 * @returns {InitOutput}
 */
-export function initSync(bytes: BufferSource): InitOutput;
+export function initSync(module: SyncInitInput): InitOutput;
 
 /**
 * If `module_or_path` is {RequestInfo} or {URL}, makes a request and

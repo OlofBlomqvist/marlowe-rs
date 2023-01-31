@@ -4,25 +4,12 @@
 #![feature(generators)]
 #![feature(if_let_guard)]
 #![feature(let_chains)]
+#![feature(extern_types)]
 //! An experimental implementation of the Marlowe language for Cardano smart contracts.
 //!
 //! Its primary use-case is for creating smart contracts in Rust rather 
 //! than directly using Marlowe, and instead be able to export the contracts
 //! into Marlowe programatically.
-//! 
-//! Parser tests are done against all example
-//! contracts available on the Marlowe Playground as seen on 2022-06-06.<br/>
-//! _( Deserialize -> Re-serialize -> Compare )_
-//! 
-//! The create can be compiled to WASM.
-//! 
-//! For a list of features, see https://github.com/OlofBlomqvist/marlowe_lang.
-//! 
-//! ## Stability
-//! 
-//! At the time of writing this, the language specification of Marlowe is not yet finalized
-//! and so this crate may not exactly reflect the current syntax as seen in official
-//! implementations such as the Marlowe playground.//! 
 //! 
 //! ## Grammars
 //! 

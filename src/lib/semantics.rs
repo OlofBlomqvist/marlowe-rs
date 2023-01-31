@@ -373,7 +373,8 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
         };
 
         match machine_state {
-            MachineState::WaitingForInput {expected:inputs,timeout} => {
+            MachineState::WaitingForInput {expected:inputs,timeout:_} => {
+                
                 let the_expected_input : Option<&Contract> = inputs.iter().find_map(|x| {
                         if let InputType::Choice { 
                             choice_name, 
@@ -429,7 +430,7 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
             MachineState::ContractHasTimedOut => Err(ApplyInputDepositError::UnexpectedInput(String::from("The contract has timed out. It is only possible to send notification inputs at this point."))),
             MachineState::Closed => Err(ApplyInputDepositError::ContractIsAlreadyClosed),
             MachineState::Faulted(error_message) => Err(ApplyInputDepositError::Unknown(format!("Cannot apply input (deposit) since the state machine has faulted: {error_message}"))),
-            MachineState::WaitingForInput{expected:expected_inputs,timeout} => {
+            MachineState::WaitingForInput{expected:expected_inputs,timeout:_} => {
                 for x in expected_inputs.iter() {
                     match x {
                         InputType::Deposit { 
@@ -492,7 +493,7 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
                     MachineState::Closed => Ok((m,step_result)),
                     MachineState::WaitingForInput {expected:_,timeout:_} => Ok((m,step_result)),
                     MachineState::ReadyForNextStep => m.process(),
-                    MachineState::ContractHasTimedOut => Ok((m,step_result))
+                    MachineState::ContractHasTimedOut => m.process()
                 }
             },
             Err(e) => Err(ProcessError::Generic(e)),

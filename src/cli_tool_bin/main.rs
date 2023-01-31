@@ -1,6 +1,5 @@
 mod args;
 use args::{DatumArgs, RedeemerArgs, StateArgs, ContractArgs, PlutusArgs};
-use cardano_multiplatform_lib::{plutus};
 use marlowe_lang::{types::marlowe::{Contract, MarloweDatum, PossiblyMerkleizedInput}};
 use std::{collections::HashMap};
 use marlowe_lang::extras::utils::*;
@@ -197,7 +196,7 @@ fn contract_handler(args:ContractArgs) {
                 }
             }
             ContractInputEncoding::PlutusDataDetailedJson => {
-                let pl = plutus::encode_json_str_to_plutus_datum(&s, plutus::PlutusDatumSchema::DetailedSchema).unwrap();
+                let pl = cardano_multiplatform_lib::plutus::encode_json_str_to_plutus_datum(&s, cardano_multiplatform_lib::plutus::PlutusDatumSchema::DetailedSchema).unwrap();
                 Contract::from_plutus_data(pl, &vec![]).unwrap()
             },
         }
@@ -248,6 +247,18 @@ fn plutus_data_handler(x:PlutusArgs) {
 
 fn main() {
     match <args::Args as clap::Parser>::parse() {
+        args::Args::PlutusData(x) => plutus_data_handler(x),
+        args::Args::Datum(x) => datum_handler(x),
+        args::Args::State(x) => state_handler(x),
+        args::Args::Redeemer(x) => input_redeemer_handler(x),
+        args::Args::Contract(x) => contract_handler(x),
+    }
+}
+
+#[no_mangle]
+#[cfg(feature="wasi")]
+fn cli_main_wasi(args:&str)  {
+    match <args::Args as clap::Parser>::parse_from(args.split("|")) {
         args::Args::PlutusData(x) => plutus_data_handler(x),
         args::Args::Datum(x) => datum_handler(x),
         args::Args::State(x) => state_handler(x),

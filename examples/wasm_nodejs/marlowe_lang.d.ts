@@ -2,32 +2,53 @@
 /* eslint-disable */
 /**
 * @param {string} redeemer_cbor_hex
-* @returns {any}
+* @returns {string}
 */
-export function decode_marlowe_input_cbor_hex(redeemer_cbor_hex: string): any;
+export function decode_marlowe_input_cbor_hex(redeemer_cbor_hex: string): string;
 /**
 * @param {string} redeemer_json
-* @returns {any}
+* @returns {string}
 */
-export function decode_marlowe_input_json(redeemer_json: string): any;
+export function decode_marlowe_input_json(redeemer_json: string): string;
 /**
 */
-export function main(): void;
+export function wasm_main(): void;
 /**
 * @param {string} contract
-* @returns {any}
+* @returns {string}
 */
-export function marlowe_to_json(contract: string): any;
+export function marlowe_to_json(contract: string): string;
+/**
+* params_str format by example:
+* "variable_one_name=12345,variable_two_name=6789"
+* @param {string} contract
+* @param {string} params_str
+* @returns {string}
+*/
+export function marlowe_to_json_with_variables(contract: string, params_str: string): string;
+/**
+* params_str format by example:
+* "variable_one_name=12345,variable_two_name=6789"
+* @param {string} contract
+* @param {string} params_str
+* @returns {string}
+*/
+export function parse_marlowe_with_variables(contract: string, params_str: string): string;
+/**
+* @param {string} contract
+* @returns {string}
+*/
+export function format_marlowe(contract: string): string;
 /**
 * @param {string} cbor_hex
-* @returns {any}
+* @returns {string}
 */
-export function decode_cborhex_marlowe_plutus_datum(cbor_hex: string): any;
+export function decode_cborhex_marlowe_plutus_datum(cbor_hex: string): string;
 /**
 * @param {string} plutus_encoded_datum
-* @returns {any}
+* @returns {string}
 */
-export function decode_json_encoded_marlowe_plutus_datum(plutus_encoded_datum: string): any;
+export function decode_json_encoded_marlowe_plutus_datum(plutus_encoded_datum: string): string;
 /**
 * @param {Uint8Array} bytes
 * @returns {any}
@@ -39,17 +60,20 @@ export function cbor_hex_to_json_detailed_schema(bytes: Uint8Array): any;
 */
 export function cbor_hex_to_json_basic_schema(bytes: Uint8Array): any;
 /**
-* @param {string} json
-* @param {number} schema
-* @returns {PlutusData}
+* @param {string} marlowe_dsl
+* @returns {any[]}
 */
-export function encode_json_str_to_plutus_datum(json: string, schema: number): PlutusData;
+export function get_input_params_for_contract(marlowe_dsl: string): any[];
 /**
-* @param {PlutusData} datum
-* @param {number} schema
-* @returns {string}
+* @param {string} marlowe_dsl
+* @returns {any[]}
 */
-export function decode_plutus_datum_to_json_str(datum: PlutusData, schema: number): string;
+export function list_inputs_params(marlowe_dsl: string): any[];
+/**
+* @param {string} marlowe_dsl
+* @returns {ParseError | undefined}
+*/
+export function get_marlowe_dsl_parser_errors(marlowe_dsl: string): ParseError | undefined;
 /**
 * @param {Uint8Array} bytes
 * @returns {TransactionMetadatum}
@@ -73,49 +97,17 @@ export function encode_json_str_to_metadatum(json: string, schema: number): Tran
 */
 export function decode_metadatum_to_json_str(metadatum: TransactionMetadatum, schema: number): string;
 /**
-* @param {AuxiliaryData} auxiliary_data
-* @returns {AuxiliaryDataHash}
+* @param {string} json
+* @param {number} schema
+* @returns {PlutusData}
 */
-export function hash_auxiliary_data(auxiliary_data: AuxiliaryData): AuxiliaryDataHash;
+export function encode_json_str_to_plutus_datum(json: string, schema: number): PlutusData;
 /**
-* @param {TransactionBody} tx_body
-* @returns {TransactionHash}
+* @param {PlutusData} datum
+* @param {number} schema
+* @returns {string}
 */
-export function hash_transaction(tx_body: TransactionBody): TransactionHash;
-/**
-* @param {PlutusData} plutus_data
-* @returns {DataHash}
-*/
-export function hash_plutus_data(plutus_data: PlutusData): DataHash;
-/**
-* @param {Redeemers} redeemers
-* @param {Costmdls} cost_models
-* @param {PlutusList | undefined} datums
-* @returns {ScriptDataHash}
-*/
-export function hash_script_data(redeemers: Redeemers, cost_models: Costmdls, datums?: PlutusList): ScriptDataHash;
-/**
-* @param {Redeemers} redeemers
-* @param {PlutusList} datums
-* @param {Costmdls} cost_models
-* @param {Languages} used_langs
-* @returns {ScriptDataHash | undefined}
-*/
-export function calc_script_data_hash(redeemers: Redeemers, datums: PlutusList, cost_models: Costmdls, used_langs: Languages): ScriptDataHash | undefined;
-/**
-* @param {TransactionHash} tx_body_hash
-* @param {ByronAddress} addr
-* @param {LegacyDaedalusPrivateKey} key
-* @returns {BootstrapWitness}
-*/
-export function make_daedalus_bootstrap_witness(tx_body_hash: TransactionHash, addr: ByronAddress, key: LegacyDaedalusPrivateKey): BootstrapWitness;
-/**
-* @param {TransactionHash} tx_body_hash
-* @param {ByronAddress} addr
-* @param {Bip32PrivateKey} key
-* @returns {BootstrapWitness}
-*/
-export function make_icarus_bootstrap_witness(tx_body_hash: TransactionHash, addr: ByronAddress, key: Bip32PrivateKey): BootstrapWitness;
+export function decode_plutus_datum_to_json_str(datum: PlutusData, schema: number): string;
 /**
 * @param {string} password
 * @param {string} salt
@@ -130,20 +122,6 @@ export function encrypt_with_password(password: string, salt: string, nonce: str
 * @returns {string}
 */
 export function decrypt_with_password(password: string, data: string): string;
-/**
-* Provide backwards compatibility to Alonzo by taking the max min value of both er
-* @param {TransactionOutput} output
-* @param {BigNum} coins_per_utxo_byte
-* @param {BigNum} coins_per_utxo_word
-* @returns {BigNum}
-*/
-export function compatible_min_ada_required(output: TransactionOutput, coins_per_utxo_byte: BigNum, coins_per_utxo_word: BigNum): BigNum;
-/**
-* @param {TransactionOutput} output
-* @param {BigNum} coins_per_utxo_byte
-* @returns {BigNum}
-*/
-export function min_ada_required(output: TransactionOutput, coins_per_utxo_byte: BigNum): BigNum;
 /**
 * @param {Transaction} tx
 * @param {ExUnitPrices} ex_unit_prices
@@ -179,6 +157,36 @@ export function min_fee(tx: Transaction, linear_fee: LinearFee, ex_unit_prices: 
 */
 export function encode_json_str_to_native_script(json: string, self_xpub: string, schema: number): NativeScript;
 /**
+* @param {AuxiliaryData} auxiliary_data
+* @returns {AuxiliaryDataHash}
+*/
+export function hash_auxiliary_data(auxiliary_data: AuxiliaryData): AuxiliaryDataHash;
+/**
+* @param {TransactionBody} tx_body
+* @returns {TransactionHash}
+*/
+export function hash_transaction(tx_body: TransactionBody): TransactionHash;
+/**
+* @param {PlutusData} plutus_data
+* @returns {DataHash}
+*/
+export function hash_plutus_data(plutus_data: PlutusData): DataHash;
+/**
+* @param {Redeemers} redeemers
+* @param {Costmdls} cost_models
+* @param {PlutusList | undefined} datums
+* @returns {ScriptDataHash}
+*/
+export function hash_script_data(redeemers: Redeemers, cost_models: Costmdls, datums?: PlutusList): ScriptDataHash;
+/**
+* @param {Redeemers} redeemers
+* @param {PlutusList} datums
+* @param {Costmdls} cost_models
+* @param {Languages} used_langs
+* @returns {ScriptDataHash | undefined}
+*/
+export function calc_script_data_hash(redeemers: Redeemers, datums: PlutusList, cost_models: Costmdls, used_langs: Languages): ScriptDataHash | undefined;
+/**
 * @param {TransactionBody} txbody
 * @param {BigNum} pool_deposit
 * @param {BigNum} key_deposit
@@ -193,6 +201,34 @@ export function get_implicit_input(txbody: TransactionBody, pool_deposit: BigNum
 */
 export function get_deposit(txbody: TransactionBody, pool_deposit: BigNum, key_deposit: BigNum): BigNum;
 /**
+* Provide backwards compatibility to Alonzo by taking the max min value of both er
+* @param {TransactionOutput} output
+* @param {BigNum} coins_per_utxo_byte
+* @param {BigNum} coins_per_utxo_word
+* @returns {BigNum}
+*/
+export function compatible_min_ada_required(output: TransactionOutput, coins_per_utxo_byte: BigNum, coins_per_utxo_word: BigNum): BigNum;
+/**
+* @param {TransactionOutput} output
+* @param {BigNum} coins_per_utxo_byte
+* @returns {BigNum}
+*/
+export function min_ada_required(output: TransactionOutput, coins_per_utxo_byte: BigNum): BigNum;
+/**
+* @param {TransactionHash} tx_body_hash
+* @param {ByronAddress} addr
+* @param {LegacyDaedalusPrivateKey} key
+* @returns {BootstrapWitness}
+*/
+export function make_daedalus_bootstrap_witness(tx_body_hash: TransactionHash, addr: ByronAddress, key: LegacyDaedalusPrivateKey): BootstrapWitness;
+/**
+* @param {TransactionHash} tx_body_hash
+* @param {ByronAddress} addr
+* @param {Bip32PrivateKey} key
+* @returns {BootstrapWitness}
+*/
+export function make_icarus_bootstrap_witness(tx_body_hash: TransactionHash, addr: ByronAddress, key: Bip32PrivateKey): BootstrapWitness;
+/**
 * @param {TransactionHash} tx_body_hash
 * @param {PrivateKey} sk
 * @returns {Vkeywitness}
@@ -200,55 +236,49 @@ export function get_deposit(txbody: TransactionBody, pool_deposit: BigNum, key_d
 export function make_vkey_witness(tx_body_hash: TransactionHash, sk: PrivateKey): Vkeywitness;
 /**
 */
-export enum DatumKind {
-  Hash,
-  Inline,
+export enum WasmPartyType {
+  Role,
+  Address,
 }
 /**
 */
-export enum CertificateKind {
-  StakeRegistration,
-  StakeDeregistration,
-  StakeDelegation,
-  PoolRegistration,
-  PoolRetirement,
-  GenesisKeyDelegation,
-  MoveInstantaneousRewardsCert,
+export enum StakeCredKind {
+  Key,
+  Script,
+}
+/**
+* Careful: this enum doesn't include the network ID part of the header
+* ex: base address isn't 0b0000_0000 but instead 0b0000
+* Use `header_matches_kind` if you don't want to implement the bitwise operators yourself
+*/
+export enum AddressHeaderKind {
+  BasePaymentKeyStakeKey,
+  BasePaymentScriptStakeKey,
+  BasePaymentKeyStakeScript,
+  BasePaymentScriptStakeScript,
+  PointerKey,
+  PointerScript,
+  EnterpriseKey,
+  EnterpriseScript,
+  Byron,
+  RewardKey,
+  RewardScript,
 }
 /**
 */
-export enum MIRPot {
-  Reserves,
-  Treasury,
+export enum TransactionMetadatumKind {
+  MetadataMap,
+  MetadataList,
+  Int,
+  Bytes,
+  Text,
 }
 /**
 */
-export enum MIRKind {
-  ToOtherPot,
-  ToStakeCredentials,
-}
-/**
-*/
-export enum RelayKind {
-  SingleHostAddr,
-  SingleHostName,
-  MultiHostName,
-}
-/**
-*/
-export enum NativeScriptKind {
-  ScriptPubkey,
-  ScriptAll,
-  ScriptAny,
-  ScriptNOfK,
-  TimelockStart,
-  TimelockExpiry,
-}
-/**
-*/
-export enum NetworkIdKind {
-  Testnet,
-  Mainnet,
+export enum MetadataJsonSchema {
+  NoConversions,
+  BasicConversions,
+  DetailedSchema,
 }
 /**
 */
@@ -334,19 +364,35 @@ export enum PlutusDatumSchema {
 }
 /**
 */
-export enum TransactionMetadatumKind {
-  MetadataMap,
-  MetadataList,
-  Int,
-  Bytes,
-  Text,
+export enum CoinSelectionStrategyCIP2 {
+/**
+* Performs CIP2's Largest First ada-only selection. Will error if outputs contain non-ADA assets.
+*/
+  LargestFirst,
+/**
+* Performs CIP2's Random Improve ada-only selection. Will error if outputs contain non-ADA assets.
+*/
+  RandomImprove,
+/**
+* Same as LargestFirst, but before adding ADA, will insert by largest-first for each asset type.
+*/
+  LargestFirstMultiAsset,
+/**
+* Same as RandomImprove, but before adding ADA, will insert by random-improve for each asset type.
+*/
+  RandomImproveMultiAsset,
 }
 /**
 */
-export enum MetadataJsonSchema {
-  NoConversions,
-  BasicConversions,
-  DetailedSchema,
+export enum ChangeSelectionAlgo {
+  Default,
+}
+/**
+* Used to choose the schema for a script JSON string
+*/
+export enum ScriptSchema {
+  Wallet,
+  Node,
 }
 /**
 * Each new language uses a different namespace for hashing its script
@@ -382,64 +428,73 @@ export enum SpendingDataKind {
 }
 /**
 */
-export enum CoinSelectionStrategyCIP2 {
-/**
-* Performs CIP2's Largest First ada-only selection. Will error if outputs contain non-ADA assets.
-*/
-  LargestFirst,
-/**
-* Performs CIP2's Random Improve ada-only selection. Will error if outputs contain non-ADA assets.
-*/
-  RandomImprove,
-/**
-* Same as LargestFirst, but before adding ADA, will insert by largest-first for each asset type.
-*/
-  LargestFirstMultiAsset,
-/**
-* Same as RandomImprove, but before adding ADA, will insert by random-improve for each asset type.
-*/
-  RandomImproveMultiAsset,
+export enum DatumKind {
+  Hash,
+  Inline,
 }
 /**
 */
-export enum ChangeSelectionAlgo {
-  Default,
+export enum CertificateKind {
+  StakeRegistration,
+  StakeDeregistration,
+  StakeDelegation,
+  PoolRegistration,
+  PoolRetirement,
+  GenesisKeyDelegation,
+  MoveInstantaneousRewardsCert,
 }
 /**
 */
-export enum StakeCredKind {
-  Key,
-  Script,
+export enum MIRPot {
+  Reserves,
+  Treasury,
 }
 /**
-* Careful: this enum doesn't include the network ID part of the header
-* ex: base address isn't 0b0000_0000 but instead 0b0000
-* Use `header_matches_kind` if you don't want to implement the bitwise operators yourself
 */
-export enum AddressHeaderKind {
-  BasePaymentKeyStakeKey,
-  BasePaymentScriptStakeKey,
-  BasePaymentKeyStakeScript,
-  BasePaymentScriptStakeScript,
-  PointerKey,
-  PointerScript,
-  EnterpriseKey,
-  EnterpriseScript,
-  Byron,
-  RewardKey,
-  RewardScript,
+export enum MIRKind {
+  ToOtherPot,
+  ToStakeCredentials,
 }
 /**
-* Used to choose the schema for a script JSON string
 */
-export enum ScriptSchema {
-  Wallet,
-  Node,
+export enum RelayKind {
+  SingleHostAddr,
+  SingleHostName,
+  MultiHostName,
+}
+/**
+*/
+export enum NativeScriptKind {
+  ScriptPubkey,
+  ScriptAll,
+  ScriptAny,
+  ScriptNOfK,
+  TimelockStart,
+  TimelockExpiry,
+}
+/**
+*/
+export enum NetworkIdKind {
+  Testnet,
+  Mainnet,
 }
 /**
 */
 export class AddrAttributes {
   free(): void;
+/**
+* @param {HDAddressPayload | undefined} hdap
+* @param {ProtocolMagic | undefined} protocol_magic
+* @returns {AddrAttributes}
+*/
+  static new_bootstrap_era(hdap?: HDAddressPayload, protocol_magic?: ProtocolMagic): AddrAttributes;
+/**
+* @param {Bip32PublicKey} pubk
+* @param {HDAddressPayload | undefined} hdap
+* @param {ProtocolMagic} protocol_magic
+* @returns {AddrAttributes}
+*/
+  static new_single_key(pubk: Bip32PublicKey, hdap: HDAddressPayload | undefined, protocol_magic: ProtocolMagic): AddrAttributes;
 /**
 * @returns {Uint8Array}
 */
@@ -490,19 +545,6 @@ export class AddrAttributes {
 * @returns {AddrAttributes}
 */
   static new(): AddrAttributes;
-/**
-* @param {HDAddressPayload | undefined} hdap
-* @param {ProtocolMagic | undefined} protocol_magic
-* @returns {AddrAttributes}
-*/
-  static new_bootstrap_era(hdap?: HDAddressPayload, protocol_magic?: ProtocolMagic): AddrAttributes;
-/**
-* @param {Bip32PublicKey} pubk
-* @param {HDAddressPayload | undefined} hdap
-* @param {ProtocolMagic} protocol_magic
-* @returns {AddrAttributes}
-*/
-  static new_single_key(pubk: Bip32PublicKey, hdap: HDAddressPayload | undefined, protocol_magic: ProtocolMagic): AddrAttributes;
 }
 /**
 */
@@ -636,47 +678,6 @@ export class Address {
 export class AddressContent {
   free(): void;
 /**
-* @returns {Uint8Array}
-*/
-  to_bytes(): Uint8Array;
-/**
-* @param {Uint8Array} bytes
-* @returns {AddressContent}
-*/
-  static from_bytes(bytes: Uint8Array): AddressContent;
-/**
-* @returns {string}
-*/
-  to_json(): string;
-/**
-* @returns {any}
-*/
-  to_js_value(): any;
-/**
-* @param {string} json
-* @returns {AddressContent}
-*/
-  static from_json(json: string): AddressContent;
-/**
-* @returns {AddressId}
-*/
-  address_id(): AddressId;
-/**
-* @returns {AddrAttributes}
-*/
-  addr_attr(): AddrAttributes;
-/**
-* @returns {ByronAddrType}
-*/
-  addr_type(): ByronAddrType;
-/**
-* @param {AddressId} address_id
-* @param {AddrAttributes} addr_attr
-* @param {ByronAddrType} addr_type
-* @returns {AddressContent}
-*/
-  static new(address_id: AddressId, addr_attr: AddrAttributes, addr_type: ByronAddrType): AddressContent;
-/**
 * @param {ByronAddrType} addr_type
 * @param {SpendingData} spending_data
 * @param {AddrAttributes} attributes
@@ -721,11 +722,59 @@ export class AddressContent {
 * @returns {boolean}
 */
   identical_with_pubkey(xpub: Bip32PublicKey): boolean;
+/**
+* @returns {Uint8Array}
+*/
+  to_bytes(): Uint8Array;
+/**
+* @param {Uint8Array} bytes
+* @returns {AddressContent}
+*/
+  static from_bytes(bytes: Uint8Array): AddressContent;
+/**
+* @returns {string}
+*/
+  to_json(): string;
+/**
+* @returns {any}
+*/
+  to_js_value(): any;
+/**
+* @param {string} json
+* @returns {AddressContent}
+*/
+  static from_json(json: string): AddressContent;
+/**
+* @returns {AddressId}
+*/
+  address_id(): AddressId;
+/**
+* @returns {AddrAttributes}
+*/
+  addr_attr(): AddrAttributes;
+/**
+* @returns {ByronAddrType}
+*/
+  addr_type(): ByronAddrType;
+/**
+* @param {AddressId} address_id
+* @param {AddrAttributes} addr_attr
+* @param {ByronAddrType} addr_type
+* @returns {AddressContent}
+*/
+  static new(address_id: AddressId, addr_attr: AddrAttributes, addr_type: ByronAddrType): AddressContent;
 }
 /**
 */
 export class AddressId {
   free(): void;
+/**
+* @param {ByronAddrType} addr_type
+* @param {SpendingData} spending_data
+* @param {AddrAttributes} attrs
+* @returns {AddressId}
+*/
+  static new(addr_type: ByronAddrType, spending_data: SpendingData, attrs: AddrAttributes): AddressId;
 /**
 * @param {Uint8Array} bytes
 * @returns {AddressId}
@@ -754,13 +803,6 @@ export class AddressId {
 * @returns {AddressId}
 */
   static from_hex(hex: string): AddressId;
-/**
-* @param {ByronAddrType} addr_type
-* @param {SpendingData} spending_data
-* @param {AddrAttributes} attrs
-* @returns {AddressId}
-*/
-  static new(addr_type: ByronAddrType, spending_data: SpendingData, attrs: AddrAttributes): AddressId;
 }
 /**
 */
@@ -1541,6 +1583,17 @@ export class BootstrapWitnesses {
 }
 /**
 */
+export class Bound {
+  free(): void;
+/**
+*/
+  0: bigint;
+/**
+*/
+  1: bigint;
+}
+/**
+*/
 export class ByronAddrType {
   free(): void;
 /**
@@ -1587,6 +1640,33 @@ export class ByronAddrType {
 export class ByronAddress {
   free(): void;
 /**
+* @returns {string}
+*/
+  to_base58(): string;
+/**
+* @param {string} s
+* @returns {ByronAddress}
+*/
+  static from_base58(s: string): ByronAddress;
+/**
+* @returns {AddressContent}
+*/
+  address_content(): AddressContent;
+/**
+* @param {string} s
+* @returns {boolean}
+*/
+  static is_valid(s: string): boolean;
+/**
+* @returns {Address}
+*/
+  to_address(): Address;
+/**
+* @param {Address} addr
+* @returns {ByronAddress | undefined}
+*/
+  static from_address(addr: Address): ByronAddress | undefined;
+/**
 * @returns {Uint8Array}
 */
   to_bytes(): Uint8Array;
@@ -1627,33 +1707,6 @@ export class ByronAddress {
 * @returns {ByronAddress}
 */
   static new(addr: Uint8Array, crc32: Crc32): ByronAddress;
-/**
-* @returns {string}
-*/
-  to_base58(): string;
-/**
-* @param {string} s
-* @returns {ByronAddress}
-*/
-  static from_base58(s: string): ByronAddress;
-/**
-* @returns {AddressContent}
-*/
-  address_content(): AddressContent;
-/**
-* @param {string} s
-* @returns {boolean}
-*/
-  static is_valid(s: string): boolean;
-/**
-* @returns {Address}
-*/
-  to_address(): Address;
-/**
-* @param {Address} addr
-* @returns {ByronAddress | undefined}
-*/
-  static from_address(addr: Address): ByronAddress | undefined;
 }
 /**
 */
@@ -3773,6 +3826,34 @@ export class OperationalCert {
 * @returns {OperationalCert}
 */
   static new(hot_vkey: KESVKey, sequence_number: number, kes_period: number, sigma: Ed25519Signature): OperationalCert;
+}
+/**
+*/
+export class ParseError {
+  free(): void;
+/**
+* @param {number} start_line
+* @param {number} end_line
+* @param {number} start_col
+* @param {number} end_col
+* @param {string} error_message
+*/
+  constructor(start_line: number, end_line: number, start_col: number, end_col: number, error_message: string);
+/**
+*/
+  end_col: number;
+/**
+*/
+  end_line: number;
+/**
+*/
+  error_message: string;
+/**
+*/
+  start_col: number;
+/**
+*/
+  start_line: number;
 }
 /**
 * A partial Plutus witness
@@ -6245,6 +6326,11 @@ export class StakeDeregistration {
 export class StakeDistribution {
   free(): void;
 /**
+* @param {Bip32PublicKey} pubk
+* @returns {StakeDistribution}
+*/
+  static new_single_key(pubk: Bip32PublicKey): StakeDistribution;
+/**
 * @returns {Uint8Array}
 */
   to_bytes(): Uint8Array;
@@ -6287,11 +6373,6 @@ export class StakeDistribution {
 * @returns {SingleKeyDistr | undefined}
 */
   as_single_key_distr(): SingleKeyDistr | undefined;
-/**
-* @param {Bip32PublicKey} pubk
-* @returns {StakeDistribution}
-*/
-  static new_single_key(pubk: Bip32PublicKey): StakeDistribution;
 }
 /**
 */
@@ -6334,6 +6415,11 @@ export class StakeRegistration {
 export class StakeholderId {
   free(): void;
 /**
+* @param {Bip32PublicKey} pubk
+* @returns {StakeholderId}
+*/
+  static new(pubk: Bip32PublicKey): StakeholderId;
+/**
 * @param {Uint8Array} bytes
 * @returns {StakeholderId}
 */
@@ -6361,11 +6447,6 @@ export class StakeholderId {
 * @returns {StakeholderId}
 */
   static from_hex(hex: string): StakeholderId;
-/**
-* @param {Bip32PublicKey} pubk
-* @returns {StakeholderId}
-*/
-  static new(pubk: Bip32PublicKey): StakeholderId;
 }
 /**
 */
@@ -8151,6 +8232,187 @@ export class Vkeywitnesses {
 * @param {Vkeywitness} elem
 */
   add(elem: Vkeywitness): void;
+}
+/**
+*/
+export class WASMMarloweStateMachine {
+  free(): void;
+/**
+* Takes an initialized (non-marlowe-extended) MarloweDSL contract as input.
+* @param {string} contract_dsl
+*/
+  constructor(contract_dsl: string);
+/**
+* @returns {any}
+*/
+  contract(): any;
+/**
+* @returns {any}
+*/
+  logs(): any;
+/**
+* @returns {any}
+*/
+  payments(): any;
+/**
+* @returns {WasmState}
+*/
+  state(): WasmState;
+/**
+* @returns {any}
+*/
+  warnings(): any;
+/**
+* @param {string} bech32_addr
+* @param {string} token_name
+* @param {string} currency_symbol
+* @param {bigint} quantity
+*/
+  set_acc_of_addr(bech32_addr: string, token_name: string, currency_symbol: string, quantity: bigint): void;
+/**
+* @param {string} role
+* @param {string} token_name
+* @param {string} currency_symbol
+* @param {bigint} quantity
+*/
+  set_acc_of_role(role: string, token_name: string, currency_symbol: string, quantity: bigint): void;
+/**
+* @param {string} from_role
+* @param {string} to_role
+* @param {string} token_name
+* @param {string} currency_symbol
+* @param {bigint} quantity
+*/
+  apply_input_deposit_for_role(from_role: string, to_role: string, token_name: string, currency_symbol: string, quantity: bigint): void;
+/**
+* @param {string} from_bech32_addr
+* @param {string} to_bech32_addr
+* @param {string} token_name
+* @param {string} currency_symbol
+* @param {bigint} quantity
+*/
+  apply_input_deposit_for_addr(from_bech32_addr: string, to_bech32_addr: string, token_name: string, currency_symbol: string, quantity: bigint): void;
+/**
+* @param {string} choice_name
+* @param {string} role_name
+* @param {bigint} chosen_value
+*/
+  apply_input_choice_for_role(choice_name: string, role_name: string, chosen_value: bigint): void;
+/**
+* @param {string} choice_name
+* @param {string} bech32_addr
+* @param {bigint} chosen_value
+*/
+  apply_input_choice_for_addr(choice_name: string, bech32_addr: string, chosen_value: bigint): void;
+/**
+* @returns {string}
+*/
+  process(): string;
+}
+/**
+*/
+export class WasmAccount {
+  free(): void;
+/**
+*/
+  amount: bigint;
+/**
+*/
+  party: WasmParty;
+/**
+*/
+  token: WasmToken;
+}
+/**
+*/
+export class WasmAccounts {
+  free(): void;
+}
+/**
+*/
+export class WasmBoundValue {
+  free(): void;
+/**
+*/
+  name: string;
+/**
+*/
+  value: bigint;
+}
+/**
+*/
+export class WasmBoundValues {
+  free(): void;
+}
+/**
+*/
+export class WasmChoice {
+  free(): void;
+/**
+*/
+  choice_name: string;
+/**
+*/
+  choice_owner: WasmParty;
+/**
+*/
+  value: bigint;
+}
+/**
+*/
+export class WasmChoices {
+  free(): void;
+}
+/**
+*/
+export class WasmParty {
+  free(): void;
+/**
+* @returns {string}
+*/
+  value(): string;
+/**
+* @returns {number}
+*/
+  typ(): number;
+/**
+* @param {string} bech32_addr
+* @returns {WasmParty}
+*/
+  static new_addr(bech32_addr: string): WasmParty;
+/**
+* @param {string} role_token
+* @returns {WasmParty}
+*/
+  static new_role(role_token: string): WasmParty;
+}
+/**
+*/
+export class WasmState {
+  free(): void;
+/**
+*/
+  accounts: WasmAccounts;
+/**
+*/
+  bound_values: WasmBoundValues;
+/**
+*/
+  choices: WasmChoices;
+/**
+*/
+  min_time: bigint;
+}
+/**
+*/
+export class WasmToken {
+  free(): void;
+/**
+*/
+  name: string;
+/**
+*/
+  pol: string;
 }
 /**
 */

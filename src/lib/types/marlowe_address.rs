@@ -1,7 +1,7 @@
 use crate::types::marlowe::ValidatorHash;
 use crate::types::marlowe::PubKeyHash;
 
-use super::marlowe::{Address, StakingHashOrPtr, ScriptOrPubkeyCred, PubKeyOrValidatorHashForStaking, ScriptValidatorHash};
+use super::marlowe::{Address, StakingHashOrPtr, ScriptOrPubkeyCred, PubKeyOrValidatorHashForStaking};
 
 // temp func for getting rid of unwraps quickly
 fn sterr<T,E>(x:Result<T,E>) -> Result<T,String> where E : std::fmt::Debug {

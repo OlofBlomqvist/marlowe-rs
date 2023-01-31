@@ -37,7 +37,7 @@ pub(crate) enum AstNode {
     Null
 }
 
-#[cfg_attr(feature="wasm",wasm_bindgen::prelude::wasm_bindgen)]
+#[cfg_attr(feature="js",wasm_bindgen::prelude::wasm_bindgen)]
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Clone,PartialEq)]
 pub struct Bound(pub i64,pub i64);
@@ -339,7 +339,7 @@ impl ToPlutusData for Party {
 }
 
 impl FromPlutusData<Party> for Party {
-    fn from_plutus_data(x:PlutusData,attributes:&Vec<String>) -> Result<Party,String> {
+    fn from_plutus_data(x:plutus_data::PlutusData,attributes:&Vec<String>) -> Result<Party,String> {
         
         match x.as_constr_plutus_data() {
             Some(c) => {
@@ -673,7 +673,7 @@ impl Boxer for Contract {
 
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Serialize,Clone,PartialEq,Deserialize,Eq,Hash)]
+#[derive(Debug,Clone,PartialEq,Eq,Hash)]
 pub enum ValueId {
     Name(String)
 }
@@ -763,6 +763,18 @@ pub enum RequiredContractInputField {
 
 impl Contract {
 
+    pub fn to_json(&self) -> Result<String, String> {
+        crate::serialization::json::serialize(self)
+    }
+
+    pub fn to_cborhex(&self) -> Result<String, String> {
+        crate::serialization::cborhex::serialize(self.clone())
+    }
+
+    pub fn to_dsl(&self) -> String {
+        crate::serialization::marlowe::serialize(self.clone())
+    }
+
     pub fn from_dsl(contract_marlowe_dsl:&str,inputs:Vec<(String,i64)>) -> Result<Contract,ParseError> {
         let mut inp = HashMap::new();
         for (a,b) in inputs {
@@ -774,12 +786,7 @@ impl Contract {
         }
     }
 
-    
-    pub fn from_json(contract_marlowe_dsl:&str,inputs:Vec<(String,i64)>) -> Result<Contract,serde_json::Error> {
-        let mut inp = HashMap::new();
-        for (a,b) in inputs {
-            inp.insert(a,b);
-        }
+    pub fn from_json(contract_marlowe_dsl:&str) -> Result<Contract,serde_json::Error> {
         match crate::deserialization::json::deserialize::<Contract>(contract_marlowe_dsl) {
             Ok(r) => Ok(r),
             Err(e) => Err(e),

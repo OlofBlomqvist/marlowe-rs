@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use console_error_panic_hook;
-use cardano_multiplatform_lib::plutus::PlutusData;
+use wasm_bindgen::__rt::IntoJsResult;
 use wasm_bindgen::{prelude::*};
 use crate::parsing::marlowe::ParseError;
 
@@ -26,7 +26,7 @@ pub fn decode_marlowe_input_json(redeemer_json:&str) -> String {
 }
 
 #[wasm_bindgen(start)] 
-pub fn main() -> Result<(), JsValue> {
+pub fn wasm_main() -> Result<(), JsValue> {
    console_error_panic_hook::set_once();
    wasm_log("marlowe_lang utils initialized.");
    Ok(())
@@ -47,7 +47,7 @@ pub fn marlowe_to_json(contract:&str) -> Result<String,String> {
 
 /// params_str format by example:
 /// "variable_one_name=12345,variable_two_name=6789"
-#[wasm_bindgen(catch,method)]
+#[wasm_bindgen()]
 pub fn marlowe_to_json_with_variables(contract:&str,params_str:&str) -> Result<String,String> {
     let mut h = HashMap::new();
     if params_str.contains("=") {
@@ -65,7 +65,7 @@ pub fn marlowe_to_json_with_variables(contract:&str,params_str:&str) -> Result<S
 
 /// params_str format by example:
 /// "variable_one_name=12345,variable_two_name=6789"
-#[wasm_bindgen(catch,method)]
+#[wasm_bindgen()]
 pub fn parse_marlowe_with_variables(contract:&str,params_str:&str) -> Result<String,ParseError> {
     let mut h = HashMap::new();
     if params_str.contains("=") {
@@ -82,7 +82,7 @@ pub fn parse_marlowe_with_variables(contract:&str,params_str:&str) -> Result<Str
     }
 }
 
-#[wasm_bindgen(catch)]
+#[wasm_bindgen()]
 pub fn format_marlowe(contract:&str) -> String {
     crate::parsing::fmt::fmt(contract)
 }
@@ -99,7 +99,7 @@ fn marlowe_datum_to_json_type(x:MarloweDatum) -> String {
 }
 
 
-#[wasm_bindgen(catch)]
+#[wasm_bindgen()]
 pub fn decode_cborhex_marlowe_plutus_datum(cbor_hex:&str) -> Result<String,JsError> {
     
     let cbor = decode_hex(cbor_hex);
@@ -109,7 +109,7 @@ pub fn decode_cborhex_marlowe_plutus_datum(cbor_hex:&str) -> Result<String,JsErr
 
     let cbor = cbor.unwrap();
 
-    let datum = PlutusData::from_bytes(cbor);    
+    let datum = plutus_data::PlutusData::from_bytes(cbor);    
     if datum.is_err() {
         return Err(JsError::new("cbor is not in plutus data format."))
     }
@@ -156,7 +156,7 @@ pub fn cbor_hex_to_json_basic_schema(bytes:Vec<u8>) -> Result<JsValue,JsError> {
     }
 }
 
-#[wasm_bindgen(method,catch)]
+#[wasm_bindgen]
 pub fn get_input_params_for_contract(marlowe_dsl:&str) -> Result<Vec<JsValue>,ParseError> {
     let contract = 
         crate::deserialization::marlowe::deserialize(marlowe_dsl)?;
@@ -170,25 +170,9 @@ pub fn get_input_params_for_contract(marlowe_dsl:&str) -> Result<Vec<JsValue>,Pa
     ].concat())
 }
 
-#[wasm_bindgen(method,catch)]
-pub fn list_inputs_params(marlowe_dsl:&str) -> Result<Vec<JsValue>,ParseError> {
-    
-    let contract = 
-        crate::deserialization::marlowe::deserialize(marlowe_dsl)?;
-    
-    Ok([
-
-        contract.uninitialized_const_params.iter().map(|x| 
-            JsValue::from_str(&format!("CONST_PARAM:{x}"))).collect::<Vec<JsValue>>(),
-
-        contract.uninitialized_time_params.iter().map(|x| 
-            JsValue::from_str(&format!("TIME_PARAM:{x}"))).collect::<Vec<JsValue>>()
-
-    ].concat())
-}
 
 
-#[wasm_bindgen(method,catch)]
+#[wasm_bindgen]
 pub fn get_marlowe_dsl_parser_errors(marlowe_dsl:&str) -> Option<ParseError> {
     match crate::deserialization::marlowe::deserialize(marlowe_dsl) {
         Ok(_) => None,
@@ -215,15 +199,16 @@ impl WASMMarloweStateMachine {
             internal_instance : crate::semantics::ContractInstance::new(&c.contract),
         })
     }
+
     
     #[wasm_bindgen(catch,method)]
-    pub fn contract(&self) -> wasm_bindgen::JsValue{
+    pub fn contract(&self) -> wasm_bindgen::JsValue {
         JsValue::from_serde(&self.internal_instance.contract).unwrap()
     }
 
-    #[wasm_bindgen(catch,method)]
-    pub fn logs(&self) -> wasm_bindgen::JsValue{
-        JsValue::from_serde(&self.internal_instance.logs).unwrap()
+    #[wasm_bindgen(catch,method,getter_with_clone)]
+    pub fn logs(&self) -> Vec<JsValue> {
+        self.internal_instance.logs.iter().map(|x|x.into_js_result().unwrap()).collect()
     }
 
     #[wasm_bindgen(catch,method)]
@@ -259,6 +244,11 @@ impl WASMMarloweStateMachine {
         };
         let new_instance = self.internal_instance.with_account_role(role, &asset, quantity);
         self.internal_instance = new_instance;
+    }
+
+    #[wasm_bindgen(method,catch)]
+    pub fn describe(&mut self) -> String {
+        serde_json::to_string_pretty(&self.internal_instance).unwrap()
     }
 
     #[wasm_bindgen(catch,method)]
@@ -297,6 +287,21 @@ impl WASMMarloweStateMachine {
         self.internal_instance = self.internal_instance.apply_input_choice(choice_name, role_party, chosen_value).unwrap()
     }
 
+    #[wasm_bindgen(method,catch)]
+    pub fn expected_inputs_json(&mut self) -> String {
+        let x = self.internal_instance.process().unwrap();
+        let xx : MachineState = x.1;
+        let r = serde_json::to_string_pretty(&xx).unwrap();
+        r
+        // match xx {
+        //     MachineState::Closed => "closed",
+        //     MachineState::Faulted(_) => "helt fel",
+        //     MachineState::ContractHasTimedOut => "timed out",
+        //     MachineState::WaitingForInput { expected:_, timeout:_ } => "waiting for something",
+        //     MachineState::ReadyForNextStep => "ready",
+        // }.to_string()
+    }
+
     #[wasm_bindgen(catch,method)]
     pub fn process(&mut self) -> Result<String, String> {
         match &self.internal_instance.process() {
@@ -304,7 +309,7 @@ impl WASMMarloweStateMachine {
                 self.internal_instance = new_instance.clone();
                 match &new_state {
                     MachineState::ReadyForNextStep => Ok("ready".into()),
-                    MachineState::WaitingForInput { expected,timeout } => Ok("waiting".into()),
+                    MachineState::WaitingForInput { expected:_,timeout:_ } => Ok("waiting".into()),
                     MachineState::Faulted(e) => Err(e.clone()),
                     MachineState::Closed => Ok(String::from("closed")),
                     MachineState::ContractHasTimedOut => Ok(String::from("timedout"))

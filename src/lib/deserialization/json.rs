@@ -32,7 +32,18 @@ impl<'de> serde::de::Visitor<'de> for TimeoutVisitor {
     }
 }
 
+struct ValueIdVisitor;
+impl<'de> serde::de::Visitor<'de> for ValueIdVisitor {
+    type Value = ValueId;
 
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(formatter, "a valid valueid object")
+    }
+    fn visit_str<E>(self, value: &str) -> Result<Self::Value, E> 
+    where E: serde::de::Error {
+        Ok(ValueId::Name(value.to_string()))          
+    }
+}
 
 struct TokenVisitor;
 impl<'de> serde::de::Visitor<'de> for TokenVisitor {
@@ -480,7 +491,7 @@ impl<'de> serde::de::Visitor<'de> for ContractVisitor {
         let mut r#let : Option<ValueId> = None;
         let mut be : Option<Value> = None;
         // let r#else : Option<Contract> = None; <-- overlapping
-
+        
         // ASSERT
         let mut assert : Option<Observation> = None;
         // let r#then : Option<Contract> = None; <-- overlapping   
@@ -1197,6 +1208,14 @@ impl<'de> Deserialize<'de> for State {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where D: serde::Deserializer<'de> { 
             deserializer.deserialize_map(StateVisitor)
+
+    }
+}
+
+impl<'de> Deserialize<'de> for ValueId {    
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: serde::Deserializer<'de> { 
+            deserializer.deserialize_str(ValueIdVisitor)
 
     }
 }

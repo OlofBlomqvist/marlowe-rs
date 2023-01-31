@@ -11,14 +11,22 @@ When  [
               (Role "Counterparty")
               (Token "" "")
               (ConstantParam "Amount paid by counterparty"))
-           (When [] (TimeParam "First window beginning")
+           (When [(Case
+            (Choice
+               (ChoiceId "Everything is alright"
+                  (Role "Buyer")) [
+               (Bound 0 11)]) Close)] (TimeParam "First window beginning")
               (When [
                  (Case
                     (Choice
                        (ChoiceId "Price in first window"
                           (Role "Oracle")) [
                        (Bound 0 1000000000)])
-                    (When [] (TimeParam "Second window beginning")
+                    (When [(Case
+            (Choice
+               (ChoiceId "Everything is alright"
+                  (Role "Buyer")) [
+               (Bound 0 11)]) Close)] (TimeParam "Second window beginning")
                        (When [
                           (Case
                              (Choice
@@ -91,14 +99,22 @@ When  [
               (Role "Counterparty")
               (Token "" "")
               (ConstantParam "Amount paid by counterparty"))
-           (When [] (TimeParam "First window beginning")
+           (When [(Case
+            (Choice
+               (ChoiceId "Everything is alright"
+                  (Role "Buyer")) [
+               (Bound 0 11)]) Close)] (TimeParam "First window beginning")
               (When [
                  (Case
                     (Choice
                        (ChoiceId "Price in first window"
                           (Role "Oracle")) [
                        (Bound 0 1000000000)])
-                    (When [] (TimeParam "Second window beginning")
+                    (When [(Case
+            (Choice
+               (ChoiceId "Everything is alright"
+                  (Role "Buyer")) [
+               (Bound 0 11)]) Close)] (TimeParam "Second window beginning")
                        (When [
                           (Case
                              (Choice
@@ -171,14 +187,22 @@ When  [
               (Role "Counterparty")
               (Token "" "")
               (ConstantParam "Amount paid by counterparty"))
-           (When [] (TimeParam "First window beginning")
+           (When [(Case
+            (Choice
+               (ChoiceId "Everything is alright"
+                  (Role "Buyer")) [
+               (Bound 0 11)]) Close)] (TimeParam "First window beginning")
               (When [
                  (Case
                     (Choice
                        (ChoiceId "Price in first window"
                           (Role "Oracle")) [
                        (Bound 0 1000000000)])
-                    (When [] (TimeParam "Second window beginning")
+                    (When [(Case
+            (Choice
+               (ChoiceId "Everything is alright"
+                  (Role "Buyer")) [
+               (Bound 0 11)]) Close)] (TimeParam "Second window beginning")
                        (When [
                           (Case
                              (Choice
@@ -251,14 +275,22 @@ When  [
               (Role "Counterparty")
               (Token "" "")
               (ConstantParam "Amount paid by counterparty"))
-           (When [] (TimeParam "First window beginning")
+           (When [(Case
+            (Choice
+               (ChoiceId "Everything is alright"
+                  (Role "Buyer")) [
+               (Bound 0 11)]) Close)] (TimeParam "First window beginning")
               (When [
                  (Case
                     (Choice
                        (ChoiceId "Price in first window"
                           (Role "Oracle")) [
                        (Bound 0 1000000000)])
-                    (When [] (TimeParam "Second window beginning")
+                    (When [(Case
+            (Choice
+               (ChoiceId "Everything is alright"
+                  (Role "Buyer")) [
+               (Bound 0 11)]) Close)] (TimeParam "Second window beginning")
                        (When [
                           (Case
                              (Choice
@@ -884,14 +916,22 @@ When  [
               (Role "Counterparty")
               (Token "" "")
               (ConstantParam "Amount paid by counterparty"))
-           (When [] (TimeParam "First window beginning")
+           (When [(Case
+            (Choice
+               (ChoiceId "Everything is alright"
+                  (Role "Buyer")) [
+               (Bound 0 11)]) Close)] (TimeParam "First window beginning")
               (When [
                  (Case
                     (Choice
                        (ChoiceId "Price in first window"
                           (Role "Oracle")) [
                        (Bound 0 1000000000)])
-                    (When [] (TimeParam "Second window beginning")
+                    (When [(Case
+            (Choice
+               (ChoiceId "Everything is alright"
+                  (Role "Buyer")) [
+               (Bound 0 11)]) Close)] (TimeParam "Second window beginning")
                        (When [
                           (Case
                              (Choice
@@ -964,14 +1004,22 @@ When  [
               (Role "Counterparty")
               (Token "" "")
               (ConstantParam "Amount paid by counterparty"))
-           (When [] (TimeParam "First window beginning")
+           (When [(Case
+            (Choice
+               (ChoiceId "Everything is alright"
+                  (Role "Buyer")) [
+               (Bound 0 11)]) Close)] (TimeParam "First window beginning")
               (When [
                  (Case
                     (Choice
                        (ChoiceId "Price in first window"
                           (Role "Oracle")) [
                        (Bound 0 1000000000)])
-                    (When [] (TimeParam "Second window beginning")
+                    (When [(Case
+            (Choice
+               (ChoiceId "Everything is alright"
+                  (Role "Buyer")) [
+               (Bound 0 11)]) Close)] (TimeParam "Second window beginning")
                        (When [
                           (Case
                              (Choice
@@ -1044,14 +1092,22 @@ When  [
               (Role "Counterparty")
               (Token "" "")
               (ConstantParam "Amount paid by counterparty"))
-           (When [] (TimeParam "First window beginning")
+           (When [(Case
+            (Choice
+               (ChoiceId "Everything is alright"
+                  (Role "Buyer")) [
+               (Bound 0 11)]) Close)] (TimeParam "First window beginning")
               (When [
                  (Case
                     (Choice
                        (ChoiceId "Price in first window"
                           (Role "Oracle")) [
                        (Bound 0 1000000000)])
-                    (When [] (TimeParam "Second window beginning")
+                    (When [(Case
+            (Choice
+               (ChoiceId "Everything is alright"
+                  (Role "Buyer")) [
+               (Bound 0 11)]) Close)] (TimeParam "Second window beginning")
                        (When [
                           (Case
                              (Choice
@@ -1124,14 +1180,22 @@ When  [
               (Role "Counterparty")
               (Token "" "")
               (ConstantParam "Amount paid by counterparty"))
-           (When [] (TimeParam "First window beginning")
+           (When [(Case
+            (Choice
+               (ChoiceId "Everything is alright"
+                  (Role "Buyer")) [
+               (Bound 0 11)]) Close)] (TimeParam "First window beginning")
               (When [
                  (Case
                     (Choice
                        (ChoiceId "Price in first window"
                           (Role "Oracle")) [
                        (Bound 0 1000000000)])
-                    (When [] (TimeParam "Second window beginning")
+                    (When [(Case
+            (Choice
+               (ChoiceId "Everything is alright"
+                  (Role "Buyer")) [
+               (Bound 0 11)]) Close)] (TimeParam "Second window beginning")
                        (When [
                           (Case
                              (Choice
