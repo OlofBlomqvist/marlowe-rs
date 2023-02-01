@@ -506,7 +506,7 @@ dependencies = [
 
 [[package]]
 name = "marlowe_lang"
-version = "0.1.18"
+version = "0.1.19"
 dependencies = [
  "bech32 0.9.1",
  "cardano-multiplatform-lib",
