@@ -24,7 +24,7 @@ write-host -ForegroundColor Green "Successfully built crate for wasi wasm @ pkg_
 
 # Calling the cli using wasmer
 # wasmer run .\pkg_wasi\marlowe_lang_cli.wasm
-# wasmer run .\pkg_wasi\marlowe_lang_cli.wasm contract from-string Close marlowe-dsl marlowe-json
+# wasmer run .\pkg_wasi\marlowe_lang_cli.wasm contract from-string Close marlowe-dsl json
 
 # Calling an exposed lib method using wasmer
 # wasmer run .\pkg_wasi\marlowe_lang_cli.wasm --invoke foo 

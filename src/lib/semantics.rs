@@ -20,8 +20,8 @@ pub enum InputType {
     Deposit { 
         who_is_expected_to_pay:Party ,
         expected_asset_type: Token, 
-        expected_amount: Value, 
-        expected_target_account:Payee,
+        expected_amount: u64, 
+        expected_target_account:crate::types::marlowe::AccountId,
         continuation: Contract
     }, 
 
@@ -85,7 +85,14 @@ impl From<ProcessError> for String {
 #[derive(Clone,Debug,Serialize,Deserialize)]
 pub enum AppliedInput {
     Choice(ChoiceId,i64),
-    Deposit(Party,Payee,Token,u64)
+    Deposit(Party,AccountId,Token,u64)
+}
+
+pub enum ActionApplicationError {
+    InvalidChoice(ApplyInputChoiceError),
+    InvalidDeposit(ApplyInputDepositError),
+    UnexpectedNotification,
+    Unknown(String)
 }
 
 pub trait ContractSemantics<T> {
@@ -108,8 +115,11 @@ pub trait ContractSemantics<T> {
     fn apply_input_choice(&self,applied_choice_name:&str, applied_choice_owner:Party, applied_chosen_value: i64) -> 
         Result<ContractInstance,ApplyInputChoiceError>;
 
-    fn apply_input_deposit(&self,from:Party, asset: Token, quantity: u64, to:Payee) -> 
+    fn apply_input_deposit(&self,from:Party, asset: Token, quantity: u64, to:crate::types::marlowe::AccountId) -> 
         Result<ContractInstance,ApplyInputDepositError>;
+
+    fn apply_input_action(&self,action:crate::types::marlowe::InputAction) -> 
+        Result<ContractInstance,ActionApplicationError>;
 
 }
 
@@ -362,6 +372,40 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
         }
     }
 
+    fn apply_input_action(&self,action:crate::types::marlowe::InputAction) -> Result<ContractInstance,ActionApplicationError> {
+    
+        match action {
+            InputAction::Deposit { into_account, input_from_party, of_tokens, that_deposits } => {
+                match (into_account,input_from_party,of_tokens) {
+                    (Some(a), Some(b), Some(c)) => match self.apply_input_deposit(b, c, that_deposits, AccountId::Role { role_token: "nisse".to_owned() }) {
+                        Ok(v) => Ok(v),
+                        Err(e) => Err(ActionApplicationError::InvalidDeposit(e)),
+                    },
+                    _ => return Err(
+                        ActionApplicationError::InvalidDeposit(
+                            ApplyInputDepositError::UnexpectedInput(
+                                String::from("Missing arguments in deposit action.")
+                            )
+                        )
+                    )
+                }
+            },
+            InputAction::Choice { for_choice_id:Some(ChoiceId { choice_name, choice_owner:Some(owner) }), input_that_chooses_num } => {
+                let result = self.apply_input_choice(
+                    &choice_name,
+                    owner, 
+                    input_that_chooses_num
+                );
+                match result {
+                    Ok(r) => Ok(r),
+                    Err(e) => Err(ActionApplicationError::InvalidChoice(e)),
+                }
+            },
+            InputAction::Notify => todo!(),
+            _ => Err(ActionApplicationError::Unknown(String::from("Partial or invalid action could not be applied.")))
+        }
+    }
+
     fn apply_input_choice(&self,applied_choice_name:&str, applied_choice_owner:Party, applied_chosen_value: i64) -> Result<ContractInstance,ApplyInputChoiceError> {
         
         let (mut new_instance,machine_state) = match self.process() {
@@ -416,7 +460,7 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
         
     }
 
-    fn apply_input_deposit(&self,from:Party, asset: Token, quantity: u64, to:Payee) -> Result<ContractInstance,ApplyInputDepositError> {
+    fn apply_input_deposit(&self,from:Party, asset: Token, quantity: u64, to:crate::types::marlowe::AccountId) -> Result<ContractInstance,ApplyInputDepositError> {
         
         let (mut new_instance,machine_state) = match self.process() {
             Ok((a, b)) => (a,b),
@@ -441,15 +485,10 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
                             continuation 
                         } => {
 
-                            let known_positive_reduced_expected_value = match self.eval_num_value(&expected_amount) {
-                                Ok(v) if v > 0 => v as u64,
-                                _ => continue,
-                            };
-                            
 
                             if who_is_expected_to_pay == &from
                                 && &asset == expected_asset_type 
-                                && quantity == known_positive_reduced_expected_value
+                                && &quantity == expected_amount
                                 && expected_target_account == &to
                             {
                                 // Add or update amount for the party that is depositing value to their account.
@@ -652,13 +691,30 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
                         },
                         (Some(PossiblyMerkleizedContract::Raw(continuation))
                         ,Some(Action::Deposit { into_account:Some(to), party:Some(from), of_token:Some(tok), deposits :Some(depo)})) => {
-                            expected_inputs.push(InputType::Deposit { 
-                                who_is_expected_to_pay: from.clone(), 
-                                expected_asset_type: tok.clone(), 
-                                expected_amount: depo.clone(), 
-                                expected_target_account: Payee::Account(Some(to.clone())),
-                                continuation: *(continuation.clone())
-                            });
+
+                            let expected_amount = self.eval_num_value(&depo);
+                            
+                            match expected_amount {
+                                Ok(v) => 
+                                    {
+                                        if v < 0 {
+                                            return Err(format!("Expected amount turned out negative.. This is most likely a bug in the marlowe_lang crate. {:?} {:?}", self.state ,depo))
+                                        }
+
+                                        expected_inputs.push(InputType::Deposit { 
+                                        who_is_expected_to_pay: from.clone(), 
+                                        expected_asset_type: tok.clone(), 
+                                        expected_amount: v as u64, 
+                                        expected_target_account: to,
+                                        continuation: *(continuation.clone())
+                                    })
+                                }   ,
+                                Err(e) => {
+                                    return Err(format!("Failed to evaluate expected amount from state! This is most likely a bug in the marlowe_lang crate. state:{:?}, depo:{:?}, err: {}", self.state ,depo, e))
+                                },
+                            }
+
+                            
                         }
                         _ => {
                             return Err(String::from("This contract is not fully initialized. There is an invalid case in a When contract."))

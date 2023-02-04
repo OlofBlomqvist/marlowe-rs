@@ -11,13 +11,45 @@ use crate::types::marlowe::*;
 use crate::extras::utils::*;
 use plutus_data::FromPlutusData;
 
+pub fn basic_deserialize<'a,T : 'static>(json:&str) -> Result<T,serde_json::Error> 
+where T : serde::de::DeserializeOwned + std::marker::Send{
+    let j = json.to_owned();
+    
+        let mut deserializer = serde_json::Deserializer::from_str(&j);
+        deserializer.disable_recursion_limit();
+        let deserializer = serde_stacker::Deserializer::new(&mut deserializer);
+        let value = T::deserialize(deserializer).unwrap();
+        Ok(value)
+
+}
+
+#[wasm_bindgen]
+pub fn decode_marlowe_dsl_from_json(dsl:&str) -> String {
+    let result : Contract = basic_deserialize(dsl).unwrap();
+    result.to_dsl()
+}
+
 #[wasm_bindgen]
 pub fn decode_marlowe_input_cbor_hex(redeemer_cbor_hex:&str) -> String {
     let s = super::utils::try_decode_redeemer_input_cbor_hex(redeemer_cbor_hex);
     let s = serde_json::to_string_pretty(&s).unwrap();
     s
 }
- 
+
+#[wasm_bindgen]
+pub fn u64_to_i64(x:u64) -> i64 {
+    x as i64
+}
+
+#[wasm_bindgen]
+pub fn u64_to_string(x:u64) -> String {
+    x.to_string()
+}
+#[wasm_bindgen]
+pub fn i64_to_string(x:i64) -> String {
+    x.to_string()
+}
+
 #[wasm_bindgen]
 pub fn decode_marlowe_input_json(redeemer_json:&str) -> String {
     let s = super::utils::try_decode_redeemer_input_json(redeemer_json);
@@ -201,22 +233,22 @@ impl WASMMarloweStateMachine {
     }
 
     
-    #[wasm_bindgen(catch,method)]
+    #[wasm_bindgen(catch,getter)]
     pub fn contract(&self) -> wasm_bindgen::JsValue {
         JsValue::from_serde(&self.internal_instance.contract).unwrap()
     }
 
-    #[wasm_bindgen(catch,method,getter_with_clone)]
+    #[wasm_bindgen(catch,getter_with_clone)]
     pub fn logs(&self) -> Vec<JsValue> {
         self.internal_instance.logs.iter().map(|x|x.into_js_result().unwrap()).collect()
     }
 
-    #[wasm_bindgen(catch,method)]
+    #[wasm_bindgen(catch,getter)]
     pub fn payments(&self) -> wasm_bindgen::JsValue{
         JsValue::from_serde(&self.internal_instance.payments).unwrap()
     }
 
-    #[wasm_bindgen(catch,method)]
+    #[wasm_bindgen(catch,getter)]
     pub fn state(&self) -> WasmState {
         self.internal_instance.state.clone().try_into().unwrap()
     }
@@ -251,6 +283,12 @@ impl WASMMarloweStateMachine {
         serde_json::to_string_pretty(&self.internal_instance).unwrap()
     }
 
+    #[wasm_bindgen(method,catch)]
+    pub fn machine_state(self) -> WasmMachineState {
+        let (a,b) = self.internal_instance.process().unwrap();
+        b.try_into().unwrap()
+    }
+
     #[wasm_bindgen(catch,method)]
     pub fn apply_input_deposit_for_role(&mut self,from_role:&str,to_role:&str,token_name:&str,currency_symbol:&str,quantity:u64) {
         let asset = Token {
@@ -259,7 +297,7 @@ impl WASMMarloweStateMachine {
         };
         let from_role_party = Party::role(from_role);
         let to_role_party = Party::role(to_role);
-        let new_instance = self.internal_instance.apply_input_deposit(from_role_party, asset, quantity, Payee::Account(Some(to_role_party))).unwrap();
+        let new_instance = self.internal_instance.apply_input_deposit(from_role_party, asset, quantity, to_role_party).unwrap();
         self.internal_instance = new_instance;
     }
 
@@ -271,7 +309,7 @@ impl WASMMarloweStateMachine {
         };
         let from_addr_party = Party::Address(Address::from_bech32(from_bech32_addr).unwrap());
         let to_addr_party = Party::Address(Address::from_bech32(to_bech32_addr).unwrap());
-        let new_instance = self.internal_instance.apply_input_deposit(from_addr_party, asset, quantity,Payee::Account(Some(to_addr_party))).unwrap();
+        let new_instance = self.internal_instance.apply_input_deposit(from_addr_party, asset, quantity,to_addr_party).unwrap();
         self.internal_instance = new_instance;
     }
 
@@ -288,18 +326,11 @@ impl WASMMarloweStateMachine {
     }
 
     #[wasm_bindgen(method,catch)]
-    pub fn expected_inputs_json(&mut self) -> String {
+    pub fn machine_state_json(&mut self) -> String {
         let x = self.internal_instance.process().unwrap();
         let xx : MachineState = x.1;
         let r = serde_json::to_string_pretty(&xx).unwrap();
         r
-        // match xx {
-        //     MachineState::Closed => "closed",
-        //     MachineState::Faulted(_) => "helt fel",
-        //     MachineState::ContractHasTimedOut => "timed out",
-        //     MachineState::WaitingForInput { expected:_, timeout:_ } => "waiting for something",
-        //     MachineState::ReadyForNextStep => "ready",
-        // }.to_string()
     }
 
     #[wasm_bindgen(catch,method)]
@@ -526,6 +557,20 @@ pub struct WasmParty {
     typ : WasmPartyType,
     val : String
 }
+
+#[wasm_bindgen::prelude::wasm_bindgen]
+#[derive(Debug,Clone)] 
+pub enum WasmPayeeType {
+    Role = 0,
+    Address = 1
+}
+#[wasm_bindgen::prelude::wasm_bindgen]
+#[derive(Debug,Clone)] 
+pub struct WasmPayee {
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)]pub typ : WasmPayeeType,
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)]pub val : String
+}
+
 #[wasm_bindgen::prelude::wasm_bindgen]
 impl WasmParty {
     #[wasm_bindgen::prelude::wasm_bindgen(method,catch)]
@@ -551,7 +596,28 @@ impl WasmParty {
         }
     }
 }
+impl TryFrom<crate::types::marlowe::Party> for WasmParty {
+    type Error = String;
 
+    fn try_from(value: crate::types::marlowe::Party) -> Result<Self, Self::Error> {
+        match value {
+             crate::types::marlowe::Party::Role { role_token } => Ok(WasmParty::new_role(&role_token)),
+             crate::types::marlowe::Party::Address(a) => Ok(WasmParty::new_addr(&a.as_bech32().unwrap()))
+         }
+     }
+}
+impl TryFrom<WasmParty> for crate::types::marlowe::Party {
+    type Error = String;
+
+    fn try_from(value: WasmParty) -> Result<Self, Self::Error> {
+        match value.typ {
+            WasmPartyType::Role => Ok(Party::role(&value.val)),
+            WasmPartyType::Address => Ok(Party::Address(Address::from_bech32(&value.val).unwrap())),
+        }
+    }
+
+
+}
 impl TryFrom<crate::types::marlowe_strict::Party> for WasmParty {
     type Error = String;
 
@@ -560,5 +626,185 @@ impl TryFrom<crate::types::marlowe_strict::Party> for WasmParty {
             crate::types::marlowe_strict::Party::Address(a) => Ok(WasmParty::new_addr(&a)),
             crate::types::marlowe_strict::Party::Role(r) => Ok(WasmParty::new_role(&r)),
         }
+    }   
+}
+
+
+#[wasm_bindgen::prelude::wasm_bindgen]
+#[derive(Debug,Clone)]
+pub struct WasmInputDeposits {
+    deposits : Vec<WasmInputDeposit>    
+}
+#[wasm_bindgen::prelude::wasm_bindgen]
+impl WasmInputDeposits {
+    #[wasm_bindgen::prelude::wasm_bindgen(method,catch)]
+    pub fn length(&self) -> usize {
+        self.deposits.len()
+    }
+    #[wasm_bindgen::prelude::wasm_bindgen(method,catch)]
+    pub fn get(&self,n:usize) -> WasmInputDeposit {
+        self.deposits.get(n).unwrap().clone()
+    }
+}
+#[wasm_bindgen::prelude::wasm_bindgen]
+#[derive(Debug,Clone)]
+pub struct WasmInputChoices {
+    choices : Vec<WasmInputChoice>    
+}
+#[wasm_bindgen::prelude::wasm_bindgen]
+impl WasmInputChoices {
+    #[wasm_bindgen::prelude::wasm_bindgen(method,catch)]
+    pub fn length(&self) -> usize {
+        self.choices.len()
+    }
+    #[wasm_bindgen::prelude::wasm_bindgen(method,catch)]
+    pub fn get(&self,n:usize) -> WasmInputChoice {
+        self.choices.get(n).unwrap().clone()
+    }
+}
+
+
+
+#[wasm_bindgen::prelude::wasm_bindgen]
+#[derive(Debug,Clone)]
+pub enum WasmMachineStateEnum {
+    WaitingForInput,ReadyForNextStep,ContractHasTimedOut,Closed,Faulted
+}
+
+#[wasm_bindgen::prelude::wasm_bindgen]
+#[derive(Debug)]
+pub struct WasmMachineState {
+   pub waiting_for_notification : bool,
+   #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub expected_deposits : Option<WasmInputDeposits>,
+   #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub expected_choices : Option<WasmInputChoices>,
+   #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub error : Option<String>,
+   #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub next_timeout : Option<u64>,
+   #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub typ : WasmMachineStateEnum,
+}
+
+
+#[derive(Debug,Clone)]
+#[wasm_bindgen::prelude::wasm_bindgen]
+pub struct WasmInputDeposit {
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub who_is_expected_to_pay:WasmParty,
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub expected_asset_type: WasmToken,
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub expected_amount: i64,
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub expected_target_account:WasmPayee,
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub continuation_dsl: String
+}
+
+#[derive(Debug,Clone)]
+#[wasm_bindgen::prelude::wasm_bindgen]
+pub struct WasmInputChoice {
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub choice_name:String , 
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub who_is_allowed_to_make_the_choice: WasmParty, 
+    // "1-14,17-115"
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub bounds : String, 
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub continuation_dsl: String
+}
+
+
+impl TryFrom<crate::semantics::MachineState> for WasmMachineState {
+    type Error = String;
+
+    fn try_from(value: crate::semantics::MachineState) -> Result<Self, Self::Error> {
+
+        match value {
+            MachineState::Closed => Ok(WasmMachineState{
+                waiting_for_notification : false,
+                next_timeout: None,
+                expected_deposits: None,
+                expected_choices: None,
+                error: None,
+                typ: WasmMachineStateEnum::Closed,
+            }),
+            MachineState::Faulted(e) => Ok(WasmMachineState{
+                waiting_for_notification : false,
+                next_timeout: None,
+                expected_deposits: None,
+                expected_choices: None,
+                error: Some(e),
+                typ: WasmMachineStateEnum::Faulted,
+            }),
+            MachineState::ContractHasTimedOut => Ok(WasmMachineState{
+                waiting_for_notification : false,
+                next_timeout: None,
+                expected_deposits: None,
+                expected_choices: None,
+                error: None,
+                typ: WasmMachineStateEnum::ContractHasTimedOut,
+            }),
+            MachineState::WaitingForInput { expected, timeout } => {
+                
+                let mut expected_deposits : Vec<WasmInputDeposit> = vec![];
+                let mut expected_choices : Vec<WasmInputChoice> = vec![];
+                let mut expects_notify = false;
+
+                for x in &expected {
+                    match x {
+
+                        crate::semantics::InputType::Deposit { 
+                            who_is_expected_to_pay, 
+                            expected_asset_type, 
+                            expected_amount, 
+                            expected_target_account, 
+                            continuation 
+                        } => {
+                            let dep = WasmInputDeposit { 
+                                who_is_expected_to_pay: who_is_expected_to_pay.clone().try_into().unwrap(), 
+                                expected_asset_type: WasmToken { name: expected_asset_type.token_name.to_string(), pol: expected_asset_type.currency_symbol.to_string() }, 
+                                expected_amount: *expected_amount as i64, 
+                                expected_target_account: {
+                                    match expected_target_account {
+                                        Party::Address(a) => WasmPayee { typ: WasmPayeeType::Address, val: a.as_bech32().unwrap() },
+                                        Party::Role { role_token } => WasmPayee { typ: WasmPayeeType::Role, val: role_token.to_string() },
+                                    }
+                                }, 
+                                continuation_dsl: continuation.to_dsl()
+                            };
+                            expected_deposits.push(dep);
+                        },
+
+                        crate::semantics::InputType::Choice { 
+                            choice_name, 
+                            who_is_allowed_to_make_the_choice, 
+                            bounds, 
+                            continuation
+                        } => {
+                            let dslcon = continuation.to_dsl();
+                            let strbounds = bounds.iter().map(|x|format!("{}-{}",x.0,x.1)).collect::<Vec<String>>().join(",");
+                            let choice = WasmInputChoice { 
+                                choice_name: choice_name.to_string(), 
+                                who_is_allowed_to_make_the_choice: who_is_allowed_to_make_the_choice.clone().try_into().unwrap(), 
+                                bounds: strbounds.to_string(), 
+                                continuation_dsl: dslcon.to_string() 
+                            };
+                            expected_choices.push(choice);
+                        },
+
+                        crate::semantics::InputType::Notify => 
+                            expects_notify = true,
+                    }
+                }
+
+                Ok(WasmMachineState {
+                    waiting_for_notification : expects_notify,
+                    next_timeout: Some(timeout),
+                    expected_deposits: if expected_deposits.len() > 0 { Some(WasmInputDeposits{deposits:expected_deposits}) } else { None },
+                    expected_choices: if expected_choices.len() > 0 { Some(WasmInputChoices{choices:expected_choices}) } else { None },
+                    error: None,
+                    typ: WasmMachineStateEnum::WaitingForInput
+                })
+            },
+            MachineState::ReadyForNextStep => Ok(WasmMachineState{
+                waiting_for_notification : false,
+                next_timeout: None,
+                expected_deposits: None,
+                expected_choices: None,
+                error: None,
+                typ: WasmMachineStateEnum::ReadyForNextStep,
+            }),
+        }
+
     }   
 }

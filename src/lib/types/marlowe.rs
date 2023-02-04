@@ -234,12 +234,12 @@ impl Party {
 pub enum InputAction {
     Deposit { // 0
         #[ignore_option_container]
-        into_account: Option<Party>, // 0
+        into_account: Option<AccountId>, // 0
         #[ignore_option_container]
         input_from_party: Option<Party>, // 1
         #[ignore_option_container]
         of_tokens: Option<Token>, // 2
-        that_deposits: i64 // 3
+        that_deposits: u64 // 3
     },
     Choice { // 1
         #[ignore_option_container]
@@ -263,7 +263,7 @@ pub enum PossiblyMerkleizedInput {
 #[derive(Debug,Clone,PartialEq)]
 pub enum Action {
     Deposit { // 0
-        #[ignore_option_container]into_account: Option<Party>, // 0
+        #[ignore_option_container]into_account: Option<AccountId>, // 0
         #[ignore_option_container]party: Option<Party>, // 1
         #[ignore_option_container]of_token: Option<Token>, // 2
         #[ignore_option_container]deposits: Option<Value> // 3

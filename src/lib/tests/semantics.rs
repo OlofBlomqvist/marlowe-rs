@@ -174,7 +174,8 @@ fn basic_semantics_test() {
             Party::Role { role_token: "NISSE".into() },
             Token::ada(), 
             42, 
-            Payee::Account(Some(Party::Role { role_token: "NISSE".into() }))
+            AccountId::Role { role_token: "NISSE".into() }
+
         ).expect("nisse should be able to apply input deposit").process().unwrap();
 
     match machine_of_first_kind.1 {

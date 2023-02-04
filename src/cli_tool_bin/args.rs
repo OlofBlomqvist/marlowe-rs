@@ -45,7 +45,7 @@ pub enum PlutusArgs {
 pub enum ContractOutputInfoType {
     CborHex, // plutus data
     MarloweDSL, // plain marlowe text
-    MarloweJSON, // json format as used in marlowe-cli (haskell impl)
+    JSON, // json format as used in marlowe-cli (haskell impl)
     // PlutusData encoded using detailed schema
     PlutusDataDetailedJson, // plutus data detailed json format
     /// WIP - Unstable feature

@@ -158,7 +158,7 @@ fn contract_handler(args:ContractArgs) {
             ContractOutputInfoType::MarloweDSL => 
                 marlowe_lang::parsing::fmt::fmt(&
                     marlowe_lang::serialization::marlowe::serialize(c)),
-            ContractOutputInfoType::MarloweJSON => 
+            ContractOutputInfoType::JSON => 
                 marlowe_lang::serialization::json::serialize(c).unwrap(),
             ContractOutputInfoType::PlutusDataDetailedJson => {
                 let pl = c.to_plutus_data(&vec![]).unwrap();
