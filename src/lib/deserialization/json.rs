@@ -842,7 +842,7 @@ impl<'de> serde::de::Visitor<'de> for ObservationVisitor {
                 lt = Some(map.next_value()?);
             } else if k == "ge_than" {
                 ge_than = Some(map.next_value()?);
-            } else if k == "chose_something_for" {
+            } else if k == "choice_id" { // TODO HERE CHOICE_ID ?
                 chose_something_for = Some(map.next_value()?);
             } else if k == "not" {
                 not = Some(map.next_value()?);
