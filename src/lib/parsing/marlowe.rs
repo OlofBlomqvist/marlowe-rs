@@ -299,6 +299,14 @@ pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Resu
                     lt_than: v2
                 }))
             }
+            Rule::ValueLE => {
+                let v2 = get_next_into!();
+                let v1 = get_next_into!();
+                fold_back!(AstNode::MarloweObservation(Observation::ValueLE {
+                    value: v1,
+                    le_than: v2
+                }))
+            }
             Rule::NotObs => {
                 let v = get_next_into!();
                 fold_back!(AstNode::MarloweObservation(Observation::NotObs { not: v }))
