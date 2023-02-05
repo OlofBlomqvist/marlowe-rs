@@ -389,6 +389,11 @@ pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Resu
                 fold_back!(AstNode::MarloweValue(Value::ConstantValue(nn)))
 
             }
+            Rule::Assert => {
+                let cont = get_next_into!();
+                let obs = get_next_into!();
+                fold_back!(AstNode::MarloweContract(Contract::Assert { assert: obs, then: cont }))
+            }
 
             Rule::ActionHole|
             Rule::ContractHole|
