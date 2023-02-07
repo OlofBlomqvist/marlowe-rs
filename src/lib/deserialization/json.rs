@@ -196,7 +196,7 @@ impl<'de> serde::de::Visitor<'de> for ActionVisitor {
         // DEPOSIT:
         let mut party : Option<Party> = None;
         let mut of_token : Option<Token> = None;
-        let mut into_account : Option<Party> = None;
+        let mut into_account : Option<AccountId> = None;
         let mut deposits : Option<Value> = None;
 
         // NOTIFY:
@@ -471,7 +471,7 @@ impl<'de> serde::de::Visitor<'de> for ContractVisitor {
     {
 
         // PAY
-        let mut from_account : Option<Party>  = None;
+        let mut from_account : Option<AccountId>  = None;
         let mut to : Option<Payee> = None;
         let mut token: Option<Token> = None;
         let mut pay : Option<Value> = None;
@@ -972,7 +972,7 @@ impl<'de> serde::de::Visitor<'de> for ValueVisitor {
 
         // AvailableMoney
         let mut amount_of_token : Option<Token> = None;
-        let mut in_account : Option<Party> = None;
+        let mut in_account : Option<AccountId> = None;
         
         // AddValue
         let mut add : Option<Value> = None;

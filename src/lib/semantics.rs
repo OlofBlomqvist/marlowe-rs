@@ -32,7 +32,10 @@ pub enum InputType {
         continuation: Contract
     },
 
-    Notify
+    Notify {
+        obs: Observation,
+        continuation: PossiblyMerkleizedContract
+    }
 }
 
 #[derive(Clone,Debug,Serialize,Deserialize)]
@@ -65,7 +68,8 @@ pub struct ContractInstance {
     pub payments : Vec<Payment>,
     pub logs : Vec<String>,
     pub warnings : Vec<TransactionWarning>,
-    pub applied : Vec<AppliedInput>
+    pub applied : Vec<AppliedInput>,
+    pub role_payout_validator_hash: Option<String>
 }
 
 
@@ -102,7 +106,7 @@ pub trait ContractSemantics<T> {
     fn with_account_role(&self,role:&str,asset:&Token,quantity:u64) -> T;
     fn assert_observation(&self,obs:&Observation) -> Option<bool>;
     fn eval_num_value(&self,val:&Value) -> Result<i64,String>;
-    
+    fn with_min_time(&self,val:&u64) -> T;
     fn process(&self) -> 
         Result<(ContractInstance,MachineState),ProcessError>;
     
@@ -140,6 +144,7 @@ impl ContractInstance {
     
     pub fn from_datum(datum:&MarloweDatum) -> Self {
         ContractInstance {
+            role_payout_validator_hash: Some(datum.marlowe_params.0.to_string()),
             applied: vec![],
             warnings: vec![],
             state: datum.state.clone(),
@@ -151,8 +156,9 @@ impl ContractInstance {
         }
     }
 
-    pub fn new(contract:&Contract) -> Self {
+    pub fn new(contract:&Contract,role_payout_validator_hash:Option<String>) -> Self {
         ContractInstance {
+            role_payout_validator_hash,
             applied: vec![],
             warnings: vec![],
             state: State { 
@@ -172,6 +178,13 @@ impl ContractInstance {
         match self.process() {
             Ok((_,MachineState::ContractHasTimedOut)) => true,
             _ => false
+        }
+    }
+    pub fn as_datum(&self) -> MarloweDatum {
+        MarloweDatum {
+            marlowe_params: MarloweParams(self.role_payout_validator_hash.clone().unwrap_or_default()),
+            state: self.state.clone(),
+            contract: self.contract.clone(),
         }
     }
 
@@ -655,24 +668,25 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
                 let current_time = Self::get_current_time();                
                 if current_time > maxtime {
                     new_instance.contract = *c.clone();
-                    new_instance.logs.push(format!("When contract has timed out."));
+                    new_instance.logs.push(format!("[{}] When contract has timed out. max time was: {}",current_time,maxtime));
                     return Ok((new_instance,MachineState::ContractHasTimedOut))
                 }
 
                 let mut expected_inputs = vec![];
                 
                 for x in when.iter().filter_map(|y|y.clone()).collect::<Vec<Case>>() {
-                    match (x.then,x.case) {
+                    match (&x.then,&x.case) {
                         (   Some(PossiblyMerkleizedContract::Raw(continuation)),
                             Some(Action::Notify { notify_if:Some(obs) })
                         ) => {
-
-                            if !expected_inputs.contains(&InputType::Notify) { expected_inputs.push(InputType::Notify) }
+                            let cont = if let Some(c) = x.then.clone() {c} else { return Err(String::from("missing continuation for notification."))};
+                            if !expected_inputs.contains(&InputType::Notify{obs:obs.clone(), continuation:cont.clone()}) { expected_inputs.push(InputType::Notify{obs:obs.clone(), continuation:cont.clone()}) }
 
                             let concrete_observation = self.assert_observation(&obs);
                             if concrete_observation.is_none() {
                                 return Err(String::from("Contract is incomplete. Missing observation details."))}
                             if let Some(true) = &concrete_observation {
+                                new_instance.logs.push(format!("Notification of a true observation! {:?}",&obs));
                                 new_instance.contract = *(continuation.clone());
                                 return Ok((new_instance,MachineState::ReadyForNextStep))
                             }
@@ -705,12 +719,12 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
                                         who_is_expected_to_pay: from.clone(), 
                                         expected_asset_type: tok.clone(), 
                                         expected_amount: v as u64, 
-                                        expected_target_account: to,
+                                        expected_target_account: to.clone(),
                                         continuation: *(continuation.clone())
                                     })
                                 }   ,
                                 Err(e) => {
-                                    return Err(format!("Failed to evaluate expected amount from state! This is most likely a bug in the marlowe_lang crate. state:{:?}, depo:{:?}, err: {}", self.state ,depo, e))
+                                    return Err(format!("Failed to evaluate expected amount from state! state:{:?}, depo:{:?}, err: {}", self.state ,depo, e))
                                 },
                             }
 
@@ -721,7 +735,7 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
                         },
                     }
                 };
-
+                new_instance.logs.push(format!("When contract is waiting for input until max time: {}",maxtime));
                 Ok((new_instance,MachineState::WaitingForInput{expected:expected_inputs,timeout:maxtime}))
             },
 
@@ -782,5 +796,11 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
         }
         
 
+    }
+
+    fn with_min_time(&self,val:&u64) -> ContractInstance {
+        let mut new_instance = self.clone();
+        new_instance.state.min_time = *val;
+        new_instance
     }
 }

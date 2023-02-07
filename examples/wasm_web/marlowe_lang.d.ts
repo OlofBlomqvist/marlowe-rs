@@ -1,10 +1,30 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
+* @param {string} dsl
+* @returns {string}
+*/
+export function decode_marlowe_dsl_from_json(dsl: string): string;
+/**
 * @param {string} redeemer_cbor_hex
 * @returns {string}
 */
 export function decode_marlowe_input_cbor_hex(redeemer_cbor_hex: string): string;
+/**
+* @param {bigint} x
+* @returns {bigint}
+*/
+export function u64_to_i64(x: bigint): bigint;
+/**
+* @param {bigint} x
+* @returns {string}
+*/
+export function u64_to_string(x: bigint): string;
+/**
+* @param {bigint} x
+* @returns {string}
+*/
+export function i64_to_string(x: bigint): string;
 /**
 * @param {string} redeemer_json
 * @returns {string}
@@ -234,6 +254,32 @@ export function make_vkey_witness(tx_body_hash: TransactionHash, sk: PrivateKey)
 export enum WasmPartyType {
   Role,
   Address,
+}
+/**
+*/
+export enum WasmPayeeType {
+  AccountRole,
+  AccountAddress,
+  PartyRole,
+  PartyAddress,
+}
+/**
+*/
+export enum WasmTransactionWarningType {
+  Failed,
+  TransactionNonPositiveDeposit,
+  TransactionNonPositivePay,
+  TransactionPartialPay,
+  TransactionShadowing,
+}
+/**
+*/
+export enum WasmMachineStateEnum {
+  WaitingForInput,
+  ReadyForNextStep,
+  ContractHasTimedOut,
+  Closed,
+  Faulted,
 }
 /**
 */
@@ -6445,6 +6491,20 @@ export class StakeholderId {
 }
 /**
 */
+export class StringVec {
+  free(): void;
+/**
+* @returns {number}
+*/
+  length(): number;
+/**
+* @param {number} n
+* @returns {string}
+*/
+  get(n: number): string;
+}
+/**
+*/
 export class Strings {
   free(): void;
 /**
@@ -8234,29 +8294,46 @@ export class WASMMarloweStateMachine {
   free(): void;
 /**
 * Takes an initialized (non-marlowe-extended) MarloweDSL contract as input.
+* @param {string} datum_json
+* @returns {WASMMarloweStateMachine}
+*/
+  static from_datum_json(datum_json: string): WASMMarloweStateMachine;
+/**
+* Takes an initialized (non-marlowe-extended) MarloweDSL contract as input.
+* @param {WasmDatum} datum
+* @returns {WASMMarloweStateMachine}
+*/
+  static from_datum(datum: WasmDatum): WASMMarloweStateMachine;
+/**
+* Takes an initialized (non-marlowe-extended) MarloweDSL contract as input.
 * @param {string} contract_dsl
+* @param {string} role_payout_validator_hash
 */
-  constructor(contract_dsl: string);
+  constructor(contract_dsl: string, role_payout_validator_hash: string);
 /**
-* @returns {any}
+* @returns {WasmDatum}
 */
-  contract(): any;
+  as_datum(): WasmDatum;
 /**
-* @returns {any[]}
+* @returns {string}
 */
-  logs(): any[];
+  datum_json(): string;
 /**
-* @returns {any}
+* @returns {string}
 */
-  payments(): any;
+  datum_text(): string;
 /**
-* @returns {WasmState}
+* @returns {string}
 */
-  state(): WasmState;
+  timeout_continuation(): string;
 /**
-* @returns {any}
+* @returns {StringVec}
 */
-  warnings(): any;
+  logs(): StringVec;
+/**
+* @returns {WasmTransactionWarnings}
+*/
+  warnings(): WasmTransactionWarnings;
 /**
 * @param {string} bech32_addr
 * @param {string} token_name
@@ -8275,6 +8352,10 @@ export class WASMMarloweStateMachine {
 * @returns {string}
 */
   describe(): string;
+/**
+* @returns {WasmMachineState}
+*/
+  machine_state(): WasmMachineState;
 /**
 * @param {string} from_role
 * @param {string} to_role
@@ -8306,11 +8387,25 @@ export class WASMMarloweStateMachine {
 /**
 * @returns {string}
 */
-  expected_inputs_json(): string;
+  machine_state_json(): string;
+/**
+* @param {string} obsJson
+* @returns {boolean}
+*/
+  test_observation(obsJson: string): boolean;
 /**
 * @returns {string}
 */
   process(): string;
+/**
+*/
+  readonly contract: string;
+/**
+*/
+  readonly payments: WasmPayments;
+/**
+*/
+  readonly state: WasmState;
 }
 /**
 */
@@ -8330,6 +8425,15 @@ export class WasmAccount {
 */
 export class WasmAccounts {
   free(): void;
+/**
+* @returns {number}
+*/
+  length(): number;
+/**
+* @param {number} n
+* @returns {WasmAccount}
+*/
+  get(n: number): WasmAccount;
 }
 /**
 */
@@ -8346,6 +8450,15 @@ export class WasmBoundValue {
 */
 export class WasmBoundValues {
   free(): void;
+/**
+* @returns {number}
+*/
+  length(): number;
+/**
+* @param {number} n
+* @returns {WasmBoundValue}
+*/
+  get(n: number): WasmBoundValue;
 }
 /**
 */
@@ -8365,6 +8478,145 @@ export class WasmChoice {
 */
 export class WasmChoices {
   free(): void;
+/**
+* @returns {number}
+*/
+  length(): number;
+/**
+* @param {number} n
+* @returns {WasmChoice}
+*/
+  get(n: number): WasmChoice;
+}
+/**
+*/
+export class WasmDatum {
+  free(): void;
+/**
+*/
+  contract_dsl: string;
+/**
+*/
+  payout_validator_hash: string;
+/**
+*/
+  state: WasmState;
+}
+/**
+*/
+export class WasmInputChoice {
+  free(): void;
+/**
+*/
+  bounds: string;
+/**
+*/
+  choice_name: string;
+/**
+*/
+  continuation_dsl: string;
+/**
+*/
+  who_is_allowed_to_make_the_choice: WasmParty;
+}
+/**
+*/
+export class WasmInputChoices {
+  free(): void;
+/**
+* @returns {number}
+*/
+  length(): number;
+/**
+* @param {number} n
+* @returns {WasmInputChoice}
+*/
+  get(n: number): WasmInputChoice;
+}
+/**
+*/
+export class WasmInputDeposit {
+  free(): void;
+/**
+*/
+  continuation_dsl: string;
+/**
+*/
+  expected_amount: bigint;
+/**
+*/
+  expected_asset_type: WasmToken;
+/**
+*/
+  expected_target_account: WasmPayee;
+/**
+*/
+  who_is_expected_to_pay: WasmParty;
+}
+/**
+*/
+export class WasmInputDeposits {
+  free(): void;
+/**
+* @returns {number}
+*/
+  length(): number;
+/**
+* @param {number} n
+* @returns {WasmInputDeposit}
+*/
+  get(n: number): WasmInputDeposit;
+}
+/**
+*/
+export class WasmInputNotification {
+  free(): void;
+/**
+*/
+  continuation: string;
+/**
+*/
+  observation: string;
+}
+/**
+*/
+export class WasmInputNotifications {
+  free(): void;
+/**
+* @returns {number}
+*/
+  length(): number;
+/**
+* @param {number} n
+* @returns {WasmInputNotification}
+*/
+  get(n: number): WasmInputNotification;
+}
+/**
+*/
+export class WasmMachineState {
+  free(): void;
+/**
+*/
+  error?: string;
+/**
+*/
+  expected_choices?: WasmInputChoices;
+/**
+*/
+  expected_deposits?: WasmInputDeposits;
+/**
+*/
+  expected_notifications?: WasmInputNotifications;
+/**
+*/
+  next_timeout?: bigint;
+/**
+*/
+  typ: number;
+/**
+*/
+  waiting_for_notification: boolean;
 }
 /**
 */
@@ -8391,6 +8643,48 @@ export class WasmParty {
 }
 /**
 */
+export class WasmPayee {
+  free(): void;
+/**
+*/
+  typ: number;
+/**
+*/
+  val: string;
+}
+/**
+*/
+export class WasmPayment {
+  free(): void;
+/**
+*/
+  amount: bigint;
+/**
+*/
+  from: WasmParty;
+/**
+*/
+  to: WasmPayee;
+/**
+*/
+  token: WasmToken;
+}
+/**
+*/
+export class WasmPayments {
+  free(): void;
+/**
+* @returns {number}
+*/
+  length(): number;
+/**
+* @param {number} n
+* @returns {WasmPayment}
+*/
+  get(n: number): WasmPayment;
+}
+/**
+*/
 export class WasmState {
   free(): void;
 /**
@@ -8404,7 +8698,7 @@ export class WasmState {
   choices: WasmChoices;
 /**
 */
-  min_time: bigint;
+  min_time?: bigint;
 }
 /**
 */
@@ -8416,6 +8710,107 @@ export class WasmToken {
 /**
 */
   pol: string;
+}
+/**
+*/
+export class WasmTransactionWarning {
+  free(): void;
+/**
+*/
+  typ: number;
+/**
+*/
+  value: any;
+}
+/**
+*/
+export class WasmTransactionWarningFailed {
+  free(): void;
+/**
+*/
+  value: string;
+}
+/**
+*/
+export class WasmTransactionWarningTransactionNonPositiveDeposit {
+  free(): void;
+/**
+*/
+  asked_to_deposit: bigint;
+/**
+*/
+  in_account: WasmParty;
+/**
+*/
+  of_token: WasmToken;
+/**
+*/
+  party: WasmParty;
+}
+/**
+*/
+export class WasmTransactionWarningTransactionPartialPay {
+  free(): void;
+/**
+*/
+  account: WasmParty;
+/**
+*/
+  asked_to_pay: bigint;
+/**
+*/
+  but_only_paid: bigint;
+/**
+*/
+  of_token: WasmToken;
+/**
+*/
+  to_payee: WasmPayee;
+}
+/**
+*/
+export class WasmTransactionWarningTransactionShadowing {
+  free(): void;
+/**
+*/
+  had_value: bigint;
+/**
+*/
+  is_now_assigned: bigint;
+/**
+*/
+  value_id: string;
+}
+/**
+*/
+export class WasmTransactionWarningTransactionTransactionNonPositivePay {
+  free(): void;
+/**
+*/
+  account: WasmParty;
+/**
+*/
+  asked_to_pay: bigint;
+/**
+*/
+  of_token: WasmToken;
+/**
+*/
+  to_payee: WasmPayee;
+}
+/**
+*/
+export class WasmTransactionWarnings {
+  free(): void;
+/**
+* @returns {number}
+*/
+  length(): number;
+/**
+* @param {number} n
+* @returns {WasmTransactionWarning}
+*/
+  get(n: number): WasmTransactionWarning;
 }
 /**
 */
@@ -8501,7 +8896,10 @@ export interface InitOutput {
   readonly __wbg_get_parseerror_error_message: (a: number, b: number) => void;
   readonly __wbg_set_parseerror_error_message: (a: number, b: number, c: number) => void;
   readonly parseerror_new: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
+  readonly decode_marlowe_dsl_from_json: (a: number, b: number, c: number) => void;
   readonly decode_marlowe_input_cbor_hex: (a: number, b: number, c: number) => void;
+  readonly u64_to_string: (a: number, b: number) => void;
+  readonly i64_to_string: (a: number, b: number) => void;
   readonly decode_marlowe_input_json: (a: number, b: number, c: number) => void;
   readonly wasm_main: () => void;
   readonly marlowe_to_json: (a: number, b: number, c: number) => void;
@@ -8515,26 +8913,41 @@ export interface InitOutput {
   readonly get_input_params_for_contract: (a: number, b: number, c: number) => void;
   readonly get_marlowe_dsl_parser_errors: (a: number, b: number) => number;
   readonly __wbg_wasmmarlowestatemachine_free: (a: number) => void;
-  readonly wasmmarlowestatemachine_create: (a: number, b: number, c: number) => void;
-  readonly wasmmarlowestatemachine_contract: (a: number) => number;
-  readonly wasmmarlowestatemachine_logs: (a: number, b: number) => void;
+  readonly __wbg_wasmdatum_free: (a: number) => void;
+  readonly __wbg_get_wasmdatum_state: (a: number) => number;
+  readonly __wbg_set_wasmdatum_state: (a: number, b: number) => void;
+  readonly __wbg_get_wasmdatum_payout_validator_hash: (a: number, b: number) => void;
+  readonly __wbg_set_wasmdatum_payout_validator_hash: (a: number, b: number, c: number) => void;
+  readonly __wbg_get_wasmdatum_contract_dsl: (a: number, b: number) => void;
+  readonly __wbg_set_wasmdatum_contract_dsl: (a: number, b: number, c: number) => void;
+  readonly wasmmarlowestatemachine_from_datum_json: (a: number, b: number, c: number) => void;
+  readonly wasmmarlowestatemachine_from_datum: (a: number, b: number) => void;
+  readonly wasmmarlowestatemachine_new: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly wasmmarlowestatemachine_as_datum: (a: number) => number;
+  readonly wasmmarlowestatemachine_datum_json: (a: number, b: number) => void;
+  readonly wasmmarlowestatemachine_datum_text: (a: number, b: number) => void;
+  readonly wasmmarlowestatemachine_contract: (a: number, b: number) => void;
+  readonly wasmmarlowestatemachine_timeout_continuation: (a: number, b: number) => void;
+  readonly wasmmarlowestatemachine_logs: (a: number) => number;
   readonly wasmmarlowestatemachine_payments: (a: number) => number;
   readonly wasmmarlowestatemachine_state: (a: number) => number;
   readonly wasmmarlowestatemachine_warnings: (a: number) => number;
   readonly wasmmarlowestatemachine_set_acc_of_addr: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
   readonly wasmmarlowestatemachine_set_acc_of_role: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => void;
   readonly wasmmarlowestatemachine_describe: (a: number, b: number) => void;
+  readonly wasmmarlowestatemachine_machine_state: (a: number) => number;
   readonly wasmmarlowestatemachine_apply_input_deposit_for_role: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => void;
   readonly wasmmarlowestatemachine_apply_input_deposit_for_addr: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number) => void;
   readonly wasmmarlowestatemachine_apply_input_choice_for_role: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
   readonly wasmmarlowestatemachine_apply_input_choice_for_addr: (a: number, b: number, c: number, d: number, e: number, f: number) => void;
-  readonly wasmmarlowestatemachine_expected_inputs_json: (a: number, b: number) => void;
+  readonly wasmmarlowestatemachine_machine_state_json: (a: number, b: number) => void;
+  readonly wasmmarlowestatemachine_test_observation: (a: number, b: number, c: number) => number;
   readonly wasmmarlowestatemachine_process: (a: number, b: number) => void;
-  readonly __wbg_wasmtoken_free: (a: number) => void;
-  readonly __wbg_get_wasmtoken_name: (a: number, b: number) => void;
-  readonly __wbg_set_wasmtoken_name: (a: number, b: number, c: number) => void;
-  readonly __wbg_get_wasmtoken_pol: (a: number, b: number) => void;
-  readonly __wbg_set_wasmtoken_pol: (a: number, b: number, c: number) => void;
+  readonly __wbg_wasmpayment_free: (a: number) => void;
+  readonly __wbg_get_wasmpayment_to: (a: number) => number;
+  readonly __wbg_set_wasmpayment_to: (a: number, b: number) => void;
+  readonly __wbg_get_wasmpayment_token: (a: number) => number;
+  readonly __wbg_set_wasmpayment_token: (a: number, b: number) => void;
   readonly __wbg_wasmaccount_free: (a: number) => void;
   readonly __wbg_get_wasmaccount_party: (a: number) => number;
   readonly __wbg_set_wasmaccount_party: (a: number, b: number) => void;
@@ -8547,8 +8960,11 @@ export interface InitOutput {
   readonly __wbg_get_wasmboundvalue_name: (a: number, b: number) => void;
   readonly __wbg_set_wasmboundvalue_name: (a: number, b: number, c: number) => void;
   readonly __wbg_wasmaccounts_free: (a: number) => void;
+  readonly wasmaccounts_get: (a: number, b: number) => number;
   readonly __wbg_wasmchoices_free: (a: number) => void;
+  readonly wasmchoices_get: (a: number, b: number) => number;
   readonly __wbg_wasmboundvalues_free: (a: number) => void;
+  readonly wasmboundvalues_get: (a: number, b: number) => number;
   readonly __wbg_wasmstate_free: (a: number) => void;
   readonly __wbg_get_wasmstate_accounts: (a: number) => number;
   readonly __wbg_set_wasmstate_accounts: (a: number, b: number) => void;
@@ -8557,20 +8973,140 @@ export interface InitOutput {
   readonly __wbg_get_wasmstate_bound_values: (a: number) => number;
   readonly __wbg_set_wasmstate_bound_values: (a: number, b: number) => void;
   readonly __wbg_wasmparty_free: (a: number) => void;
+  readonly __wbg_get_wasmpayee_typ: (a: number) => number;
+  readonly __wbg_set_wasmpayee_typ: (a: number, b: number) => void;
   readonly wasmparty_value: (a: number, b: number) => void;
   readonly wasmparty_typ: (a: number) => number;
   readonly wasmparty_new_addr: (a: number, b: number) => number;
   readonly wasmparty_new_role: (a: number, b: number) => number;
+  readonly __wbg_wasmtransactionwarning_free: (a: number) => void;
+  readonly __wbg_get_wasmtransactionwarning_typ: (a: number) => number;
+  readonly __wbg_set_wasmtransactionwarning_typ: (a: number, b: number) => void;
+  readonly __wbg_get_wasmtransactionwarning_value: (a: number) => number;
+  readonly __wbg_set_wasmtransactionwarning_value: (a: number, b: number) => void;
+  readonly __wbg_wasmtransactionwarnings_free: (a: number) => void;
+  readonly wasmtransactionwarnings_get: (a: number, b: number) => number;
+  readonly __wbg_wasmtransactionwarningfailed_free: (a: number) => void;
+  readonly __wbg_wasmtransactionwarningtransactionshadowing_free: (a: number) => void;
+  readonly __wbg_get_wasmtransactionwarningtransactionshadowing_value_id: (a: number, b: number) => void;
+  readonly __wbg_set_wasmtransactionwarningtransactionshadowing_value_id: (a: number, b: number, c: number) => void;
+  readonly __wbg_wasmtransactionwarningtransactionpartialpay_free: (a: number) => void;
+  readonly __wbg_get_wasmtransactionwarningtransactionpartialpay_account: (a: number) => number;
+  readonly __wbg_set_wasmtransactionwarningtransactionpartialpay_account: (a: number, b: number) => void;
+  readonly __wbg_get_wasmtransactionwarningtransactionpartialpay_of_token: (a: number) => number;
+  readonly __wbg_set_wasmtransactionwarningtransactionpartialpay_of_token: (a: number, b: number) => void;
+  readonly __wbg_get_wasmtransactionwarningtransactionpartialpay_to_payee: (a: number) => number;
+  readonly __wbg_set_wasmtransactionwarningtransactionpartialpay_to_payee: (a: number, b: number) => void;
+  readonly __wbg_wasmtransactionwarningtransactionnonpositivedeposit_free: (a: number) => void;
+  readonly __wbg_get_wasmtransactionwarningtransactionnonpositivedeposit_party: (a: number) => number;
+  readonly __wbg_stringvec_free: (a: number) => void;
+  readonly stringvec_length: (a: number) => number;
+  readonly stringvec_get: (a: number, b: number, c: number) => void;
+  readonly __wbg_wasminputdeposits_free: (a: number) => void;
+  readonly __wbg_wasmpayments_free: (a: number) => void;
+  readonly wasmpayments_get: (a: number, b: number) => number;
+  readonly wasminputdeposits_get: (a: number, b: number) => number;
+  readonly __wbg_wasminputchoices_free: (a: number) => void;
+  readonly wasminputchoices_get: (a: number, b: number) => number;
+  readonly __wbg_wasminputnotifications_free: (a: number) => void;
+  readonly wasminputnotifications_get: (a: number, b: number) => number;
+  readonly __wbg_wasmmachinestate_free: (a: number) => void;
+  readonly __wbg_get_wasmmachinestate_waiting_for_notification: (a: number) => number;
+  readonly __wbg_set_wasmmachinestate_waiting_for_notification: (a: number, b: number) => void;
+  readonly __wbg_get_wasmmachinestate_expected_deposits: (a: number) => number;
+  readonly __wbg_set_wasmmachinestate_expected_deposits: (a: number, b: number) => void;
+  readonly __wbg_get_wasmmachinestate_expected_choices: (a: number) => number;
+  readonly __wbg_set_wasmmachinestate_expected_choices: (a: number, b: number) => void;
+  readonly __wbg_get_wasmmachinestate_expected_notifications: (a: number) => number;
+  readonly __wbg_set_wasmmachinestate_expected_notifications: (a: number, b: number) => void;
+  readonly __wbg_get_wasmmachinestate_error: (a: number, b: number) => void;
+  readonly __wbg_set_wasmmachinestate_error: (a: number, b: number, c: number) => void;
+  readonly __wbg_get_wasmmachinestate_next_timeout: (a: number, b: number) => void;
+  readonly __wbg_set_wasmmachinestate_next_timeout: (a: number, b: number, c: number) => void;
+  readonly __wbg_get_wasmmachinestate_typ: (a: number) => number;
+  readonly __wbg_set_wasmmachinestate_typ: (a: number, b: number) => void;
+  readonly __wbg_wasminputdeposit_free: (a: number) => void;
+  readonly __wbg_get_wasminputdeposit_expected_target_account: (a: number) => number;
+  readonly __wbg_set_wasminputdeposit_expected_target_account: (a: number, b: number) => void;
+  readonly __wbg_get_wasminputdeposit_continuation_dsl: (a: number, b: number) => void;
+  readonly __wbg_set_wasminputdeposit_continuation_dsl: (a: number, b: number, c: number) => void;
+  readonly __wbg_wasminputchoice_free: (a: number) => void;
+  readonly __wbg_get_wasminputchoice_choice_name: (a: number, b: number) => void;
+  readonly __wbg_set_wasminputchoice_choice_name: (a: number, b: number, c: number) => void;
+  readonly __wbg_get_wasminputchoice_who_is_allowed_to_make_the_choice: (a: number) => number;
+  readonly __wbg_set_wasminputchoice_who_is_allowed_to_make_the_choice: (a: number, b: number) => void;
+  readonly __wbg_get_wasminputchoice_bounds: (a: number, b: number) => void;
+  readonly __wbg_set_wasminputchoice_bounds: (a: number, b: number, c: number) => void;
+  readonly __wbg_get_wasminputchoice_continuation_dsl: (a: number, b: number) => void;
+  readonly __wbg_set_wasminputchoice_continuation_dsl: (a: number, b: number, c: number) => void;
+  readonly __wbg_wasminputnotification_free: (a: number) => void;
+  readonly __wbg_get_wasminputnotification_observation: (a: number, b: number) => void;
+  readonly __wbg_set_wasminputnotification_observation: (a: number, b: number, c: number) => void;
+  readonly u64_to_i64: (a: number) => number;
+  readonly __wbg_set_wasmstate_min_time: (a: number, b: number, c: number) => void;
   readonly __wbg_set_wasmchoice_choice_name: (a: number, b: number, c: number) => void;
-  readonly __wbg_set_wasmstate_min_time: (a: number, b: number) => void;
-  readonly __wbg_set_wasmboundvalue_value: (a: number, b: number) => void;
-  readonly __wbg_set_wasmaccount_amount: (a: number, b: number) => void;
-  readonly __wbg_get_wasmaccount_amount: (a: number) => number;
+  readonly __wbg_set_wasmtoken_pol: (a: number, b: number, c: number) => void;
+  readonly __wbg_get_wasmtransactionwarningfailed_value: (a: number, b: number) => void;
+  readonly __wbg_get_wasmtoken_name: (a: number, b: number) => void;
+  readonly __wbg_get_wasmpayee_val: (a: number, b: number) => void;
+  readonly __wbg_get_wasminputnotification_continuation: (a: number, b: number) => void;
+  readonly __wbg_get_wasmstate_min_time: (a: number, b: number) => void;
+  readonly __wbg_set_wasmtransactionwarningtransactionnonpositivedeposit_asked_to_deposit: (a: number, b: number) => void;
+  readonly __wbg_set_wasmtransactionwarningtransactiontransactionnonpositivepay_of_token: (a: number, b: number) => void;
+  readonly __wbg_set_wasmtransactionwarningtransactiontransactionnonpositivepay_asked_to_pay: (a: number, b: number) => void;
+  readonly __wbg_set_wasmtransactionwarningtransactiontransactionnonpositivepay_account: (a: number, b: number) => void;
   readonly __wbg_set_wasmchoice_value: (a: number, b: number) => void;
+  readonly __wbg_set_wasmaccount_amount: (a: number, b: number) => void;
+  readonly __wbg_set_wasmtransactionwarningtransactionnonpositivedeposit_of_token: (a: number, b: number) => void;
+  readonly __wbg_set_wasmtransactionwarningtransactionnonpositivedeposit_in_account: (a: number, b: number) => void;
+  readonly __wbg_set_wasmtransactionwarningfailed_value: (a: number, b: number, c: number) => void;
+  readonly __wbg_set_wasmtransactionwarningtransactiontransactionnonpositivepay_to_payee: (a: number, b: number) => void;
+  readonly __wbg_set_wasminputdeposit_expected_amount: (a: number, b: number) => void;
+  readonly __wbg_set_wasminputdeposit_expected_asset_type: (a: number, b: number) => void;
+  readonly __wbg_set_wasminputdeposit_who_is_expected_to_pay: (a: number, b: number) => void;
+  readonly __wbg_set_wasmpayment_amount: (a: number, b: number) => void;
+  readonly __wbg_set_wasmpayment_from: (a: number, b: number) => void;
+  readonly __wbg_set_wasmtoken_name: (a: number, b: number, c: number) => void;
+  readonly __wbg_set_wasminputnotification_continuation: (a: number, b: number, c: number) => void;
+  readonly __wbg_set_wasmboundvalue_value: (a: number, b: number) => void;
+  readonly __wbg_set_wasmtransactionwarningtransactionshadowing_is_now_assigned: (a: number, b: number) => void;
+  readonly __wbg_set_wasmtransactionwarningtransactionshadowing_had_value: (a: number, b: number) => void;
+  readonly __wbg_set_wasmtransactionwarningtransactionpartialpay_but_only_paid: (a: number, b: number) => void;
+  readonly __wbg_set_wasmtransactionwarningtransactionpartialpay_asked_to_pay: (a: number, b: number) => void;
+  readonly __wbg_get_wasmtransactionwarningtransactionshadowing_had_value: (a: number) => number;
+  readonly __wbg_get_wasmtransactionwarningtransactionpartialpay_asked_to_pay: (a: number) => number;
+  readonly __wbg_get_wasminputdeposit_expected_amount: (a: number) => number;
+  readonly __wbg_get_wasmtransactionwarningtransactiontransactionnonpositivepay_to_payee: (a: number) => number;
+  readonly __wbg_get_wasmtransactionwarningtransactiontransactionnonpositivepay_of_token: (a: number) => number;
+  readonly __wbg_get_wasmtransactionwarningtransactiontransactionnonpositivepay_asked_to_pay: (a: number) => number;
+  readonly __wbg_get_wasmtransactionwarningtransactiontransactionnonpositivepay_account: (a: number) => number;
   readonly __wbg_get_wasmchoice_value: (a: number) => number;
-  readonly __wbg_get_wasmboundvalue_value: (a: number) => number;
   readonly __wbg_get_wasmchoice_choice_name: (a: number, b: number) => void;
-  readonly __wbg_get_wasmstate_min_time: (a: number) => number;
+  readonly __wbg_set_wasmpayee_val: (a: number, b: number, c: number) => void;
+  readonly __wbg_get_wasmboundvalue_value: (a: number) => number;
+  readonly __wbg_get_wasmaccount_amount: (a: number) => number;
+  readonly __wbg_get_wasminputdeposit_expected_asset_type: (a: number) => number;
+  readonly __wbg_get_wasminputdeposit_who_is_expected_to_pay: (a: number) => number;
+  readonly __wbg_get_wasmtransactionwarningtransactionnonpositivedeposit_of_token: (a: number) => number;
+  readonly __wbg_get_wasmtransactionwarningtransactionnonpositivedeposit_in_account: (a: number) => number;
+  readonly __wbg_get_wasmtransactionwarningtransactionnonpositivedeposit_asked_to_deposit: (a: number) => number;
+  readonly __wbg_get_wasmtoken_pol: (a: number, b: number) => void;
+  readonly __wbg_get_wasmtransactionwarningtransactionpartialpay_but_only_paid: (a: number) => number;
+  readonly __wbg_get_wasmpayment_amount: (a: number) => number;
+  readonly __wbg_get_wasmpayment_from: (a: number) => number;
+  readonly __wbg_get_wasmtransactionwarningtransactionshadowing_is_now_assigned: (a: number) => number;
+  readonly __wbg_wasmtransactionwarningtransactiontransactionnonpositivepay_free: (a: number) => void;
+  readonly __wbg_wasmtoken_free: (a: number) => void;
+  readonly wasminputdeposits_length: (a: number) => number;
+  readonly wasmpayments_length: (a: number) => number;
+  readonly wasmtransactionwarnings_length: (a: number) => number;
+  readonly __wbg_set_wasmtransactionwarningtransactionnonpositivedeposit_party: (a: number, b: number) => void;
+  readonly __wbg_wasmpayee_free: (a: number) => void;
+  readonly wasminputnotifications_length: (a: number) => number;
+  readonly wasmchoices_length: (a: number) => number;
+  readonly wasmaccounts_length: (a: number) => number;
+  readonly wasminputchoices_length: (a: number) => number;
+  readonly wasmboundvalues_length: (a: number) => number;
   readonly rust_psm_on_stack: (a: number, b: number, c: number, d: number) => void;
   readonly rust_psm_stack_direction: () => number;
   readonly rust_psm_stack_pointer: () => number;

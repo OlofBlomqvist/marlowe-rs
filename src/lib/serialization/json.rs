@@ -49,17 +49,17 @@ where
 }
 
 
-impl Serialize for Party {
+impl Serialize for AccountId {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer {
         match self {
-            Party::Role { role_token } => {
+            AccountId::Role { role_token } => {
                 let mut what = serializer.serialize_struct("party", 1)?;
                 what.serialize_field("role_token", role_token)?;
                 what.end()
             },
-            Party::Address ( address ) => {
+            AccountId::Address ( address ) => {
 
                 let mut what = serializer.serialize_struct("address", 1)?;
                 what.serialize_field("address", &address)?;
@@ -240,7 +240,7 @@ where
                    token
                 ), value)
             }).collect::<Vec<(
-                (&crate::types::marlowe::Party, &crate::types::marlowe::Token), 
+                (&crate::types::marlowe::AccountId, &crate::types::marlowe::Token), 
                 &u64
             )>>();
         s.serialize_field("accounts", accounts)?;

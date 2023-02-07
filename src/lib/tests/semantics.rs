@@ -148,7 +148,7 @@ fn basic_semantics_test() {
 
 
     let machine = 
-        ContractInstance::new(&wait_for_choice_contract)
+        ContractInstance::new(&wait_for_choice_contract,Some("AA".to_string()))
         .process().expect("should be able to process");
 
     

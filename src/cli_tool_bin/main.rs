@@ -1,6 +1,6 @@
 mod args;
 use args::{DatumArgs, RedeemerArgs, StateArgs, ContractArgs, PlutusArgs};
-use marlowe_lang::{types::marlowe::{Contract, MarloweDatum, PossiblyMerkleizedInput}};
+use marlowe_lang::{types::marlowe::{Contract, MarloweDatum, PossiblyMerkleizedInput, Token}};
 use std::{collections::HashMap};
 use marlowe_lang::extras::utils::*;
 use plutus_data::{ToPlutusData, PlutusData, FromPlutusData};
@@ -140,7 +140,7 @@ fn contract_handler(args:ContractArgs) {
             #[cfg(feature="unstable")]
             ContractOutputInfoType::ExpectedActions => {
 
-                let machine = ContractInstance::new(&c);
+                let machine = ContractInstance::new(&c, None);
                 let result = machine.process().unwrap();
                 let state: MachineState = result.1;
                 for x in result.0.logs {
@@ -268,34 +268,24 @@ fn cli_main_wasi(args:&str)  {
 }
 
 
-// This method currently just uses a basic string template for providing quick way of generating an initial state.
-// It should be replaced with an actual implementation such that the initial state can be created with more
-// precision. Format of the template is taken from here:
-// https://github.com/input-output-hk/marlowe-cardano/blob/main/marlowe-cli/lectures/03-marlowe-cli-abstract.ipynb
 
 // probably should support Address as creator as well? "address": "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x"
 fn create_state(initial_ada:i64,creator_role:&str) {
         
-    let template = "
-{
-\"accounts\": [
-[[{\"role_token\": \"$CREATOR_ROLE\"}, {\"currency_symbol\": \"\", \"token_name\": \"\"}], $INITIAL_LOVELACE]
-],
-\"choices\": [],
-\"boundValues\": [],
-\"minTime\": 1
-}
-    ";
-    
-    let lovelace = initial_ada*1000;
-    let result = template
-        .replace("$CREATOR_ROLE",
-            &creator_role)
-        .replace("$INITIAL_LOVELACE",
-            lovelace.to_string().as_str()
-        ).to_string();
-        
-    println!("{}",result);
+    let mut state = marlowe_lang::types::marlowe::State {
+        accounts: HashMap::new(),
+        bound_values: HashMap::new(),
+        choices: HashMap::new(),
+        min_time: 1
+    };
+
+    let creator = marlowe_lang::types::marlowe::Party::role(creator_role);
+
+    state.accounts.insert(
+        (creator,Token { currency_symbol:"".into(), token_name:"".into()}),
+        (initial_ada*1000) as u64);
+
+    println!("{}",serde_json::to_string_pretty(&state).unwrap());
     
 }
 

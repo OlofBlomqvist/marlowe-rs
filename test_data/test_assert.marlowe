@@ -1,0 +1,10 @@
+Let
+    "BANANA"
+    (Constant 31)
+    (Assert
+        (ValueEQ
+            (UseValue "BANANA")
+            (Constant 32)
+        )
+        Close 
+    )

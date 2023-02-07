@@ -208,7 +208,7 @@ fn state_json_serialization() -> Result<(),String> {
     };
 
     let basic_wasm_state = WasmState {
-        accounts: WasmAccounts::new(vec![
+        accounts: WasmAccounts { items: vec![
             WasmAccount {
                 amount: 42,
                 party: WasmParty::new_role("KALLE"),
@@ -217,18 +217,16 @@ fn state_json_serialization() -> Result<(),String> {
                     pol: "test".into()
                 }
             }
-        ]),
-        choices: WasmChoices::new(vec![
+        ]},
+        choices: WasmChoices { items:vec![
             WasmChoice { 
                 choice_name: String::from("choice name"), 
                 choice_owner: WasmParty::new_role("KALLE"), 
                 value: 42
             }
-        ]),
-        bound_values: WasmBoundValues::new(vec![
-
-        ]),
-        min_time: 99492,
+        ]},
+        bound_values: WasmBoundValues {items:vec![]},
+        min_time: Some(99492),
     };
 
     
@@ -311,8 +309,8 @@ fn serialize_json_transaction_shadowing_warning() -> Result<(),String> {
     match deserialized_from_spec_example {
         TransactionWarning::TransactionShadowing {
             value_id,
-            had_value: Value::ConstantValue(4),
-            is_now_assigned: Value::ConstantValue(5)
+            had_value: 4,
+            is_now_assigned: 5
         } if value_id == "example" => Ok(()),
        e => Err(format!("Deserialized result does not match original content! {:?}",e))
     }

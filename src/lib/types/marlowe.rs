@@ -297,7 +297,7 @@ pub enum Timeout {
 }
 
 
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Debug,Clone,PartialEq,Deserialize)]
 pub enum PossiblyMerkleizedContract {
     Raw(Box<Contract>),
     Merkleized(String)
@@ -1133,9 +1133,7 @@ pub struct IntervalError {
     pub interval_in_past_error : Vec<i64>
 }
 
-
 pub type AccountId = Party;
-
 
 #[derive(Serialize,Deserialize,Debug,Clone)]
 #[serde(untagged)]
@@ -1161,8 +1159,8 @@ pub enum TransactionWarning {
     },
     TransactionShadowing {
         value_id : String,
-        had_value : Value,
-        is_now_assigned : Value
+        had_value : i64,
+        is_now_assigned : i64
     },
     /// Do not use this directly.
     /// Instead call transaction_assertion_failed()!
