@@ -316,7 +316,7 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
             },
             Value::ConstantParam(p) => {
                 match self.state.bound_values.get(&ValueId::Name(p.to_string())) {
-                    Some(_) => todo!(),
+                    Some(v) => Ok(*v),
                     None => Err(format!("Contract contains constant parameter reference which has not been initialized: {p}")),
                 }
             },
