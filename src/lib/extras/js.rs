@@ -122,13 +122,7 @@ pub fn format_marlowe(contract:&str) -> String {
 
 fn marlowe_datum_to_json_type(x:MarloweDatum) -> String {
     
-    let contract = format!(
-        "Contract (Marlowe-DSL): {}",
-        crate::serialization::marlowe::serialize(x.contract)
-    );
-    let state = format!("State: {:?}\n\nContinuation: {}",x.state,contract);
-    let result = format!("{}\n\n{}",contract,state);
-    result
+    serde_json::to_string_pretty(&x).unwrap()
 }
 
 

@@ -92,7 +92,7 @@ pub enum DatumInputEncoding {
 pub enum DatumOutputEncoding {
     CborHex,
     PlutusDataDetailedJson,
-    DetailedText,
+    JSON,
     SimpleText
 }
 

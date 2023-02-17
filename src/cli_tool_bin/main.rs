@@ -24,14 +24,8 @@ fn datum_handler(args:DatumArgs) {
             DatumOutputEncoding::SimpleText => {
                 format!("{:?}",x)
             }
-            DatumOutputEncoding::DetailedText => {
-                let marlowe_params = x.marlowe_params;
-
-                let contract = 
-                    format!("Contract (Marlowe-DSL): {}",
-                        marlowe_lang::serialization::marlowe::serialize(x.contract));
-                
-                format!("Marlowe params: {marlowe_params:?}\n\nState: {}\n\nContinuation: {}",x.state,contract)
+            DatumOutputEncoding::JSON => {
+                serde_json::to_string_pretty(&x).unwrap()
             },
             DatumOutputEncoding::PlutusDataDetailedJson => {
                 let pl = x.to_plutus_data(&vec![]).unwrap();
