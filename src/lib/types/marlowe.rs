@@ -270,7 +270,7 @@ pub enum Action {
     },
     Choice { // 1
         #[ignore_option_container]for_choice: Option<ChoiceId>, // 0
-        choose_between: Vec<Option<Bound>> // 1 
+        #[ignore_option_container]choose_between: Vec<Option<Bound>> // 1 
     },
     Notify { // 2
         #[ignore_option_container]notify_if: Option<Observation> // 0
