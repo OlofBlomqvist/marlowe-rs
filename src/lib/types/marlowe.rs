@@ -385,7 +385,7 @@ impl ToPlutusData for PossiblyMerkleizedContract {
                 contract.to_plutus_data(&attributes)
             },
             PossiblyMerkleizedContract::Merkleized(m) => {
-                m.to_plutus_data(&attributes)
+                Ok(PlutusData::new_bytes(hex::decode(m).unwrap()))
             },
         }
     }
