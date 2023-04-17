@@ -92,6 +92,7 @@ pub enum AppliedInput {
     Deposit(Party,AccountId,Token,u64)
 }
 
+#[derive(Debug,Clone,Serialize,Deserialize)]
 pub enum ActionApplicationError {
     InvalidChoice(ApplyInputChoiceError),
     InvalidDeposit(ApplyInputDepositError),
@@ -110,7 +111,7 @@ pub trait ContractSemantics<T> {
     fn process(&self) -> 
         Result<(ContractInstance,MachineState),ProcessError>;
     
-    fn step(&self) -> 
+    fn step(&self,force_observe:bool) -> 
         Result<(ContractInstance,MachineState),String>;
     
     fn with_account_addr(&self,bech32_addr:&str,asset:&Token,quantity:u64) -> 
@@ -414,7 +415,18 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
                     Err(e) => Err(ActionApplicationError::InvalidChoice(e)),
                 }
             },
-            InputAction::Notify => todo!(),
+            InputAction::Notify => {
+                let result = self.step(true);
+                match result {
+                    Ok(r) => match r.0.process() {
+                        Ok((a,b)) => Ok(a),
+                        Err(e) => Err(ActionApplicationError::Unknown(
+                            format!("Applied notify successfully but failed to invoke process() (step 2).. {:?}",e)
+                        )),
+                    }
+                    Err(e) => Err(ActionApplicationError::Unknown(format!("Attempted to apply a notification action but failed to do so.. {}",e))),
+                }
+            },
             _ => Err(ActionApplicationError::Unknown(String::from("Partial or invalid action could not be applied.")))
         }
     }
@@ -538,7 +550,7 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
     // This method just calls step in a loop until it fails, requires user input, or closes.
     fn process(&self) -> Result<(ContractInstance,MachineState),ProcessError> { 
         
-        match self.step() {
+        match self.step(false) {
             Ok((m,step_result)) => {
                 match &step_result {
                     MachineState::Faulted(s) => Err(ProcessError::Generic(s.clone())),
@@ -555,7 +567,7 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
     // Takes the machine a single step further.
     // It has been separated into its own method rather than only having a single
     // processor loop because it makes it easyer to test, validate and debug.
-    fn step(&self) -> Result<(ContractInstance,MachineState),String> {
+    fn step(&self,force_observe:bool) -> Result<(ContractInstance,MachineState),String> {
         match &self.contract {
             
             Contract::Close => {
@@ -680,12 +692,18 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
                             Some(Action::Notify { notify_if:Some(obs) })
                         ) => {
                             let cont = if let Some(c) = x.then.clone() {c} else { return Err(String::from("missing continuation for notification."))};
-                            if !expected_inputs.contains(&InputType::Notify{obs:obs.clone(), continuation:cont.clone()}) { expected_inputs.push(InputType::Notify{obs:obs.clone(), continuation:cont.clone()}) }
+                            
+                            if !expected_inputs.contains(&InputType::Notify{obs:obs.clone(), continuation:cont.clone()}) { 
+                                expected_inputs.push(InputType::Notify{obs:obs.clone(), continuation:cont.clone()}) 
+                            }
 
                             let concrete_observation = self.assert_observation(&obs);
+                            
                             if concrete_observation.is_none() {
-                                return Err(String::from("Contract is incomplete. Missing observation details."))}
-                            if let Some(true) = &concrete_observation {
+                                return Err(String::from("Contract is incomplete. Missing observation details."))
+                            }
+                           
+                            if force_observe && let Some(true) = &concrete_observation {
                                 new_instance.logs.push(format!("Notification of a true observation! {:?}",&obs));
                                 new_instance.contract = *(continuation.clone());
                                 return Ok((new_instance,MachineState::ReadyForNextStep))
