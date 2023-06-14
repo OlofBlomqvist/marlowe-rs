@@ -41,7 +41,6 @@ utils = [
     "dep:minicbor",
     "dep:plutus_data",
     "dep:hex",
-    #"dep:uplc",
     "dep:serde_derive" ]
 js = [
     "utils",

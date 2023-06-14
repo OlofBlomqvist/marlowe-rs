@@ -431,8 +431,8 @@ impl WASMMarloweStateMachine {
     }
 
     #[wasm_bindgen]
-    pub fn test_observation(&mut self,obsJson:&str) -> bool {
-        let obs : Observation = serde_json::from_str(obsJson).unwrap();
+    pub fn test_observation(&mut self,obs_json:&str) -> bool {
+        let obs : Observation = serde_json::from_str(obs_json).unwrap();
         self.internal_instance.assert_observation(&obs).unwrap()
     }
 

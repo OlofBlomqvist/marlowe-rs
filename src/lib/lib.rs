@@ -78,3 +78,5 @@ pub mod deserialization;
 #[cfg(feature="unstable")]
 pub mod semantics;
 
+#[cfg(feature="unstable")]
+pub use plutus_data;
