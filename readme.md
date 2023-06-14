@@ -6,13 +6,6 @@
 
 An experimental Rust implementation of  Marlowe for Cardano smart (financial) contracts. 
 
-**Warning:** This crate should not (yet) be used anywhere near a production environment.
-
-### Notes regarding marlowe version changes
-
-- The Marlowe playground 
-does not yet support using using address for parties, so if you want to parse contracts created from there, you need to use v 1.12 or convert them manually.
-
 ### Main Features
 - Encode/Decode Marlowe types between: MarloweDSL/Rust/Json/CborHex
 - List contract parameters used in a contract (extended marlowe)
