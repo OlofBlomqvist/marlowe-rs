@@ -387,7 +387,7 @@ impl WASMMarloweStateMachine {
     }
 
     #[wasm_bindgen]
-    pub fn apply_input_deposit_for_role(&mut self,from_role:&str,to_role:&str,token_name:&str,currency_symbol:&str,quantity:u64) {
+    pub fn apply_input_deposit_for_role(&mut self,from_role:&str,to_role:&str,token_name:&str,currency_symbol:&str,quantity:i64) {
         let asset = Token {
             currency_symbol: currency_symbol.into(),
             token_name: token_name.into()
@@ -399,7 +399,7 @@ impl WASMMarloweStateMachine {
     }
 
     #[wasm_bindgen]
-    pub fn apply_input_deposit_for_addr(&mut self,from_bech32_addr:&str,to_bech32_addr:&str,token_name:&str,currency_symbol:&str,quantity:u64) {
+    pub fn apply_input_deposit_for_addr(&mut self,from_bech32_addr:&str,to_bech32_addr:&str,token_name:&str,currency_symbol:&str,quantity:i64) {
         let asset = Token {
             currency_symbol: currency_symbol.into(),
             token_name: token_name.into()

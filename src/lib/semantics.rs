@@ -20,7 +20,7 @@ pub enum InputType {
     Deposit { 
         who_is_expected_to_pay:Party ,
         expected_asset_type: Token, 
-        expected_amount: u64, 
+        expected_amount: i64, 
         expected_target_account:crate::types::marlowe::AccountId,
         continuation: Contract
     }, 
@@ -120,7 +120,7 @@ pub trait ContractSemantics<T> {
     fn apply_input_choice(&self,applied_choice_name:&str, applied_choice_owner:Party, applied_chosen_value: i64) -> 
         Result<ContractInstance,ApplyInputChoiceError>;
 
-    fn apply_input_deposit(&self,from:Party, asset: Token, quantity: u64, to:crate::types::marlowe::AccountId) -> 
+    fn apply_input_deposit(&self,from:Party, asset: Token, quantity: i64, to:crate::types::marlowe::AccountId) -> 
         Result<ContractInstance,ApplyInputDepositError>;
 
     fn apply_input_action(&self,action:crate::types::marlowe::InputAction) -> 
@@ -390,8 +390,9 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
     
         match action {
             InputAction::Deposit { into_account, input_from_party, of_tokens, that_deposits } => {
+                
                 match (into_account,input_from_party,of_tokens) {
-                    (Some(a), Some(b), Some(c)) => match self.apply_input_deposit(b, c, that_deposits, AccountId::Role { role_token: "nisse".to_owned() }) {
+                    (Some(_a), Some(b), Some(c)) => match self.apply_input_deposit(b, c, that_deposits, AccountId::Role { role_token: "nisse".to_owned() }) {
                         Ok(v) => Ok(v),
                         Err(e) => Err(ActionApplicationError::InvalidDeposit(e)),
                     },
@@ -419,7 +420,7 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
                 let result = self.step(true);
                 match result {
                     Ok(r) => match r.0.process() {
-                        Ok((a,b)) => Ok(a),
+                        Ok((a,_b)) => Ok(a),
                         Err(e) => Err(ActionApplicationError::Unknown(
                             format!("Applied notify successfully but failed to invoke process() (step 2).. {:?}",e)
                         )),
@@ -485,7 +486,7 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
         
     }
 
-    fn apply_input_deposit(&self,from:Party, asset: Token, quantity: u64, to:crate::types::marlowe::AccountId) -> Result<ContractInstance,ApplyInputDepositError> {
+    fn apply_input_deposit(&self,from:Party, asset: Token, quantity: i64, to:crate::types::marlowe::AccountId) -> Result<ContractInstance,ApplyInputDepositError> {
         
         let (mut new_instance,machine_state) = match self.process() {
             Ok((a, b)) => (a,b),
@@ -510,30 +511,43 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
                             continuation 
                         } => {
 
+                            // When a contract expects negative deposit amounts, we accept the redeemer matching that exact negative value,
+                            // but we treat the applied input value as zero, thus it will not actually affect the value of any account.
+                            let clamped_quantity = 0.max(quantity) as u64;
 
                             if who_is_expected_to_pay == &from
                                 && &asset == expected_asset_type 
                                 && &quantity == expected_amount
                                 && expected_target_account == &to
                             {
-                                // Add or update amount for the party that is depositing value to their account.
-                                if let Some(existing_amount) = new_instance.state.accounts.get_mut(&(from.clone(),asset.clone())) {
-                                    *existing_amount = *existing_amount + quantity;
+                                let mut old_amount : u64 = 0;
+                                let new_amount : u64;
+
+                                // Add or update amount for the target account.
+                                if let Some(existing_amount) = new_instance.state.accounts.get_mut(&(expected_target_account.clone(),asset.clone())) {
+                                    old_amount = *existing_amount;
+                                    new_amount = *existing_amount + clamped_quantity;
+                                    *existing_amount = *existing_amount + clamped_quantity;
                                 } else {
+                                    new_amount = clamped_quantity;
                                     new_instance.state.accounts.insert(
-                                        (from.clone(),asset.clone()), 
-                                        quantity
+                                        (expected_target_account.clone(),asset.clone()), 
+                                        clamped_quantity
                                     );
                                 }
                                 
                                 new_instance.contract = continuation.clone();
                                 new_instance.applied.push(AppliedInput::Deposit(
-                                    from, 
+                                    from.clone(), 
                                     expected_target_account.clone(), 
                                     expected_asset_type.clone(), 
-                                    quantity
+                                    clamped_quantity
                                 ));
-                                new_instance.logs.push(format!("Deposit was successfully applied: '{x:?}' has been applied."));
+                                if clamped_quantity as i64 > quantity {
+                                    new_instance.logs.push(format!("Deposit was successfully applied: '{x:?}' has been applied. {from}. Because this was a negative deposit, it counted as zero - so the target account {expected_target_account} did not change at all but stays at {old_amount} {expected_asset_type}"));
+                                } else {
+                                    new_instance.logs.push(format!("Deposit was successfully applied: '{x:?}' has been applied. {from} has added {clamped_quantity} of {expected_asset_type} to the account of {expected_target_account} which now contains {new_amount} {expected_asset_type} (before this, it contained only {old_amount})"));
+                                }
                                 return Ok(new_instance)
                             }
                         }
@@ -729,14 +743,10 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
                             match expected_amount {
                                 Ok(v) => 
                                     {
-                                        if v < 0 {
-                                            return Err(format!("Expected amount turned out negative.. This is most likely a bug in the marlowe_lang crate. {:?} {:?}", self.state ,depo))
-                                        }
-
                                         expected_inputs.push(InputType::Deposit { 
                                         who_is_expected_to_pay: from.clone(), 
                                         expected_asset_type: tok.clone(), 
-                                        expected_amount: v as u64, 
+                                        expected_amount: v, 
                                         expected_target_account: to.clone(),
                                         continuation: *(continuation.clone())
                                     })
@@ -822,3 +832,6 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
         new_instance
     }
 }
+
+
+

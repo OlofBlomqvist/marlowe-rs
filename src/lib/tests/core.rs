@@ -407,9 +407,9 @@ fn can_find_uninitialized_inputs() -> Result<(),String> {
     }
 
     if found_inputs.len() != (result.uninitialized_const_params.len() + result.uninitialized_time_params.len()) {
-        println!("parser found these consts: {:?}",result.uninitialized_const_params);
-        println!("parser found these times: {:?}",result.uninitialized_time_params);
-        println!("contract impl found these: {:?}",found_inputs);
+        // println!("parser found these consts: {:?}",result.uninitialized_const_params);
+        // println!("parser found these times: {:?}",result.uninitialized_time_params);
+        // println!("contract impl found these: {:?}",found_inputs);
         return Err(format!("PARSE AND STRUCT IMPL DIFF!"))
     }
     
@@ -519,7 +519,7 @@ pub fn marlowe_strict_conversion() -> Result<(),String> {
 pub fn basic_marlowe_strict_example_code() -> Result<(),String> {
 
     use crate::types::marlowe_strict::*;
-    use crate::serialization::*;
+    // use crate::serialization::*;
 
     let p1 = Party::role("P1");
     let p2 = Party::role("P2");
@@ -549,11 +549,11 @@ pub fn basic_marlowe_strict_example_code() -> Result<(),String> {
         timeout_continuation: Contract::Close.into()
     };
 
-    let serializable_contract : crate::types::marlowe::Contract = contract.try_into()?;
+    let _serializable_contract : crate::types::marlowe::Contract = contract.try_into()?;
 
-    println!("{}",marlowe::serialize(serializable_contract.clone()));
-    println!("{}",json::serialize(serializable_contract.clone())?);
-    println!("{}",cborhex::serialize(serializable_contract.clone())?);
+    // println!("{}",marlowe::serialize(serializable_contract.clone()));
+    // println!("{}",json::serialize(serializable_contract.clone())?);
+    // println!("{}",cborhex::serialize(serializable_contract.clone())?);
 
 
     Ok(())
@@ -615,8 +615,8 @@ fn marlowe_strict_with_iter_example() {
         timeout: chrono::Utc::now().checked_add_days(Days::new(1)).unwrap().timestamp_millis(), 
         timeout_continuation: Contract::Close.into()
     };
-    let serialized = marlowe::serialize_strict(contract).unwrap();
-    println!("{}",parsing::fmt::fmt(&serialized))
+    let _serialized = marlowe::serialize_strict(contract).unwrap();
+    // println!("{}",parsing::fmt::fmt(&serialized))
 }
 
 

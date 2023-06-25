@@ -239,7 +239,7 @@ pub enum InputAction {
         input_from_party: Option<Party>, // 1
         #[ignore_option_container]
         of_tokens: Option<Token>, // 2
-        that_deposits: u64 // 3
+        that_deposits: i64 // 3
     },
     Choice { // 1
         #[ignore_option_container]

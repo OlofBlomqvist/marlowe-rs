@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{types::marlowe::*};
+use crate::{types::marlowe::*, semantics::ContractSemantics};
 
 #[cfg(feature="js")]
 use crate::extras::js::*;
@@ -447,3 +447,16 @@ fn json_serialize_of_transaction_assertion_failed() {
 
     assert!(serialized=="\"assertion_failed\"")
 }
+
+
+#[test]
+fn serialize_input_deposit_with_negative_numbers() {
+    let b = InputAction::Deposit { 
+        into_account: Some(Party::Role { role_token: "".into() }), 
+        input_from_party:Some(Party::Role { role_token: "".into() }), 
+        of_tokens: Some(Token::ada()), 
+        that_deposits: -414
+    };
+    _ = crate::serialization::json::serialize(b).expect("should be able to serialize with negative deposits");
+}
+
