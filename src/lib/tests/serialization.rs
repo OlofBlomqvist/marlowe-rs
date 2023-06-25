@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{types::marlowe::*, semantics::ContractSemantics};
+use crate::{types::marlowe::*};
 
 #[cfg(feature="js")]
 use crate::extras::js::*;
