@@ -1,7 +1,7 @@
 [package]
 name = "marlowe_lang"
 description = "experimental parser lib for Cardano Marlowe DSL"
-version = "0.1.22"
+version = "0.1.22-experimental1"
 edition = "2021"
 authors = ["Olof Blomqvist <olof@twnet.se>"]
 repository = "https://github.com/OlofBlomqvist/marlowe_rust"
@@ -29,7 +29,7 @@ bech32 = "0.9.1"
 time = "0.3.17"
 chrono = { version = "0.4.23", features = ["wasmbind"] }
 #aiken-lang = "*"
-js-sys = { version = "0.3.59", optional=true }
+js-sys = { version = "0.3.59", optional=true}
 serde_stacker = {version= "0.1.7"}
 
 [features]
@@ -45,6 +45,7 @@ utils = [
 js = [
     "utils",
     "dep:js-sys",
+    "dep:getrandom",
     "dep:wasm-bindgen",
     "dep:console_error_panic_hook",
     "dep:web-sys" ]

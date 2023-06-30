@@ -1,10 +1,30 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
+* @param {string} dsl
+* @returns {string}
+*/
+export function decode_marlowe_dsl_from_json(dsl: string): string;
+/**
 * @param {string} redeemer_cbor_hex
 * @returns {string}
 */
 export function decode_marlowe_input_cbor_hex(redeemer_cbor_hex: string): string;
+/**
+* @param {bigint} x
+* @returns {bigint}
+*/
+export function u64_to_i64(x: bigint): bigint;
+/**
+* @param {bigint} x
+* @returns {string}
+*/
+export function u64_to_string(x: bigint): string;
+/**
+* @param {bigint} x
+* @returns {string}
+*/
+export function i64_to_string(x: bigint): string;
 /**
 * @param {string} redeemer_json
 * @returns {string}
@@ -64,11 +84,6 @@ export function cbor_hex_to_json_basic_schema(bytes: Uint8Array): any;
 * @returns {any[]}
 */
 export function get_input_params_for_contract(marlowe_dsl: string): any[];
-/**
-* @param {string} marlowe_dsl
-* @returns {any[]}
-*/
-export function list_inputs_params(marlowe_dsl: string): any[];
 /**
 * @param {string} marlowe_dsl
 * @returns {ParseError | undefined}
@@ -239,6 +254,32 @@ export function make_vkey_witness(tx_body_hash: TransactionHash, sk: PrivateKey)
 export enum WasmPartyType {
   Role,
   Address,
+}
+/**
+*/
+export enum WasmPayeeType {
+  AccountRole,
+  AccountAddress,
+  PartyRole,
+  PartyAddress,
+}
+/**
+*/
+export enum WasmTransactionWarningType {
+  Failed,
+  TransactionNonPositiveDeposit,
+  TransactionNonPositivePay,
+  TransactionPartialPay,
+  TransactionShadowing,
+}
+/**
+*/
+export enum WasmMachineStateEnum {
+  WaitingForInput,
+  ReadyForNextStep,
+  ContractHasTimedOut,
+  Closed,
+  Faulted,
 }
 /**
 */
@@ -6450,6 +6491,20 @@ export class StakeholderId {
 }
 /**
 */
+export class StringVec {
+  free(): void;
+/**
+* @returns {number}
+*/
+  length(): number;
+/**
+* @param {number} n
+* @returns {string}
+*/
+  get(n: number): string;
+}
+/**
+*/
 export class Strings {
   free(): void;
 /**
@@ -8238,30 +8293,51 @@ export class Vkeywitnesses {
 export class WASMMarloweStateMachine {
   free(): void;
 /**
+* @param {bigint} mintime
+*/
+  set_mintime(mintime: bigint): void;
+/**
+* Takes an initialized (non-marlowe-extended) MarloweDSL contract as input.
+* @param {string} datum_json
+* @returns {WASMMarloweStateMachine}
+*/
+  static from_datum_json(datum_json: string): WASMMarloweStateMachine;
+/**
+* Takes an initialized (non-marlowe-extended) MarloweDSL contract as input.
+* @param {WasmDatum} datum
+* @returns {WASMMarloweStateMachine}
+*/
+  static from_datum(datum: WasmDatum): WASMMarloweStateMachine;
+/**
 * Takes an initialized (non-marlowe-extended) MarloweDSL contract as input.
 * @param {string} contract_dsl
+* @param {string} role_payout_validator_hash
 */
-  constructor(contract_dsl: string);
+  constructor(contract_dsl: string, role_payout_validator_hash: string);
 /**
-* @returns {any}
+* @returns {WasmDatum}
 */
-  contract(): any;
+  as_datum(): WasmDatum;
 /**
-* @returns {any}
+* @returns {string}
 */
-  logs(): any;
+  datum_json(): string;
 /**
-* @returns {any}
+* @returns {string}
 */
-  payments(): any;
+  datum_text(): string;
 /**
-* @returns {WasmState}
+* @returns {string}
 */
-  state(): WasmState;
+  timeout_continuation(): string;
 /**
-* @returns {any}
+* @returns {StringVec}
 */
-  warnings(): any;
+  logs(): StringVec;
+/**
+* @returns {WasmTransactionWarnings}
+*/
+  warnings(): WasmTransactionWarnings;
 /**
 * @param {string} bech32_addr
 * @param {string} token_name
@@ -8276,6 +8352,14 @@ export class WASMMarloweStateMachine {
 * @param {bigint} quantity
 */
   set_acc_of_role(role: string, token_name: string, currency_symbol: string, quantity: bigint): void;
+/**
+* @returns {string}
+*/
+  describe(): string;
+/**
+* @returns {WasmMachineState}
+*/
+  machine_state(): WasmMachineState;
 /**
 * @param {string} from_role
 * @param {string} to_role
@@ -8307,7 +8391,25 @@ export class WASMMarloweStateMachine {
 /**
 * @returns {string}
 */
+  machine_state_json(): string;
+/**
+* @param {string} obs_json
+* @returns {boolean}
+*/
+  test_observation(obs_json: string): boolean;
+/**
+* @returns {string}
+*/
   process(): string;
+/**
+*/
+  readonly contract: string;
+/**
+*/
+  readonly payments: WasmPayments;
+/**
+*/
+  readonly state: WasmState;
 }
 /**
 */
@@ -8327,6 +8429,15 @@ export class WasmAccount {
 */
 export class WasmAccounts {
   free(): void;
+/**
+* @returns {number}
+*/
+  length(): number;
+/**
+* @param {number} n
+* @returns {WasmAccount}
+*/
+  get(n: number): WasmAccount;
 }
 /**
 */
@@ -8343,6 +8454,15 @@ export class WasmBoundValue {
 */
 export class WasmBoundValues {
   free(): void;
+/**
+* @returns {number}
+*/
+  length(): number;
+/**
+* @param {number} n
+* @returns {WasmBoundValue}
+*/
+  get(n: number): WasmBoundValue;
 }
 /**
 */
@@ -8362,6 +8482,145 @@ export class WasmChoice {
 */
 export class WasmChoices {
   free(): void;
+/**
+* @returns {number}
+*/
+  length(): number;
+/**
+* @param {number} n
+* @returns {WasmChoice}
+*/
+  get(n: number): WasmChoice;
+}
+/**
+*/
+export class WasmDatum {
+  free(): void;
+/**
+*/
+  contract_dsl: string;
+/**
+*/
+  payout_validator_hash: string;
+/**
+*/
+  state: WasmState;
+}
+/**
+*/
+export class WasmInputChoice {
+  free(): void;
+/**
+*/
+  bounds: string;
+/**
+*/
+  choice_name: string;
+/**
+*/
+  continuation_dsl: string;
+/**
+*/
+  who_is_allowed_to_make_the_choice: WasmParty;
+}
+/**
+*/
+export class WasmInputChoices {
+  free(): void;
+/**
+* @returns {number}
+*/
+  length(): number;
+/**
+* @param {number} n
+* @returns {WasmInputChoice}
+*/
+  get(n: number): WasmInputChoice;
+}
+/**
+*/
+export class WasmInputDeposit {
+  free(): void;
+/**
+*/
+  continuation_dsl: string;
+/**
+*/
+  expected_amount: bigint;
+/**
+*/
+  expected_asset_type: WasmToken;
+/**
+*/
+  expected_target_account: WasmPayee;
+/**
+*/
+  who_is_expected_to_pay: WasmParty;
+}
+/**
+*/
+export class WasmInputDeposits {
+  free(): void;
+/**
+* @returns {number}
+*/
+  length(): number;
+/**
+* @param {number} n
+* @returns {WasmInputDeposit}
+*/
+  get(n: number): WasmInputDeposit;
+}
+/**
+*/
+export class WasmInputNotification {
+  free(): void;
+/**
+*/
+  continuation: string;
+/**
+*/
+  observation: string;
+}
+/**
+*/
+export class WasmInputNotifications {
+  free(): void;
+/**
+* @returns {number}
+*/
+  length(): number;
+/**
+* @param {number} n
+* @returns {WasmInputNotification}
+*/
+  get(n: number): WasmInputNotification;
+}
+/**
+*/
+export class WasmMachineState {
+  free(): void;
+/**
+*/
+  error?: string;
+/**
+*/
+  expected_choices?: WasmInputChoices;
+/**
+*/
+  expected_deposits?: WasmInputDeposits;
+/**
+*/
+  expected_notifications?: WasmInputNotifications;
+/**
+*/
+  next_timeout?: bigint;
+/**
+*/
+  typ: number;
+/**
+*/
+  waiting_for_notification: boolean;
 }
 /**
 */
@@ -8388,6 +8647,48 @@ export class WasmParty {
 }
 /**
 */
+export class WasmPayee {
+  free(): void;
+/**
+*/
+  typ: number;
+/**
+*/
+  val: string;
+}
+/**
+*/
+export class WasmPayment {
+  free(): void;
+/**
+*/
+  amount: bigint;
+/**
+*/
+  from: WasmParty;
+/**
+*/
+  to: WasmPayee;
+/**
+*/
+  token: WasmToken;
+}
+/**
+*/
+export class WasmPayments {
+  free(): void;
+/**
+* @returns {number}
+*/
+  length(): number;
+/**
+* @param {number} n
+* @returns {WasmPayment}
+*/
+  get(n: number): WasmPayment;
+}
+/**
+*/
 export class WasmState {
   free(): void;
 /**
@@ -8401,7 +8702,7 @@ export class WasmState {
   choices: WasmChoices;
 /**
 */
-  min_time: bigint;
+  min_time?: bigint;
 }
 /**
 */
@@ -8413,6 +8714,107 @@ export class WasmToken {
 /**
 */
   pol: string;
+}
+/**
+*/
+export class WasmTransactionWarning {
+  free(): void;
+/**
+*/
+  typ: number;
+/**
+*/
+  value: any;
+}
+/**
+*/
+export class WasmTransactionWarningFailed {
+  free(): void;
+/**
+*/
+  value: string;
+}
+/**
+*/
+export class WasmTransactionWarningTransactionNonPositiveDeposit {
+  free(): void;
+/**
+*/
+  asked_to_deposit: bigint;
+/**
+*/
+  in_account: WasmParty;
+/**
+*/
+  of_token: WasmToken;
+/**
+*/
+  party: WasmParty;
+}
+/**
+*/
+export class WasmTransactionWarningTransactionPartialPay {
+  free(): void;
+/**
+*/
+  account: WasmParty;
+/**
+*/
+  asked_to_pay: bigint;
+/**
+*/
+  but_only_paid: bigint;
+/**
+*/
+  of_token: WasmToken;
+/**
+*/
+  to_payee: WasmPayee;
+}
+/**
+*/
+export class WasmTransactionWarningTransactionShadowing {
+  free(): void;
+/**
+*/
+  had_value: bigint;
+/**
+*/
+  is_now_assigned: bigint;
+/**
+*/
+  value_id: string;
+}
+/**
+*/
+export class WasmTransactionWarningTransactionTransactionNonPositivePay {
+  free(): void;
+/**
+*/
+  account: WasmParty;
+/**
+*/
+  asked_to_pay: bigint;
+/**
+*/
+  of_token: WasmToken;
+/**
+*/
+  to_payee: WasmPayee;
+}
+/**
+*/
+export class WasmTransactionWarnings {
+  free(): void;
+/**
+* @returns {number}
+*/
+  length(): number;
+/**
+* @param {number} n
+* @returns {WasmTransactionWarning}
+*/
+  get(n: number): WasmTransactionWarning;
 }
 /**
 */
