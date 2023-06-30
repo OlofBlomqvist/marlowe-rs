@@ -31,6 +31,7 @@ chrono = { version = "0.4.23", features = ["wasmbind"] }
 #aiken-lang = "*"
 js-sys = { version = "0.3.59", optional=true}
 serde_stacker = {version= "0.1.7"}
+proc-macro2 = "1.0.63"
 
 [features]
 default = ["utils"]
