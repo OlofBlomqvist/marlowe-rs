@@ -1,3 +1,4 @@
+#![feature(arbitrary_enum_discriminant)]
 #![feature(generator_trait)]
 #![feature(generators)]
 #![feature(if_let_guard)]
