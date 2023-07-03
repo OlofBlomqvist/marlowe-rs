@@ -167,13 +167,17 @@ pub mod marlowe_wasm_exports {
     }
 }
 
+#[cfg(feature = "js")]
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
+
+#[cfg(feature = "js")]
 #[wasm_bindgen(catch)]
 extern "C" {    
     #[wasm_bindgen(js_namespace = console)]
     pub fn log(s: &JsValue);
 }
 
+#[cfg(feature = "js")]
 pub(crate) fn logs(s:&str) {
     log(&JsValue::from_str(s));
 }
