@@ -9,7 +9,7 @@ use crate::semantics::{MachineState, ProcessError, ContractSemantics};
 
 use crate::types::marlowe::*;
 use crate::extras::utils::*;
-use crate::types::marlowe_strict::Party;
+
 use plutus_data::FromPlutusData;
 
 pub fn basic_deserialize<'a,T : 'static>(json:&str) -> Result<T,serde_json::Error> 
@@ -1047,7 +1047,7 @@ pub struct WasmInputNotification {
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub observation:String
 }
 
-
+#[cfg(feature="unstable")]
 impl TryFrom<crate::semantics::MachineState> for WasmMachineState {
     type Error = String;
 

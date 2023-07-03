@@ -1,0 +1,19 @@
+<html>
+  <head>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type"/>
+  </head>
+  <body>
+    <script type="module">
+      import init, { 
+        marlowe_to_json
+      } from './path/to/marlowe_lang.js';
+      async function run() {
+        await init();
+        let example = marlowe_to_json("Close")
+        console.log("result",example)
+      }
+      run();
+    </script>
+  </body>
+
+</html>

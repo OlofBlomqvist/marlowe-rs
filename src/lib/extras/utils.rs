@@ -100,3 +100,80 @@ pub fn try_decode_redeemer_input_json(redeemer_json:&str) -> Result<Vec<Possibly
     
     Vec::<PossiblyMerkleizedInput>::from_plutus_data(jj,&vec![])
 }
+
+
+
+
+pub fn try_decode_any_marlowe_data(input:&str) -> Result<String,String> {
+    
+    if let Ok(result) =
+        marlowe_lang::extras::utils::try_decode_cborhex_marlowe_plutus_datum(&input) {
+
+            match serde_json::to_string_pretty(&result) {
+                Ok(json) => Ok(format!("Decoded datum from cbor hex to json:\n\n{}",json)),
+                Err(e) => Ok(format!("Decoded datum from cbor hex but had trouble encoding it to json ({e:?}) but here is the debug representation: {result:?}"))
+            }
+            
+
+        }
+    else if let Ok(result) =
+        marlowe_lang::extras::utils::try_decode_json_encoded_marlowe_plutus_datum(&input) {
+            match serde_json::to_string_pretty(&result) {
+                Ok(json) => Ok(format!("Decoded datum from json:\n\n{}",json)),
+                Err(e) => Ok(format!("Decoded datum from plutus-data-json but had trouble re-serializing it to json ({e:?}) but here is the debug representation: {result:?}"))
+            }
+
+        }
+    else if let Ok(result) =
+        marlowe_lang::extras::utils::try_decode_redeemer_input_cbor_hex(&input) {
+            Ok(result.iter().map(|xx|format!("Decoded redeemer from cbor hex:\n\n {}",xx)).collect::<String>())
+        }
+    else if let Ok(result) =
+        marlowe_lang::extras::utils::try_decode_redeemer_input_json(&input) {
+            Ok(result.iter().map(|xx|format!("Decoded redeemer from json:\n\n {}",xx)).collect::<String>())
+        }
+    else if let Ok(result) = decode_data_cborhex_to_json(&input) { Ok(format!("Decoded plutus data from cbor hex to json:\n {}",result)) }
+    else if let Ok(result) = decode_metadata_cborhex_to_json(&input) { Ok(format!("Decoded tx metadata from cbor hex to json:\n {}",result)) }
+    else {
+        Err(String::from("Could not decode the input"))
+    }
+}
+
+pub fn decode_metadata_cborhex_to_json(input:&str) -> Result<String,String> {
+    let hex_bytes = hex::decode(input).map_err(|e|format!("{e:?}"))?;
+    let meta_datum = cardano_multiplatform_lib::metadata::TransactionMetadatum::from_bytes(hex_bytes).map_err(|e|format!("{e:?}"))?;
+    cardano_multiplatform_lib::metadata::decode_metadatum_to_json_str(&meta_datum, cardano_multiplatform_lib::metadata::MetadataJsonSchema::DetailedSchema).map_err(|e|format!("{e:?}"))
+}
+
+
+pub fn decode_data_cborhex_to_json(input:&str) -> Result<String,String> {
+    let hex_bytes = hex::decode(input).map_err(|e|format!("{e:?}"))?;
+    let plutus_data = cardano_multiplatform_lib::plutus::PlutusData::from_bytes(hex_bytes).map_err(|e|format!("{e:?}"))?;
+    cardano_multiplatform_lib::plutus::decode_plutus_datum_to_json_str(&plutus_data, cardano_multiplatform_lib::plutus::PlutusDatumSchema::DetailedSchema).map_err(|e|format!("{e:?}"))
+}
+
+
+#[cfg(feature = "js")]
+pub mod marlowe_wasm_exports {
+    
+    #[wasm_bindgen::prelude::wasm_bindgen(catch)]
+    pub fn try_decode_metadata_cborhex_to_json(input:String) -> Result<String,String> {
+        super::decode_metadata_cborhex_to_json(&input)
+    }
+
+    #[wasm_bindgen::prelude::wasm_bindgen(catch)]
+    pub fn decode_marlowe_data_or_redeemer(input:String) -> Result<String,String> {
+        super::try_decode_any_marlowe_data(&input)
+    }
+}
+
+use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
+#[wasm_bindgen(catch)]
+extern "C" {    
+    #[wasm_bindgen(js_namespace = console)]
+    pub fn log(s: &JsValue);
+}
+
+pub(crate) fn logs(s:&str) {
+    log(&JsValue::from_str(s));
+}
