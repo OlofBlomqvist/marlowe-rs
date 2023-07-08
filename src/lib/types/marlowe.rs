@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Display;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -15,8 +16,8 @@ use crate::{
 };
 
 
-#[derive(Debug,Serialize)]
-pub(crate) enum AstNode {
+#[derive(Debug,Serialize,Clone)]
+pub  enum AstNode {
     MarloweValueId(crate::types::marlowe::ValueId),
     StringValue(String),
     MarloweToken(crate::types::marlowe::Token),
@@ -35,6 +36,12 @@ pub(crate) enum AstNode {
     MarloweNumber(i64),
     //MarlowePossiblyMerkleizedContract(PossiblyMerkleizedContract),    
     Null
+}
+
+impl Display for AstNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&format!("{:?}",self))
+    }
 }
 
 #[cfg_attr(feature="js",wasm_bindgen::prelude::wasm_bindgen)]

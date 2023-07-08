@@ -1,7 +1,7 @@
 Basic example of how to use marlowe_lang in Deno.
 
 ```bash
-deno run --allow-net --allow-read --allow-sys --allow-env .\index.js
+deno run --allow-net --allow-read --allow-sys --allow-env .\app.js
 ```
 
 ```

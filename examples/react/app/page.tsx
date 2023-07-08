@@ -36,9 +36,10 @@ const Home = () => {
       setData(marlowe)
     } catch (e) {
       if (e instanceof marlowe.ParseError) {
-        setData("ERR: " + e.error_message)
+        setData(e.error_message)
       } else {
-        setData("ERR: " + JSON.stringify(e))
+        console.log(e)
+        setData("Something is broken, see console.")
       }
       
     }
