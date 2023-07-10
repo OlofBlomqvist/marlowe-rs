@@ -1,4 +1,4 @@
-```
+
 // Basic example using iterators
 ```rust
 use chrono::Days;
