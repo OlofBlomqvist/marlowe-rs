@@ -3,17 +3,21 @@
     <meta content="text/html;charset=utf-8" http-equiv="Content-Type"/>
   </head>
   <body>
-    <script type="module">
-      import init, { 
-        marlowe_to_json
-      } from './path/to/marlowe_lang.js';
-      async function run() {
-        await init();
-        let example = marlowe_to_json("Close")
+   <script type="module">
+      import init, * as marlowe
+      from 'https://unpkg.com/marlowe_lang@0.1.24-4-web/marlowe_lang.js';
+      async function initialize_marlowe() {
+        console.log("Loading wasm...")
+        await init("https://unpkg.com/marlowe_lang@0.1.24-4-web/marlowe_lang_bg.wasm");
+        window.marlowe = marlowe
+        
+        let example = marlowe.marlowe_to_json_with_variables('When [] (TimeParam "A") Close',"A=2")
         console.log("result",example)
+        document.body.innerHTML ='EXECUTING COMMAND: marlowe.marlowe_to_json_with_variables(\'When [] (TimeParam "A") Close\',"A=2")<br/><br/>'
+        document.body.append('RESULT: ' + example)
       }
-      run();
-    </script>
+      initialize_marlowe();
+    </script> 
   </body>
 
 </html>

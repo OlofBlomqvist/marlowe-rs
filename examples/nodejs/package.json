@@ -12,6 +12,6 @@
   },
   "sideEffects": false,
   "dependencies": {
-    "marlowe_lang": "0.1.24"
+    "marlowe_lang": "nodejs"
   }
 }
