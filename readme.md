@@ -1,10 +1,10 @@
 # Marlowe Lang
-
+https://www.npmjs.com/package/marlowe_lang
 [![crates.io](https://img.shields.io/crates/v/marlowe_lang.svg)](https://crates.io/crates/marlowe_lang)
 [![Documentation](https://docs.rs/marlowe_lang/badge.svg)](https://docs.rs/marlowe_lang)
 [![BuildAndTest](https://github.com/OlofBlomqvist/marlowe_rust/actions/workflows/rust.yml/badge.svg?branch=master)](https://github.com/OlofBlomqvist/marlowe_rust/actions/workflows/rust.yml)
-[![npm version](https://badge.fury.io/js/marlowe_lang.svg)](https://badge.fury.io/js/marlowe_lang)
-[![PyPI version](https://badge.fury.io/py/marlowe.svg)](https://badge.fury.io/py/marlowe)
+[![npm version](https://badge.fury.io/js/marlowe_lang.svg)](https://www.npmjs.com/package/marlowe_lang)
+[![PyPI version](https://badge.fury.io/py/marlowe.svg)](https://pypi.org/project/marlowe/)
 
 An **experimental** Rust implementation of  Marlowe for Cardano smart (financial) contracts. See the examples dir for use with node/deno/react etc.
 
