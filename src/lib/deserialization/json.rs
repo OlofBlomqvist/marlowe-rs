@@ -4,17 +4,28 @@ use serde::Deserialize;
 use crate::types::marlowe::*;
 
 
-pub fn deserialize<'a,T : 'static>(json:&str) -> Result<T,serde_json::Error> 
+pub fn deserialize<'a,T : 'static>(json:&str) -> Result<T,String> 
 where T : serde::de::DeserializeOwned + std::marker::Send{
     let j = json.to_owned();
-    std::thread::Builder::new().stack_size(32 * 1024 * 1024).spawn(move ||{
+    let work = std::thread::Builder::new().stack_size(32 * 1024 * 1024).spawn(move ||{
         let mut deserializer = serde_json::Deserializer::from_str(&j);
         deserializer.disable_recursion_limit();
         let deserializer = serde_stacker::Deserializer::new(&mut deserializer);
-        let value = T::deserialize(deserializer).unwrap();
-        Ok(value)
-    }).unwrap().join().unwrap()
-
+        T::deserialize(deserializer)
+    });
+    match work {
+        Ok(handle) => {
+            match handle.join() {
+                Ok(Ok(v)) => Ok(v),
+                Ok(Err(e)) => Err(format!("inner error: {:?}",e)),
+                Err(e) => match e.downcast_ref::<String>() {
+                    Some(as_string) => Err(as_string.into()),
+                    None => Err("something went terribly wrong.".into())
+                }
+            }
+        },
+        Err(e) => Err(format!("exc: {:?}",e))
+    }
 }
 
 struct TimeoutVisitor;

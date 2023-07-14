@@ -793,11 +793,8 @@ impl Contract {
         }
     }
 
-    pub fn from_json(contract_marlowe_dsl:&str) -> Result<Contract,serde_json::Error> {
-        match crate::deserialization::json::deserialize::<Contract>(contract_marlowe_dsl) {
-            Ok(r) => Ok(r),
-            Err(e) => Err(e),
-        }
+    pub fn from_json(contract_marlowe_dsl:&str) -> Result<Contract,String> {
+        crate::deserialization::json::deserialize::<Contract>(contract_marlowe_dsl)
     }
 
 
