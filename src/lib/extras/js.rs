@@ -382,7 +382,7 @@ impl WASMMarloweStateMachine {
 
     #[wasm_bindgen]
     pub fn machine_state(&self) -> WasmMachineState {
-        let (a,b) = self.internal_instance.clone().process().unwrap();
+        let (_a,b) = self.internal_instance.clone().process().unwrap();
         b.try_into().unwrap()
     }
 

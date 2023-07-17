@@ -156,12 +156,12 @@ pub fn decode_data_cborhex_to_json(input:&str) -> Result<String,String> {
 #[cfg(feature = "js")]
 pub mod marlowe_wasm_exports {
     
-    #[wasm_bindgen::prelude::wasm_bindgen(catch)]
+    #[wasm_bindgen::prelude::wasm_bindgen]
     pub fn try_decode_metadata_cborhex_to_json(input:String) -> Result<String,String> {
         super::decode_metadata_cborhex_to_json(&input)
     }
 
-    #[wasm_bindgen::prelude::wasm_bindgen(catch)]
+    #[wasm_bindgen::prelude::wasm_bindgen]
     pub fn decode_marlowe_data_or_redeemer(input:String) -> Result<String,String> {
         super::try_decode_any_marlowe_data(&input)
     }
@@ -171,12 +171,13 @@ pub mod marlowe_wasm_exports {
 use wasm_bindgen::{prelude::wasm_bindgen, JsValue};
 
 #[cfg(feature = "js")]
-#[wasm_bindgen(catch)]
+#[wasm_bindgen()]
 extern "C" {    
     #[wasm_bindgen(js_namespace = console)]
     pub fn log(s: &JsValue);
 }
 
+#[allow(dead_code)]
 #[cfg(feature = "js")]
 pub(crate) fn logs(s:&str) {
     log(&JsValue::from_str(s));
