@@ -10,6 +10,8 @@ An **experimental** Rust implementation of  Marlowe for Cardano smart (financial
 
 Note that while there is support for encoding and decoding on-chain data, this crate focuses on the off-chain parts, making it as easy as possible to create, manage and understand contracts in Rust; there will not be any support for creating actual transactions.
 
+There is also no support for directly communicating with any Cardano or Marlowe infrastructure - this is purely an implementation of the datatypes, semantics and serialization for Marlowe.
+
 ### Main Features
 - Encode/Decode Marlowe types between: MarloweDSL/Rust/Json/CborHex
 - List contract parameters used in a contract (extended marlowe)
@@ -25,11 +27,16 @@ Note that while there is support for encoding and decoding on-chain data, this c
 This crate can be used in Rust, React, Node, Deno etc., see the examples directory for more details. It will also be possible to compile to WASI soon™.
 Note that the wasm file is quite large (at 3MB~) right now. This is expected to change in the future to below 300kb, but it is not a priority right now.
 
-### To do's
+
+### WIP & TODOs
 
 - Add [marlowe-spec-test](https://github.com/input-output-hk/marlowe/tree/master/marlowe-spec-test) to build pipeline when it has been properly packaged.
 
 - Rewrite parser logic to use Chumsky.
+
+- Replace CML with Pallas
+
+- Provide support for WASI compilation
 
 ## CLI Tool:
 
