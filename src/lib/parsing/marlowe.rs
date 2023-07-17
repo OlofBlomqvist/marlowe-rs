@@ -104,8 +104,23 @@ pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Resu
         macro_rules! try_get_next { () => { (get_next_node(&mut current_operation))};}
         macro_rules! get_next { () => { try_get_next!()? } }
         macro_rules! get_next_into { () => { get_next!().try_into()? };}
-        match current_operation.pair_rule_type {  
+        match current_operation.pair_rule_type {
             Rule::Contract => fold_back!(get_next!()),
+            Rule::MerkleizedContract => {
+                let hash : String = get_next_into!();
+                fold_back!(
+                    AstNode::MarlowePossiblyMerkleizedContract(PossiblyMerkleizedContract::Merkleized(hash))
+                );
+            },
+            Rule::NonMerkleizedContract => {
+                let contract : Contract = get_next_into!();
+
+                fold_back!(
+                    AstNode::MarlowePossiblyMerkleizedContract(PossiblyMerkleizedContract::Raw(Box::new(contract)))
+                );
+            },
+            Rule::PossiblyMerkleizedContract => fold_back!(get_next!()),
+            
             Rule::Close => fold_back!(AstNode::MarloweContract(Contract::Close)),
             Rule::UseValue => fold_back!(AstNode::MarloweValue(Value::UseValue(get_next_into!()))),            
             Rule::ConstantParam => {
@@ -162,10 +177,10 @@ pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Resu
                 notify_if: get_next_node(&mut current_operation)?.try_into()? })),            
             Rule::Case => {
                 let continuation_contract = get_next!();
-                let contract_node : Option<Contract> = continuation_contract.try_into()?;
+                let contract_node : Option<PossiblyMerkleizedContract> = continuation_contract.try_into()?;
                 let contract_node =
                     match contract_node {
-                        Some(c) => Some(PossiblyMerkleizedContract::Raw(Box::new(c))),
+                        Some(c) => Some(c),
                         None => None,
                     };
                 let action = get_next_into!();
@@ -421,7 +436,6 @@ pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Resu
     uninitialized_const_params.dedup();
     uninitialized_time_params.sort();
     uninitialized_time_params.dedup();
-
     match result_stack.pop() {
         Some(v) => {
             parties.sort_by_key(|x|format!("{x:?}"));

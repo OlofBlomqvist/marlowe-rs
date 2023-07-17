@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fmt::Display;
+use std::ops::Deref;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -33,8 +34,8 @@ pub  enum AstNode {
     MarloweObservation(crate::types::marlowe::Observation),
     MarlowePayee(crate::types::marlowe::Payee),
     MarloweChoiceId(crate::types::marlowe::ChoiceId),
-    MarloweNumber(i64),
-    //MarlowePossiblyMerkleizedContract(PossiblyMerkleizedContract),    
+    MarloweNumber(i64),    
+    MarlowePossiblyMerkleizedContract(crate::types::marlowe::PossiblyMerkleizedContract),
     Null
 }
 
@@ -469,6 +470,9 @@ Impl_From_For!(@Contract,MarloweContract);
 Impl_From_For!(@i64,MarloweNumber);
 Impl_From_For!(@Observation,MarloweObservation);
 Impl_From_For!(@ValueId,MarloweValueId);
+Impl_From_For!(@PossiblyMerkleizedContract,MarlowePossiblyMerkleizedContract);
+
+
 
 pub(crate) fn walk_any<T>(x:T,f:&mut dyn FnMut(&AstNode)) -> () where crate::types::marlowe::AstNode: From<T> {
     walk(&x.into(),f);
@@ -490,41 +494,85 @@ pub(crate) fn walk(
                 Party::Role { role_token:_ } => {},
             }
         }
-        AstNode::MarloweContract(x) => match x {
-            Contract::Pay { from_account:Some(a), to:Some(b), token:Some(c), pay:Some(d), then:Some(e) } => {
-                walk_any(a,func);
-                walk_any(b,func);
-                walk_any(c,func);
-                walk_any(d,func);
-                walk_any(e,func);
-            },
-            Contract::If { x_if:Some(a), then:Some(b), x_else:Some(c) } => {
-                walk_any(a,func);
-                walk_any(b,func);
-                walk_any(c,func);
-            },
-            Contract::When { when, timeout:Some(b), timeout_continuation:Some(c) } => {
-                for x in when {
-                    if let Some(case) = x {
-                        walk_any(case,func)
+        AstNode::MarloweContract(x) => {
+            match x {
+                Contract::Pay { from_account:Some(a), to:Some(b), token:Some(c), pay:Some(d), then:Some(e) } => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                    walk_any(c,func);
+                    walk_any(d,func);
+                    walk_any(e,func);
+                },
+                Contract::If { x_if:Some(a), then:Some(b), x_else:Some(c) } => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                    walk_any(c,func);
+                },
+                Contract::When { when, timeout:Some(b), timeout_continuation:Some(c) } => {
+                    for x in when {
+                        if let Some(case) = x {
+                            walk_any(case,func)
+                        }
                     }
+                    walk_any(b,func);
+                    walk_any(c,func);
+                },
+                Contract::Let { x_let, be:Some(a), then:Some(b) } => {
+                    walk_any(x_let,func);
+                    walk_any(a,func);
+                    walk_any(b,func);
+                    
+                },
+                Contract::Assert { assert:Some(a), then:Some(b) } => {
+                    walk_any(a,func);
+                    walk_any(b,func);
+                },
+                Contract::Close => {},
+                _ => {
+                    //panic!("BAD CONTRACT: {c:?}")
                 }
-                walk_any(b,func);
-                walk_any(c,func);
-            },
-            Contract::Let { x_let, be:Some(a), then:Some(b) } => {
-                walk_any(x_let,func);
-                walk_any(a,func);
-                walk_any(b,func);
-                
-            },
-            Contract::Assert { assert:Some(a), then:Some(b) } => {
-                walk_any(a,func);
-                walk_any(b,func);
-            },
-            Contract::Close => {},
-            _ => {
-                //panic!("BAD CONTRACT: {c:?}")
+            }
+        },
+        AstNode::MarlowePossiblyMerkleizedContract(x) => {
+            match x {
+                PossiblyMerkleizedContract::Raw(raw) => match raw.deref() {
+                    Contract::Pay { from_account:Some(a), to:Some(b), token:Some(c), pay:Some(d), then:Some(e) } => {
+                        walk_any(a,func);
+                        walk_any(b,func);
+                        walk_any(c,func);
+                        walk_any(d,func);
+                        walk_any(e,func);
+                    },
+                    Contract::If { x_if:Some(a), then:Some(b), x_else:Some(c) } => {
+                        walk_any(a,func);
+                        walk_any(b,func);
+                        walk_any(c,func);
+                    },
+                    Contract::When { when, timeout:Some(b), timeout_continuation:Some(c) } => {
+                        for x in when {
+                            if let Some(case) = x {
+                                walk_any(case,func)
+                            }
+                        }
+                        walk_any(b,func);
+                        walk_any(c,func);
+                    },
+                    Contract::Let { x_let, be:Some(a), then:Some(b) } => {
+                        walk_any(x_let,func);
+                        walk_any(a,func);
+                        walk_any(b,func);
+                        
+                    },
+                    Contract::Assert { assert:Some(a), then:Some(b) } => {
+                        walk_any(a,func);
+                        walk_any(b,func);
+                    },
+                    Contract::Close => {},
+                    _ => {
+                        //panic!("BAD CONTRACT: {c:?}")
+                    }
+                },
+                PossiblyMerkleizedContract::Merkleized(_) => {},
             }
         },
         AstNode::MarloweCaseList(x) => {
@@ -909,7 +957,6 @@ impl Contract {
                 } else {
                     vec![]
                 };
-
             match &x.then {
                 Some(PossiblyMerkleizedContract::Raw(c)) => get_from_contract(&c,action_fields),
                 _ => action_fields                

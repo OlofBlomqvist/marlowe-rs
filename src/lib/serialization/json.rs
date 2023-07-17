@@ -81,7 +81,7 @@ where
                 actual_contract.serialize(serializer)
             },
             PossiblyMerkleizedContract::Merkleized(s) => {
-                serializer.serialize_str(&format!("MerkleizedContinuation(\"{s}\")"))
+                serializer.serialize_str(&format!("(\"{s}\")"))
             },
         }
     }
@@ -260,7 +260,16 @@ where
             return Err(serde::ser::Error::custom(format!("A case is not fully initialized. Missing action or continuation contract.")))
         }
         let mut s = serializer.serialize_struct("case", 2)?;
-        s.serialize_field("then", &self.then)?;
+        match &self.then {
+            Some(m) => 
+                match m {
+                    PossiblyMerkleizedContract::Raw(raw_contract) => s.serialize_field("then", raw_contract)?,
+                    PossiblyMerkleizedContract::Merkleized(hash) => s.serialize_field("merkleized_then", hash)?
+                }
+                
+            None => 
+            s.serialize_field("then", &self.then)?,
+        }
         s.serialize_field("case", &self.case)?;            
         s.end()
     }

@@ -93,7 +93,7 @@ impl std::fmt::Display for PossiblyMerkleizedContract {
                 write!(f,"{actual_contract}")
             },
             PossiblyMerkleizedContract::Merkleized(bytestring) => {
-                write!(f,"MerkleizedContinuation(\"{bytestring}\")")
+                write!(f,"\"{bytestring}\"")
             },
         }
     }
@@ -282,7 +282,15 @@ impl std::fmt::Display for Case {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "(Case {} {})",
             match &self.case {None=>"?action".to_string(),Some(v)=>format!("{v}")},
-            match &self.then {None=>"?contract".to_string(),Some(v)=>format!("{v}")},
+            match &self.then {
+                None=>"?contract".to_string(),
+                Some(v)=> {
+                    match &v {
+                        PossiblyMerkleizedContract::Raw(c) => format!("{c}"),
+                        PossiblyMerkleizedContract::Merkleized(hash) => format!("(MerkleizedThen \"{hash}\")"),
+                    }
+                }
+            },
         )
     }
 }

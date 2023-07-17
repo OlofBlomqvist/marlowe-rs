@@ -81,9 +81,18 @@ Action = _{ ActionHole | Notify | Choice | Deposit }
     Choice =  { lpar  ~"Choice"   ~ ChoiceId  ~ ArrayOfBounds  ~ rpar }
     Notify =  { lpar  ~"Notify"   ~ Observation  ~ rpar }
 
-Case = { 
-    lpar  ~ "Case"  ~ Action  ~ WrappedContract  ~ rpar
-    | "Case"  ~ Action  ~ WrappedContract
+
+PossiblyMerkleizedContract = _{ContractHole|NonMerkleizedContract|MerkleizedContract}
+    NonMerkleizedContract = { WrappedContract }
+    MerkleizedContract = {
+        lpar ~ "MerkleizedThen" ~ quoted_string  ~ rpar
+        | "MerkleizedThen" ~ quoted_string
+    }
+
+Case = {
+    lpar ~ "Case"  ~ Action  ~ PossiblyMerkleizedContract ~ rpar
+    | "Case"  ~ Action ~ PossiblyMerkleizedContract
+    
 }
 
 Bound = ${ 
