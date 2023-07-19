@@ -61,10 +61,10 @@ pub fn deserialize_with_input(content:&str,input:HashMap<String,i64>) -> Result<
             match e.line_col {
                 pest::error::LineColLocation::Span((start_line,start_col),(end_line,end_col)) => {
                     Err(ParseError {
-                        start_line: start_line,
-                        end_line: end_line,
-                        start_col: start_col,
-                        end_col: end_col,
+                        start_line,
+                        end_line,
+                        start_col,
+                        end_col,
                         error_message: format!("{:#}",e),
                     })
                 },

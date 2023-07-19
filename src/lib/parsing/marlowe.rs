@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use pest::iterators::Pair;
 use crate::parsing::Rule;
-use crate::types::{marlowe::*};
+use crate::types::marlowe::*;
 
 struct Operation<'a> {
 pub(crate)     pair_rule_type : Rule,
@@ -10,7 +10,7 @@ pub(crate)     pair_rule_type : Rule,
     string_representation : Option<String>
 }
 
-fn add_to_parent(call_stack:&mut Vec<Operation>,result_stack:&mut Vec<AstNode>,node:AstNode) {
+fn add_to_parent(call_stack:&mut [Operation],result_stack:&mut Vec<AstNode>,node:AstNode) {
     match call_stack.last_mut() {
         Some(parent) => {
             parent.extracted_child_ast_nodes.push(node)
@@ -24,7 +24,7 @@ fn add_to_parent(call_stack:&mut Vec<Operation>,result_stack:&mut Vec<AstNode>,n
 fn option_to_result<T>(maybe_ast_node:Option<T>,msg:&str) -> Result<T,&str> {
     match maybe_ast_node {
         Some(x) => Ok(x),
-        None => return Err(msg),
+        None => Err(msg),
     }
 }
 
@@ -179,10 +179,7 @@ pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Resu
                 let continuation_contract = get_next!();
                 let contract_node : Option<PossiblyMerkleizedContract> = continuation_contract.try_into()?;
                 let contract_node =
-                    match contract_node {
-                        Some(c) => Some(c),
-                        None => None,
-                    };
+                    contract_node;
                 let action = get_next_into!();
                 fold_back!(AstNode::MarloweCase(crate::types::marlowe::Case {
                     case: action,
@@ -195,7 +192,7 @@ pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Resu
                 let cases = get_next_into!();
                 fold_back!(AstNode::MarloweContract(Contract::When { 
                     when: cases,
-                    timeout: timeout, 
+                    timeout, 
                     timeout_continuation: contract_node
                 }))
             }
@@ -267,7 +264,7 @@ pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Resu
                 fold_back!(AstNode::MarloweContract(Contract::Pay { 
                     from_account: party, 
                     to: payee, 
-                    token: token, 
+                    token, 
                     pay: value, 
                     then: continuation
                 }))
@@ -429,7 +426,7 @@ pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Resu
          
     }
     if result_stack.len() != 1 {
-        return Err(format!("Marlowe_Lang::ErrorCode(1) : {:?}",result_stack).to_string())
+        return Err(format!("Marlowe_Lang::ErrorCode(1) : {:?}",result_stack))
     };
     
     uninitialized_const_params.sort();
@@ -442,8 +439,8 @@ pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Resu
             parties.dedup_by_key(|x|format!("{x:?}"));
             Ok(RawContractParseResult { 
                 node: v, 
-                uninitialized_const_params: uninitialized_const_params,
-                uninitialized_time_params: uninitialized_time_params,
+                uninitialized_const_params,
+                uninitialized_time_params,
                 parties
             })
         }
@@ -492,10 +489,10 @@ impl ParseError {
 impl Clone for ParseError {
     fn clone(&self) -> Self {
         Self { 
-            start_line: self.start_line.clone(), 
-            end_line: self.end_line.clone(), 
-            start_col: self.start_col.clone(), 
-            end_col: self.end_col.clone(), 
+            start_line: self.start_line, 
+            end_line: self.end_line, 
+            start_col: self.start_col, 
+            end_col: self.end_col, 
             error_message: self.error_message.clone() 
         }
     }

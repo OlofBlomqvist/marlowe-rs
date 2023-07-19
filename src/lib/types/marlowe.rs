@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::ops::Deref;
+use hex::ToHex;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -9,7 +10,7 @@ use plutus_data::ToPlutusDataDerive;
 #[cfg(feature = "utils")]
 use plutus_data::FromPlutusDataDerive;
 
-use crate::extras::utils::datum_to_json;
+//use crate::extras::utils::datum_to_json;
 use crate::parsing::marlowe::ParseError;
 use crate::{
     Impl_From_For_Vec, 
@@ -238,7 +239,7 @@ impl Party {
 
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub enum InputAction {
     Deposit { // 0
         #[ignore_option_container]
@@ -260,7 +261,7 @@ pub enum InputAction {
 
 // aka redeemer
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub enum PossiblyMerkleizedInput {
     Action(InputAction),
     MerkleizedInput(InputAction, #[base_16] String)
@@ -312,103 +313,131 @@ pub enum PossiblyMerkleizedContract {
 }
 
 impl ToPlutusData for Party {
-    fn to_plutus_data(&self,attributes:&Vec<String>) -> Result<PlutusData,String> {
+    fn to_plutus_data(&self,attributes:&[String]) -> Result<PlutusData,String> {
+        
         match self {
             Party::Address(a) => {
                 
-                let big_num = plutus_data::convert_to_big_num(&0);
-                let mut items = plutus_data::PlutusList::new();
-                match a.to_plutus_data(&vec![])?.as_constr_plutus_data() {
-                    Some(pladdress) => {
-                        let pladdress = pladdress.data();
+                match a.to_plutus_data(&[])? {
+                    PlutusData::Constr(pladdress) => {
+                        
+                        let pladdress = pladdress.fields;
                         if pladdress.len() != 2 {
                             return Err(String::from("Invalid number of items in address."))
                         }
-                        items.add(&pladdress.get(0));
-                        items.add(&pladdress.get(1));
-                        // this is an ugly hack for storing the contents of address directly inside of the constr data
-                        // of the party::address variant constr rather than as a single sub-item.
-                        let item = plutus_data::ConstrPlutusData::new(&big_num,&items);
-                        Ok(plutus_data::PlutusData::new_constr_plutus_data(&item))
+                        Ok(pallas_primitives::babbage::PlutusData::Constr(pallas_primitives::babbage::Constr { 
+                            tag: 121, 
+                            any_constructor:  Some(0), 
+                            fields: pladdress
+                        }))
+
                     },
-                    None => Err(String::from("failed to convert into plutus data. this is most likely a bug in the marlowe_lang crate.")),
+                    _ => Err(String::from("failed to convert into plutus data. this is most likely a bug in the marlowe_lang crate.")),
                 }
             },
             Party::Role { role_token } => {
                 //println!("TO PLUTUS FOR ROLE: {}",role_token);
-                let big_num = plutus_data::convert_to_big_num(&1);
-                let mut items = plutus_data::PlutusList::new();
-                items.add(&role_token.to_plutus_data(attributes)?);
-                let item = plutus_data::ConstrPlutusData::new(&big_num,&items);
-                Ok(plutus_data::PlutusData::new_constr_plutus_data(&item))
+                // let big_num = plutus_data::convert_to_big_num(&1);
+                // let mut items = plutus_data::PlutusList::new();
+                // items.add(&role_token.to_plutus_data(attributes)?);
+                // let item = plutus_data::ConstrPlutusData::new(&big_num,&items);
+                // Ok(plutus_data::PlutusData::new_constr_plutus_data(&item))
+
+                Ok(pallas_primitives::babbage::PlutusData::Constr(pallas_primitives::babbage::Constr { 
+                    tag: 122, 
+                    any_constructor:  Some(1), 
+                    fields: vec![role_token.to_plutus_data(attributes)?]
+                }))
+
             },
         }
     }
 }
 
+
 impl FromPlutusData<Party> for Party {
-    fn from_plutus_data(x:plutus_data::PlutusData,attributes:&Vec<String>) -> Result<Party,String> {
-        
-        match x.as_constr_plutus_data() {
-            Some(c) => {
-                match from_bignum(&c.alternative()) {
-                    0 => { // ADDRESS
-                        let data = c.data(); // must have the two items here. network and address
-                        if data.len() != 2 {
-                            panic!("Invalid/missing address inside of party... {:?}",datum_to_json(&x))
+    fn from_plutus_data(x:plutus_data::PlutusData,attributes:&[String]) -> Result<Party,String> {
+        match &x {
+            PlutusData::Constr(c) =>{
+                
+               
+                match c.constructor_value() {
+                    Some(0) => {
+                        if c.fields.len() != 2 {
+                            return Err(format!("Expected to decode a party address item.. found: {c:?}"))
                         }
-                        let item_zero = data.clone().get(0);
-                        let result = Ok(Party::Address(Address {
-                            is_mainnet: bool::from_plutus_data(item_zero.clone(),&vec![]).expect(&format!("expected bool item 0 from {:?}",datum_to_json(&item_zero))),
-                            addr: ScriptOrPubkeyCred::from_plutus_data(data.clone().get(1), &vec![])?,
-                        }));
+                        let is_mainnet = match &c.fields[0] {
+                            PlutusData::Constr(c) if Some(1) == c.constructor_value() && c.fields.is_empty() => true,
+                            PlutusData::Constr(c) if Some(0) == c.constructor_value() && c.fields.is_empty() => false,
+                            x => return Err(format!("Failed to decode is_mainnet for a party: {x:?}"))
+                        };
+                        let content_data = &c.fields[1];
 
-                        //println!("Successfully decoded an address");
-                        result
-
-                    },
-                    1 => { // ROLE
-                        let data = c.data(); // must have a single string item in here (bytes)
-                        if data.len() != 1 {
-                            return Err(String::from("missing the value in 'party::role(...)'"))
+                        match content_data {
+                            PlutusData::Constr(address_info) => {
+                                if address_info.fields.len() != 2 {
+                                    return Err(format!("Invalid/missing address inside of party... {:?}",&x))
+                                }
+                                
+                                Ok(Party::Address(Address {
+                                    is_mainnet,
+                                    addr: ScriptOrPubkeyCred::from_plutus_data(content_data.clone(), attributes)?,
+                                }))
+                            },
+                            _ => todo!()
                         }
-                        let role_name = data.get(0);
-                        Ok(Party::Role {
-                            role_token: String::from_plutus_data(role_name, attributes).expect(&format!("expected a role token string from {:?}",datum_to_json(&x))),
-                        })
-                    },
-                    _ => Err(String::from("Invalid constructor."))
+                        
+                    } ,
+                    Some(1)  => {
+                        if c.fields.len() != 1 {
+                            return Err(format!("Expected to decode a party role item with a single byte array (role token), found: {c:?}"))
+                        }
+                        let role_name_bytes = c.fields[0].clone();
+                        match &role_name_bytes {
+                            PlutusData::BoundedBytes(_) => {
+                                Ok(Party::Role {
+                                    role_token: String::from_plutus_data(role_name_bytes, attributes).unwrap_or_else(|_| panic!("expected a role token string from {:?}",&x)),
+                                })
+                            },
+                            x => panic!("{:?}",x)
+                        }
+                        
+                    } ,
+                    x => Err(format!("Unknown party type tag: {x:?} (expected tag 1 or 0)"))
                 }
             },
-            None => Err(String::from("Expected constr data..")),
+            _ => Err(String::from("Expected constr data..")),
         }
+        
         
     }
 }
 
 impl ToPlutusData for PossiblyMerkleizedContract {
-    fn to_plutus_data(&self,attributes:&Vec<String>) -> Result<PlutusData,String> {
+    fn to_plutus_data(&self,attributes:&[String]) -> Result<PlutusData,String> {
         match self {
             PossiblyMerkleizedContract::Raw(contract) => {
-                contract.to_plutus_data(&attributes)
+                contract.to_plutus_data(attributes)
             },
             PossiblyMerkleizedContract::Merkleized(m) => {
-                Ok(PlutusData::new_bytes(hex::decode(m).unwrap()))
+                let bytes = hex::decode(m).unwrap(); // todo - dont unwrap
+                Ok(PlutusData::BoundedBytes(bytes.into()))
+                //Ok(PlutusData::new_bytes(hex::decode(m).unwrap()))
             },
         }
     }
 }
 
 impl FromPlutusData<PossiblyMerkleizedContract> for PossiblyMerkleizedContract {
-    fn from_plutus_data(x:PlutusData,attributes:&Vec<String>) -> Result<PossiblyMerkleizedContract,String> {
-        if let Some(bytes) = x.as_bytes() {
-            return Ok(PossiblyMerkleizedContract::Merkleized(hex::encode(&bytes)))
+    fn from_plutus_data(x:PlutusData,attributes:&[String]) -> Result<PossiblyMerkleizedContract,String> {
+        match &x {
+            PlutusData::Constr(_c) => {
+                let inner_contract = Contract::from_plutus_data(x, attributes)?;
+                Ok(PossiblyMerkleizedContract::Raw(Box::new(inner_contract)))
+            },
+            PlutusData::BoundedBytes(b) =>  Ok(PossiblyMerkleizedContract::Merkleized(b.encode_hex())),
+            _ => Err(String::from("failed to deserialize possibly merkleized contract."))
         }
-        if let Some(_) = x.as_constr_plutus_data() {
-            let inner_contract = Contract::from_plutus_data(x, &attributes)?;
-            return Ok(PossiblyMerkleizedContract::Raw(Box::new(inner_contract)))
-        }
-        Err(String::from("failed to deserialize possibly merkleized contract."))
     }
 }
 
@@ -474,12 +503,12 @@ Impl_From_For!(@PossiblyMerkleizedContract,MarlowePossiblyMerkleizedContract);
 
 
 
-pub(crate) fn walk_any<T>(x:T,f:&mut dyn FnMut(&AstNode)) -> () where crate::types::marlowe::AstNode: From<T> {
+pub(crate) fn walk_any<T>(x:T,f:&mut dyn FnMut(&AstNode)) where crate::types::marlowe::AstNode: From<T> {
     walk(&x.into(),f);
 }
 pub(crate) fn walk(
     node:&AstNode,
-    func: &mut dyn FnMut(&AstNode) -> () 
+    func: &mut dyn FnMut(&AstNode) 
 ) {
     func(node);
 
@@ -509,10 +538,8 @@ pub(crate) fn walk(
                     walk_any(c,func);
                 },
                 Contract::When { when, timeout:Some(b), timeout_continuation:Some(c) } => {
-                    for x in when {
-                        if let Some(case) = x {
-                            walk_any(case,func)
-                        }
+                    for x in when.iter().flatten() {
+                        walk_any(x,func)
                     }
                     walk_any(b,func);
                     walk_any(c,func);
@@ -549,10 +576,8 @@ pub(crate) fn walk(
                         walk_any(c,func);
                     },
                     Contract::When { when, timeout:Some(b), timeout_continuation:Some(c) } => {
-                        for x in when {
-                            if let Some(case) = x {
-                                walk_any(case,func)
-                            }
+                        for x in when.iter().flatten() {
+                            walk_any(x,func)
                         }
                         walk_any(b,func);
                         walk_any(c,func);
@@ -605,10 +630,8 @@ pub(crate) fn walk(
                     Some(o) => walk_any(o,func),
                     None => {},
                 }
-                for x in choose_between {
-                    if let Some(xx) = x {
-                        walk_any(xx,func)
-                    }
+                for x in choose_between.iter().flatten() {
+                    walk_any(x,func)
                 }
             },
             Action::Notify { notify_if:Some(a) } => walk_any(a,func),
@@ -842,7 +865,7 @@ impl Contract {
     }
 
     pub fn from_json(contract_marlowe_dsl:&str) -> Result<Contract,String> {
-        crate::deserialization::json::deserialize::<Contract>(contract_marlowe_dsl)
+        crate::deserialization::json::deserialize::<Contract>(contract_marlowe_dsl.into())
     }
 
 
@@ -850,11 +873,8 @@ impl Contract {
     pub fn parties(&self) -> Vec<Party> {
         let mut result = vec![];
         walk_any(self, &mut |node:&AstNode| {
-            match node {
-                AstNode::MarloweParty(p) => {
-                    result.push(p.clone());
-                }
-                _ => {}
+            if let AstNode::MarloweParty(p) = node {
+                result.push(p.clone());
             }
         });
         result.sort_by_key(|x|format!("{x:?}"));
@@ -953,12 +973,12 @@ impl Contract {
         fn get_from_case(x:&Case) -> Vec<RequiredContractInputField> {
             let action_fields = 
                 if let Some(a) = &x.case { 
-                    get_from_action(&a)          
+                    get_from_action(a)          
                 } else {
                     vec![]
                 };
             match &x.then {
-                Some(PossiblyMerkleizedContract::Raw(c)) => get_from_contract(&c,action_fields),
+                Some(PossiblyMerkleizedContract::Raw(c)) => get_from_contract(c,action_fields),
                 _ => action_fields                
             }   
         }
@@ -1113,13 +1133,13 @@ impl TransactionError {
     pub fn teambiguous_time_interval_error(contents:Option<String>) -> Self {
         Self {
             tag: "TEAmbiguousTimeIntervalError".into(),
-            contents: if let Some(c) = contents { Some(TransactionErrorContent::Str(c)) } else {None}
+            contents: contents.map(TransactionErrorContent::Str)
         }
     }
     pub fn teapply_no_match_error(contents:Option<String>) -> Self {
         Self {
             tag: "TEApplyNoMatchError".into(),
-            contents: if let Some(c) = contents { Some(TransactionErrorContent::Str(c)) } else {None}
+            contents: contents.map(TransactionErrorContent::Str)
         }
     }
     pub fn teinterval_error(contents:IntervalError) -> Self {
@@ -1131,7 +1151,7 @@ impl TransactionError {
     pub fn teuseless_transaction(contents:Option<String>) -> Self {
         Self {
             tag: "TEUselessTransaction".into(),
-            contents: if let Some(c) = contents { Some(TransactionErrorContent::Str(c)) } else {None}
+            contents: contents.map(TransactionErrorContent::Str)
         }
     }
 }

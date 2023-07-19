@@ -3,14 +3,13 @@ use std::collections::HashMap;
 use serde::Deserialize;
 use crate::types::marlowe::*;
 
-
-pub fn deserialize<'a,T : 'static>(json:&str) -> Result<T,String> 
-where T : serde::de::DeserializeOwned + std::marker::Send{
-    let j = json.to_owned();
+#[cfg(feature="infinite-recursion")]
+pub fn deserialize<T>(json:String) -> Result<T,String> 
+where T : serde::de::DeserializeOwned + std::marker::Send + 'static {
     let work = std::thread::Builder::new().stack_size(32 * 1024 * 1024).spawn(move ||{
-        let mut deserializer = serde_json::Deserializer::from_str(&j);
-        deserializer.disable_recursion_limit();
-        let deserializer = serde_stacker::Deserializer::new(&mut deserializer);
+        let mut deserializer = serde_json::Deserializer::from_str(&json);
+        deserializer.disable_recursion_limit();        
+        let deserializer = serde_stacker::Deserializer::new(&mut deserializer);        
         T::deserialize(deserializer)
     });
     match work {
@@ -26,6 +25,13 @@ where T : serde::de::DeserializeOwned + std::marker::Send{
         },
         Err(e) => Err(format!("exc: {:?}",e))
     }
+}
+
+
+#[cfg(not(feature="infinite-recursion"))]
+pub fn deserialize<T>(json:String) -> Result<T,String> 
+where T : serde::de::DeserializeOwned + std::marker::Send + 'static {
+    serde_json::de::from_str(&json).map_err(|e| format!("{e:?}"))
 }
 
 struct TimeoutVisitor;
@@ -85,17 +91,17 @@ impl<'de> serde::de::Visitor<'de> for TokenVisitor {
         }
 
         if token_name.is_none() && currency_symbol.is_none() {
-            return Err(serde::de::Error::custom(&format!("Invalid token object")));
+            return Err(serde::de::Error::custom(&"Invalid token object".to_string()));
         }
 
-        return Ok(Token {
+        Ok(Token {
             currency_symbol: currency_symbol.map_or_else(
                 || Err(serde::de::Error::custom(&format!("missing currency symbol"))),
-                |v|Ok(v)
+                Ok
             )?,
             token_name: token_name.map_or_else(
                 || Err(serde::de::Error::custom(&format!("missing token name"))),
-                |v|Ok(v)
+                Ok
             )?,
         })
 
@@ -119,7 +125,7 @@ impl<'de> serde::de::Visitor<'de> for InputActionVisitor {
         if value == "input_notify" {
             Ok(InputAction::Notify)            
         } else {
-            return Err(serde::de::Error::custom(&format!("Not a valid input action: {}",value)));
+            Err(serde::de::Error::custom(format!("Not a valid input action: {}",value)))
         }
     }
 
@@ -185,7 +191,7 @@ impl<'de> serde::de::Visitor<'de> for InputActionVisitor {
             })
         }
 
-        Err(serde::de::Error::custom(&format!("Invalid input action object")))
+        Err(serde::de::Error::custom(&"Invalid input action object".to_string()))
 
     }
 }
@@ -266,13 +272,13 @@ impl<'de> serde::de::Visitor<'de> for ActionVisitor {
                 for_choice, 
                 choose_between: choose_between.map_or_else(
                     || Err(serde::de::Error::custom(&format!("missing bounds"))),
-                    |v|Ok(v)
+                    Ok
                 )?.iter()
                     .map(|x|Some(x.to_owned())).collect::<Vec<Option<Bound>>>()
             })
         }
 
-        Err(serde::de::Error::custom(&format!("Invalid action object!")))
+        Err(serde::de::Error::custom(&"Invalid action object!".to_string()))
 
     }
 }
@@ -447,7 +453,7 @@ impl<'de> serde::de::Visitor<'de> for ChoiceIdVisitor {
         Ok(ChoiceId{
             choice_name: choice_name.map_or_else(
                 || Err(serde::de::Error::custom(&format!("missing choice name"))),
-                |v|Ok(v)
+                Ok
             )?,
             choice_owner
         })
@@ -472,7 +478,7 @@ impl<'de> serde::de::Visitor<'de> for ContractVisitor {
         if value == "close" {
             Ok(Contract::Close)            
         } else {
-            return Err(serde::de::Error::custom(&format!("Not a valid contract.")));
+            Err(serde::de::Error::custom("Not a valid contract.".to_string()))
         }
     }
 
@@ -558,15 +564,15 @@ impl<'de> serde::de::Visitor<'de> for ContractVisitor {
             return Ok(Contract::When { 
                 when: when.map_or_else(
                     || Err(serde::de::Error::custom(&format!("missing when contract continuation"))),
-                    |v|Ok(v)
+                    Ok
                 )?.iter().map(|x|Some(x.clone())).collect::<Vec<Option<Case>>>(), 
                 timeout: Some(Timeout::TimeConstant(timeout.map_or_else(
                     || Err(serde::de::Error::custom(&format!("missing timeout"))),
-                    |v|Ok(v)
+                    Ok
                 )?)), 
                 timeout_continuation: Some(timeout_continuation.map_or_else(
                     || Err(serde::de::Error::custom(&format!("missing timeout continuation"))),
-                    |v|Ok(v)
+                    Ok
                 )?.boxed())
             })
         }
@@ -577,11 +583,11 @@ impl<'de> serde::de::Visitor<'de> for ContractVisitor {
                 x_if: r#if, 
                 then: Some(Box::new(then.map_or_else(
                     || Err(serde::de::Error::custom(&format!("missing IF contract continuation (then)"))),
-                    |v|Ok(v)
+                    Ok
                 )?)), 
                 x_else: Some(Box::new(r#else.map_or_else(
                     || Err(serde::de::Error::custom(&format!("missing IF contract continuation (else)"))),
-                    |v|Ok(v)
+                    Ok
                 )?)) 
             })
         }
@@ -591,15 +597,15 @@ impl<'de> serde::de::Visitor<'de> for ContractVisitor {
             return Ok(Contract::Let {
                 x_let: r#let.map_or_else(
                     || Err(serde::de::Error::custom(&format!("missing LET contract valueId (let)"))),
-                    |v|Ok(v)
+                    Ok
                 )?,
                 be: Some(Box::new(be.map_or_else(
                     || Err(serde::de::Error::custom(&format!("missing LET contract value (be)"))),
-                    |v|Ok(v)
+                    Ok
                 )?)),
                 then: Some(Box::new(then.map_or_else(
                     || Err(serde::de::Error::custom(&format!("missing LET contract continuation (then)"))),
-                    |v|Ok(v)
+                    Ok
                 )?)),
             })
         }
@@ -607,13 +613,13 @@ impl<'de> serde::de::Visitor<'de> for ContractVisitor {
         // PAY CONTRACT
         if from_account.is_some() && to.is_some() && token.is_some() && pay.is_some() && r#then.is_some() {
             return Ok(Contract::Pay { 
-                from_account: from_account, 
-                to: to, 
-                token: token, 
-                pay: pay, 
+                from_account, 
+                to, 
+                token, 
+                pay, 
                 then: Some(Box::new(r#then.map_or_else(
                     || Err(serde::de::Error::custom(&format!("missing PAY contract continuation (then)"))),
-                    |v|Ok(v)
+                    Ok
                 )?))
             })
         }
@@ -621,10 +627,10 @@ impl<'de> serde::de::Visitor<'de> for ContractVisitor {
         // ASSERT CONTRACT
         if assert.is_some() && r#then.is_some() {
             return Ok(Contract::Assert {
-                assert: assert,
+                assert,
                 then: Some(Box::new(r#then.map_or_else(
                     || Err(serde::de::Error::custom(&format!("missing ASSERT contract continuation (then)"))),
-                    |v|Ok(v)
+                    Ok
                 )?)),
             })
         }
@@ -673,26 +679,26 @@ impl<'de> serde::de::Visitor<'de> for CaseVisitor {
         }
 
         if (then.is_none()&&merkleized_then.is_none()) && case.is_none() {
-            return Err(serde::de::Error::custom(&format!("Missing data in case!")));
+            return Err(serde::de::Error::custom(&"Missing data in case!".to_string()));
         }
 
         if merkleized_then.is_some() {
             Ok(Case { case:Some(case.map_or_else(
                 || Err(serde::de::Error::custom(&format!("missing CASE action"))),
-                |v|Ok(v)
+                Ok
             )?), then:Some(
                 PossiblyMerkleizedContract::Merkleized(merkleized_then.map_or_else(
                     || Err(serde::de::Error::custom(&format!("missing CASE continuation merkleized data (merkleized_then)"))),
-                    |v|Ok(v)
+                    Ok
                 )?)) })
         } else {
             Ok(Case { case:Some(case.map_or_else(
                 || Err(serde::de::Error::custom(&format!("missing CASE action"))),
-                |v|Ok(v)
+                Ok
             )?), then:Some(
                 PossiblyMerkleizedContract::Raw(Box::new(then.map_or_else(
                     || Err(serde::de::Error::custom(&format!("missing CASE continuation (then)"))),
-                    |v|Ok(v)
+                    Ok
                 )?))) })
         }
         
@@ -777,7 +783,7 @@ impl<'de> serde::de::Visitor<'de> for StateVisitor {
             })
         } 
 
-        Err(serde::de::Error::custom(&format!("Invalid state object.")))
+        Err(serde::de::Error::custom(&"Invalid state object.".to_string()))
         
 
     }
@@ -936,7 +942,7 @@ impl<'de> serde::de::Visitor<'de> for ObservationVisitor {
         }
         
 
-        return Err(serde::de::Error::custom(&format!("Invalid Observation object!")));
+        Err(serde::de::Error::custom(&"Invalid Observation object!".to_string()))
 
     }
 
@@ -970,7 +976,7 @@ impl<'de> serde::de::Visitor<'de> for ValueVisitor {
         if value == "time_interval_end" {
             return Ok(Value::TimeIntervalEnd)
         }
-        return Err(serde::de::Error::custom(&format!("unknown value: ('{value}')")));
+        Err(serde::de::Error::custom(format!("unknown value: ('{value}')")))
     }
 
     fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
@@ -1124,7 +1130,7 @@ impl<'de> serde::de::Visitor<'de> for ValueVisitor {
         
 
 
-        return Err(serde::de::Error::custom(&format!("Invalid value object!")))
+        Err(serde::de::Error::custom(&"Invalid value object!".to_string()))
         
     }
 

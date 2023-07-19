@@ -14,7 +14,7 @@ use pest::iterators::Pair;
 #[test]
 fn deserialize_unwrapped_simple_observation_should_succeed() {
     let simple_contract = "When [ (Case (Notify TrueObs) Close) ] (TimeParam \"test\") Close";
-    let deserialized = deserialize(&simple_contract);
+    let deserialized = deserialize(simple_contract);
     match deserialized {
         Ok(_d) => {},
         Err(e) => panic!("{e:?}"),
@@ -24,7 +24,7 @@ fn deserialize_unwrapped_simple_observation_should_succeed() {
 #[test]
 fn deserialize_wrapped_simple_observation_should_fail() {
     let simple_contract = "When [ (Case (Notify (TrueObs)) Close) ] (TimeParam \"test\") Close";
-    let deserialized = deserialize(&simple_contract);
+    let deserialized = deserialize(simple_contract);
     match deserialized {
         Ok(v) => panic!("{}",v.contract),
         Err(_e) => {},
@@ -97,7 +97,7 @@ fn can_parse_playground_samples() {
     let mut count = 0;
     for path in paths {
 
-        count = count + 1;
+        count += 1;
         let canonical_path = path.unwrap().path().canonicalize().unwrap();
         let path_string = canonical_path.display().to_string();
         if !path_string.to_uppercase().ends_with(".MARLOWE") || path_string.contains("test_simple_addr") {
@@ -113,10 +113,8 @@ fn can_parse_playground_samples() {
                 // easy to compare in diff viewer should this test fail.
                 let strep = |x:&str| {
                     x.replace('\n', "")
-                        .replace("(","(\n")
-                        .replace('\r', "")
-                        .replace(" ","")
-                        .replace("\t","")
+                        .replace('(',"(\n")
+                        .replace(['\r', ' ', '\t'], "")
                         
                 };
 
@@ -147,7 +145,7 @@ fn can_parse_playground_samples() {
 
 #[test]
 fn can_parse_sample() {
-    let serialized_contract = read_from_file(&"sample.marlowe");
+    let serialized_contract = read_from_file("sample.marlowe");
     match deserialize(&serialized_contract) {
         Ok(_) => {},
         Err(e) => panic!("{e:?}"),
@@ -156,7 +154,7 @@ fn can_parse_sample() {
 
 #[test]
 fn example_of_how_to_modify_a_contract() {
-    let serialized_contract = read_from_file(&"sample.marlowe");
+    let serialized_contract = read_from_file("sample.marlowe");
     let result = deserialize(&serialized_contract).unwrap();
     modify(result.contract);
 }
@@ -174,7 +172,7 @@ fn should_not_parse_unwrapped() {
 
 #[test]
 fn modify_example_works(){
-    let serialized_contract = read_from_file("sample.marlowe".into());
+    let serialized_contract = read_from_file("sample.marlowe");
     let result = deserialize(&serialized_contract).unwrap();
     modify(result.contract); 
 }
@@ -183,7 +181,7 @@ fn modify_example_works(){
 pub(crate) fn read_from_file(path:&str) -> String {
     let path_exists = std::path::Path::new(&path).exists();
     if path_exists {
-        std::fs::read_to_string(&path).expect("failed to read from file.").to_owned()
+        std::fs::read_to_string(path).expect("failed to read from file.")
     } else {
         panic!("no such file exists.");
     }
@@ -198,7 +196,7 @@ fn modify(contract:Contract) -> Contract {
         Contract::When { when: cases, timeout, timeout_continuation } => 
             Contract::When {
                 when: cases,
-                timeout: timeout,
+                timeout,
                 timeout_continuation
             },
         Contract::If { x_if: observation, then: then_contract, x_else: else_contract } => 
@@ -237,7 +235,7 @@ fn modify(contract:Contract) -> Contract {
 #[test]
 fn new_parser() {
     let simple_contract = "When [ (Case (Notify TrueObs) Close) ] (TimeParam \"test\") Close";
-    let deserialized = deserialize(&simple_contract);
+    let deserialized = deserialize(simple_contract);
     match deserialized {
         Ok(d) => {
             let _ = serialize(d.contract);
@@ -348,16 +346,10 @@ fn json_core_should_return_output_identical_to_playground() {
             // will re-visit this and run the serialization thru playground when its updated
             // to be on the safe side.
             let json_play = read_from_file("test_data/test_timeouts_as_serialized_by_playground_probably_when_it_supports_addresses.json")
-                .replace(" ","")
-                .replace("\t","")
-                .replace("\n","")
-                .replace("\r","");
+                .replace([' ', '\t', '\n', '\r'], "");
 
             let json_core = json_core
-                .replace(" ","")
-                .replace("\t","")
-                .replace("\n","")
-                .replace("\r","");
+                .replace([' ', '\t', '\n', '\r'], "");
 
             if json_play == json_core {
                 //println!("Successfully validated re-enc test_timeouts_as_serialized_by_playground_v2 are identical!")
@@ -385,7 +377,7 @@ fn json_core_should_return_output_identical_to_playground() {
 #[test]
 fn can_find_uninitialized_inputs() -> Result<(),String> {
     let contract_path = "test_data/test_deeply_nested_contract.marlowe";
-    let contract_dsl = std::fs::read_to_string(&contract_path).expect("failed to read from file.").to_owned();
+    let contract_dsl = std::fs::read_to_string(contract_path).expect("failed to read from file.");
     
     let result = 
         crate::deserialization::marlowe::deserialize(&contract_dsl)
@@ -410,7 +402,7 @@ fn can_find_uninitialized_inputs() -> Result<(),String> {
         // println!("parser found these consts: {:?}",result.uninitialized_const_params);
         // println!("parser found these times: {:?}",result.uninitialized_time_params);
         // println!("contract impl found these: {:?}",found_inputs);
-        return Err(format!("PARSE AND STRUCT IMPL DIFF!"))
+        return Err("PARSE AND STRUCT IMPL DIFF!".to_string())
     }
     
     for x in found_inputs {
@@ -460,8 +452,8 @@ pub fn marlowe_strict_conversion() -> Result<(),String> {
                                         case: Action::Notify { 
                                             notify_if: Observation::True 
                                         }, 
-                                        then: Contract::Close.into() 
-                                    }.into()
+                                        then: Contract::Close 
+                                    }
                                 ], 
                                 timeout: 42, 
                                 timeout_continuation: Contract::When { 
@@ -470,14 +462,14 @@ pub fn marlowe_strict_conversion() -> Result<(),String> {
                                             case: Action::Notify { 
                                                 notify_if: Observation::True 
                                             }, 
-                                            then: Contract::Close.into() 
-                                        }.into()
+                                            then: Contract::Close 
+                                        }
                                     ], 
                                     timeout: 42, 
                                     timeout_continuation: Contract::Close.into()
                                 }.into()
                             }
-                        }.into()
+                        }
                     ], 
                     timeout: 42, 
                     timeout_continuation: Contract::When { 
@@ -486,14 +478,14 @@ pub fn marlowe_strict_conversion() -> Result<(),String> {
                                 case: Action::Notify { 
                                     notify_if: Observation::True 
                                 }, 
-                                then: Contract::Close.into() 
-                            }.into()
+                                then: Contract::Close 
+                            }
                         ], 
                         timeout: 42, 
                         timeout_continuation: Contract::Close.into()
                     }.into()
                 } 
-            }.into()
+            }
         ], 
         timeout: 42, 
         timeout_continuation: Contract::When { 
@@ -502,8 +494,8 @@ pub fn marlowe_strict_conversion() -> Result<(),String> {
                     case: Action::Notify { 
                         notify_if: Observation::True 
                     }, 
-                    then: Contract::Close.into() 
-                }.into()
+                    then: Contract::Close 
+                }
             ], 
             timeout: 42, 
             timeout_continuation: Contract::Close.into()
@@ -624,7 +616,7 @@ fn marlowe_strict_with_iter_example() {
 
 #[test]
 fn walk_for_roles() {
-    let serialized_contract = crate::tests::core::read_from_file(&"test_data/test_deeply_nested_contract.marlowe");
+    let serialized_contract = crate::tests::core::read_from_file("test_data/test_deeply_nested_contract.marlowe");
     match crate::deserialization::marlowe::deserialize(&serialized_contract) {
         Ok(c) => {
             // make sure we capture all roles both when deserializing

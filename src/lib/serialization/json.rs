@@ -34,7 +34,7 @@ where
         },
         Action::Choice { for_choice:Some(for_choice), choose_between } => {
             if choose_between.iter().any(|x|x.is_none()) {
-                return Err(serde::ser::Error::custom(format!("A choice action contains null-cases in its list of bounds (a hole in the list of bounds). Lists of bounds are allowed to be empty, but they are not allwed to have placeholder values such as holes.")))
+                return Err(serde::ser::Error::custom("A choice action contains null-cases in its list of bounds (a hole in the list of bounds). Lists of bounds are allowed to be empty, but they are not allwed to have placeholder values such as holes.".to_string()))
             }
             let mut s = serializer.serialize_struct("action", 2)?;
             s.serialize_field("for_choice", for_choice)?;
@@ -42,7 +42,7 @@ where
             s.end()
         },
         _ => {
-            Err(serde::ser::Error::custom(format!("The contract contains an action with null values (holes).")))
+            Err(serde::ser::Error::custom("The contract contains an action with null values (holes).".to_string()))
         }
     }
 }
@@ -106,7 +106,7 @@ impl Serialize for InputAction {
                         s.end()
                 },                
                 InputAction::Notify => 
-                    serializer.serialize_str(&format!("input_notify"))
+                    serializer.serialize_str("input_notify")
                 ,
                 InputAction::Choice { for_choice_id, input_that_chooses_num } => {
                     
@@ -122,7 +122,7 @@ impl Serialize for InputAction {
                     s.end()
                 },
                 _ => {
-                    Err(serde::ser::Error::custom(format!("The contract contains an action with null values (holes).")))
+                    Err(serde::ser::Error::custom("The contract contains an action with null values (holes).".to_string()))
                 }
             }
             
@@ -148,7 +148,7 @@ impl Serialize for Address {
     where
         S: serde::Serializer {
             match &self.as_bech32() {
-                Ok(s) => serializer.serialize_str(&s),
+                Ok(s) => serializer.serialize_str(s),
                 Err(e) => Err(serde::ser::Error::custom(e)),
             }
         }
@@ -202,7 +202,7 @@ where
             s.serialize_field("account",a)?;
             s.end()
         },
-        _ => Err(serde::ser::Error::custom(format!("A payee contains null-values (holes). Missing party.")))
+        _ => Err(serde::ser::Error::custom("A payee contains null-values (holes). Missing party.".to_string()))
         
     }
 }
@@ -217,7 +217,7 @@ impl Serialize for ChoiceId {
     where
         S: serde::Serializer {
         if self.choice_owner.is_none() {
-            return Err(serde::ser::Error::custom(format!("A choice id is not fully initialized. Missing choice owner.")))
+            return Err(serde::ser::Error::custom("A choice id is not fully initialized. Missing choice owner.".to_string()))
         }
         let mut s = serializer.serialize_struct("for_choice", 2)?;
         s.serialize_field("choice_owner", &self.choice_owner)?;
@@ -257,7 +257,7 @@ impl Serialize for Case {
 where
     S: serde::Serializer {
         if self.then.is_none() || self.case.is_none() {
-            return Err(serde::ser::Error::custom(format!("A case is not fully initialized. Missing action or continuation contract.")))
+            return Err(serde::ser::Error::custom("A case is not fully initialized. Missing action or continuation contract.".to_string()))
         }
         let mut s = serializer.serialize_struct("case", 2)?;
         match &self.then {
@@ -295,7 +295,7 @@ impl Serialize for Timeout {
         match self {
             Timeout::TimeConstant(n) => serializer.serialize_i64(*n),
             Timeout::TimeParam(v) => {
-                return Err(serde::ser::Error::custom(format!("TimeParam not initialized: '{v}'.")))
+                Err(serde::ser::Error::custom(format!("TimeParam not initialized: '{v}'.")))
             }
         }
     }
@@ -315,7 +315,7 @@ impl Serialize for Contract {
                 timeout: Some(timeout) 
             } => {
                 if when.iter().any(|x|x.is_none()) {
-                    return Err(serde::ser::Error::custom(format!("A when contract contains null-cases (a hole in the list of cases). The list of cases is allowed to be empty, but it may not contain placeholder items such as holes.")))
+                    return Err(serde::ser::Error::custom("A when contract contains null-cases (a hole in the list of cases). The list of cases is allowed to be empty, but it may not contain placeholder items such as holes.".to_string()))
                 }
                 let mut what = serializer.serialize_struct("when", 3)?;
                 what.serialize_field("when", when)?;
@@ -373,7 +373,7 @@ impl Serialize for Contract {
                 what.end()
             }
             _ => {
-                Err(serde::ser::Error::custom(format!("Contract contains null values (holes)")))
+                Err(serde::ser::Error::custom("Contract contains null values (holes)".to_string()))
             }
         }
     }
@@ -463,7 +463,7 @@ impl Serialize for Observation {
                 s.end()
             },
             _ => {
-                Err(serde::ser::Error::custom(format!("Observation contains null values (holes)")))
+                Err(serde::ser::Error::custom("Observation contains null values (holes)".to_string()))
             }
         }
     }
@@ -484,7 +484,7 @@ impl Serialize for Value {
             },
             Value::ConstantValue(v) => serializer.serialize_i64(*v),
             Value::ConstantParam(v) => {
-                return Err(serde::ser::Error::custom(format!("Constant param not initialized: '{v}'")))
+                Err(serde::ser::Error::custom(format!("Constant param not initialized: '{v}'")))
             },
             Value::UseValue(v) => {
                 let mut s = serializer.serialize_struct("value", 1)?;
@@ -537,7 +537,7 @@ impl Serialize for Value {
                 s.end()
             },
             _ => {
-                Err(serde::ser::Error::custom(format!("Value contains null values (holes)")))
+                Err(serde::ser::Error::custom("Value contains null values (holes)".to_string()))
             }
         }
     }
