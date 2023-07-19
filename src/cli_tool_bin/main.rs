@@ -1,11 +1,9 @@
 mod args;
-use args::{DatumArgs, RedeemerArgs, StateArgs, ContractArgs, PlutusArgs};
-use marlowe_lang::{types::marlowe::{Contract, MarloweDatum, PossiblyMerkleizedInput, Token, Address}};
-use std::{collections::HashMap};
+use args::{DatumArgs, RedeemerArgs, StateArgs, ContractArgs};
+use marlowe_lang::types::marlowe::{Contract, MarloweDatum, PossiblyMerkleizedInput, Token, Address};
+use std::collections::HashMap;
 use marlowe_lang::extras::utils::*;
-use plutus_data::{ToPlutusData, PlutusData, FromPlutusData};
-
-use pallas_primitives::{ToCanonicalJson};
+use plutus_data::ToPlutusData;
 
 use crate::args::{ContractOutputInfoType, ContractInputEncoding, DatumInputEncoding, DatumOutputEncoding, RedeemerInputEncoding, RedeemerOutputEncoding};
 
@@ -159,7 +157,7 @@ fn contract_handler(args:ContractArgs) {
                 if input_variables.is_some() {
                     panic!("It is not possible to add inputs to contracts that are already encoded to json.")
                 }
-                marlowe_lang::deserialization::json::deserialize(s).unwrap()
+                marlowe_lang::deserialization::json::deserialize(s.into()).unwrap()
             }
             ContractInputEncoding::CborHex => {
                 if input_variables.is_some() {

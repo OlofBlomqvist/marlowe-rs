@@ -30,7 +30,7 @@ pub fn try_decode_cborhex_marlowe_plutus_contract(cbor_hex:&str) -> Result<Contr
     match decode_hex(cbor_hex) {
         Ok(cbor) => {
             match plutus_data::from_bytes(&cbor) {
-                Ok(x) => Contract::from_plutus_data(x,&vec![]),
+                Ok(x) => Contract::from_plutus_data(x,&[]),
                 Err(e) => 
                     Err(format!("Failed to decode plutus datum from input! Exception: {:?}",e))
                 
@@ -45,7 +45,7 @@ pub fn try_decode_cborhex_marlowe_plutus_datum(cbor_hex:&str) -> Result<MarloweD
     match decode_hex(cbor_hex) {
         Ok(cbor) => {
             match plutus_data::from_bytes(&cbor) {
-                Ok(x) => MarloweDatum::from_plutus_data(x,&vec![]),
+                Ok(x) => MarloweDatum::from_plutus_data(x,&[]),
                 Err(e) => 
                     Err(format!("Failed to decode plutus datum from input! Exception: {:?}",e))
 
@@ -70,7 +70,7 @@ pub fn plutus_data_list_as_vec(x:plutus_data::PlutusData) -> Result<Vec<plutus_d
 pub fn try_decode_redeemer_input_cbor_hex(redeemer_cbor_hex:&str) -> Result<Vec<PossiblyMerkleizedInput>,String> {
     let cbor = decode_hex(redeemer_cbor_hex)?;
     match plutus_data::from_bytes(&cbor) {        
-        Ok(bytes) => Vec::<PossiblyMerkleizedInput>::from_plutus_data(bytes,&vec![]),
+        Ok(bytes) => Vec::<PossiblyMerkleizedInput>::from_plutus_data(bytes,&[]),
         Err(e) => Err(format!("Failed to decoded plutusdata: {:?}",e)),
     }
 }

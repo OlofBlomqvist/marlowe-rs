@@ -4,11 +4,10 @@ use serde::Deserialize;
 use crate::types::marlowe::*;
 
 
-pub fn deserialize<'a,T : 'static>(json:&str) -> Result<T,String> 
-where T : serde::de::DeserializeOwned + std::marker::Send{
-    let j = json.to_owned();
+pub fn deserialize<T>(json:String) -> Result<T,String> 
+where T : serde::de::DeserializeOwned + std::marker::Send + 'static {
     let work = std::thread::Builder::new().stack_size(32 * 1024 * 1024).spawn(move ||{
-        let mut deserializer = serde_json::Deserializer::from_str(&j);
+        let mut deserializer = serde_json::Deserializer::from_str(&json);
         deserializer.disable_recursion_limit();
         let deserializer = serde_stacker::Deserializer::new(&mut deserializer);
         T::deserialize(deserializer)

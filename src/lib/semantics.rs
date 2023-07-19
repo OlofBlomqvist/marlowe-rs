@@ -1,6 +1,6 @@
 use std::{collections::HashMap, ops::Neg};
 
-use plutus_data::{FromPlutusData, PlutusData};
+use plutus_data::FromPlutusData;
 use serde::{Serialize, Deserialize};
 use crate::types::marlowe::*;
 

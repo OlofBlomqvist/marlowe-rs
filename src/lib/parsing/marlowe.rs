@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use pest::iterators::Pair;
 use crate::parsing::Rule;
-use crate::types::{marlowe::*};
+use crate::types::marlowe::*;
 
 struct Operation<'a> {
 pub(crate)     pair_rule_type : Rule,
@@ -10,7 +10,7 @@ pub(crate)     pair_rule_type : Rule,
     string_representation : Option<String>
 }
 
-fn add_to_parent(call_stack:&mut Vec<Operation>,result_stack:&mut Vec<AstNode>,node:AstNode) {
+fn add_to_parent(call_stack:&mut [Operation],result_stack:&mut Vec<AstNode>,node:AstNode) {
     match call_stack.last_mut() {
         Some(parent) => {
             parent.extracted_child_ast_nodes.push(node)

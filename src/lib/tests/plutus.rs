@@ -50,9 +50,9 @@ fn encode_decode_contract_to_plutus_data_all_playground_samples() {
         if !path_string.to_uppercase().ends_with(".MARLOWE") || path_string.contains("test_simple_addr") { continue; }
         let serialized_contract = read_to_string(&path_string).unwrap();
         let deserialization_result = deserialize(&serialized_contract).unwrap_or_else(|_| panic!("failed to deserialize marlowe dsl {}\n",path_string));
-        match deserialization_result.contract.to_plutus_data(&vec![]) {
+        match deserialization_result.contract.to_plutus_data(&[]) {
             Ok(encoded) => {
-                let decoded = Contract::from_plutus_data(encoded,&vec![]).unwrap_or_else(|_| panic!("could not deserialize contract from our own encoded bytes.. {}",path_string));
+                let decoded = Contract::from_plutus_data(encoded,&[]).unwrap_or_else(|_| panic!("could not deserialize contract from our own encoded bytes.. {}",path_string));
                 let pre = format!("{:#?}",deserialization_result.contract);
                 let post = format!("{:#?}",decoded);
                 if pre != post {
@@ -102,7 +102,7 @@ fn plutus_decode_tx_datum_from_cbor_hex_tx_fbb1a39851f3a1988112a41cdbfd9286ecf23
 fn encode_decode_datum_is_identical_to_original_on_chain_data() {
     let original_cbor_hex = std::fs::read_to_string("test_data/datum.cborhex").unwrap();
     let datum = try_decode_cborhex_marlowe_plutus_datum(&original_cbor_hex).expect("failed to decode cborhex");
-    let encoded_by_us = datum.to_plutus_data(&vec![]).expect("we failed to serialize plutus data.");
+    let encoded_by_us = datum.to_plutus_data(&[]).expect("we failed to serialize plutus data.");
     let our_cbor_hex = hex::encode(plutus_data::to_bytes(&encoded_by_us).unwrap());
     assert_eq!(our_cbor_hex,original_cbor_hex);
 }
@@ -114,7 +114,7 @@ fn encode_decode_datum_is_identical_to_original_on_chain_data2() {
     let datum = try_decode_cborhex_marlowe_plutus_datum(&original_cbor_hex).expect("failed to decode cborhex");
     //println!("{:?}",datum);
     
-    let encoded_by_us = datum.to_plutus_data(&vec![]).expect("we failed to serialize plutus data.");
+    let encoded_by_us = datum.to_plutus_data(&[]).expect("we failed to serialize plutus data.");
 
     let our_cbor_hex = hex::encode(plutus_data::to_bytes(&encoded_by_us).unwrap());
     //println!("OUR ENCODE: {}",&our_cbor_hex);
@@ -165,14 +165,14 @@ fn validate_decode_of_actual_on_chain_data_and_that_we_can_re_encode_with_identi
     // println!("Decoded Datum: :{:?}",datum_result);
     // println!("Datum contract marlowe-dsl: {}",datum_result.contract);
 
-    let re_datum = datum_result.to_plutus_data(&vec![]).unwrap();
+    let re_datum = datum_result.to_plutus_data(&[]).unwrap();
     if plutus_data::to_hex(&re_datum).unwrap() != datumcbor {
         panic!("not identical re-serialized datum")
     } else {
         //println!("we have re-serialized the datum and it came out exactly the same.")
     }
 
-    let re_redeemer = redeemer_result.to_plutus_data(&vec![]).unwrap();
+    let re_redeemer = redeemer_result.to_plutus_data(&[]).unwrap();
     
     if plutus_data::to_hex(&re_redeemer).unwrap() != redeemercbor {
         panic!("not identical re-serialized redeemer")

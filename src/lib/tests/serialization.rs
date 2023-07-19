@@ -61,35 +61,36 @@ fn json_can_deserialize_when_contract() {
 #[test]
 fn deep_contract_does_not_overflow_stack() {
     let serialized = include_str!("../../../test_data/test_deeply_nested_contract.marlowe");
-    let mut inputs: Vec<(String,i64)> = vec![];
-    inputs.push(("Amount of dollars".into(), 1111));
-    inputs.push(("Timeout for dollar deposit".into(), 22222));
-    inputs.push(("Amount of Ada".into(), 33333));
-    inputs.push(("Timeout for Ada deposit".into(), 4444));
-    inputs.push(("Amount paid by party".into(), 4444));
-    inputs.push(("Amount paid by counterparty".into(), 5555));
-    inputs.push(("Second window deadline".into(), 666));
-    inputs.push(("Second window beginning".into(), 777));
-    inputs.push(("First window deadline".into(), 888));
-    inputs.push(("First window beginning".into(), 9299));
-    inputs.push(("Counterparty deposit deadline".into(), 1334));
-    inputs.push(("Party deposit deadline".into(), 9919));
-    inputs.push(("Amount of Ada to use as asset".into(), 9919));
-    inputs.push(("Principal".into(), 9919));
-    inputs.push(("Interest instalment".into(), 9919));
-    inputs.push(("Price".into(), 9898));
-    inputs.push(("Mediation deadline".into(), 19898));
-    inputs.push(("Complaint deadline".into(), 19898));
-    inputs.push(("Complaint response deadline".into(), 19898));
-    inputs.push(("Payment deadline".into(), 19898));
-    inputs.push(("Collateral amount".into(), 19898));
-    inputs.push(("Dispute by buyer timeout".into(), 19898));
-    inputs.push(("Deposit of price by buyer timeout".into(), 19898));
-    inputs.push(("Deposit of collateral by buyer timeout".into(), 19898));
-    inputs.push(("Collateral deposit by seller timeout".into(), 19898));
-    inputs.push(("Very deep constant parameter for test".into(),99));
-    inputs.push(("Deeply nested time param for test".into(),99));
-    inputs.push(("Even deeper constant param for test".into(),99));
+    let inputs: Vec<(String,i64)> = vec![
+        ("Amount of dollars".into(), 1111),
+        ("Timeout for dollar deposit".into(), 22222),
+        ("Amount of Ada".into(), 33333),
+        ("Timeout for Ada deposit".into(), 4444),
+        ("Amount paid by party".into(), 4444),
+        ("Amount paid by counterparty".into(), 5555),
+        ("Second window deadline".into(), 666),
+        ("Second window beginning".into(), 777),
+        ("First window deadline".into(), 888),
+        ("First window beginning".into(), 9299),
+        ("Counterparty deposit deadline".into(), 1334),
+        ("Party deposit deadline".into(), 9919),
+        ("Amount of Ada to use as asset".into(), 9919),
+        ("Principal".into(), 9919),
+        ("Interest instalment".into(), 9919),
+        ("Price".into(), 9898),
+        ("Mediation deadline".into(), 19898),
+        ("Complaint deadline".into(), 19898),
+        ("Complaint response deadline".into(), 19898),
+        ("Payment deadline".into(), 19898),
+        ("Collateral amount".into(), 19898),
+        ("Dispute by buyer timeout".into(), 19898),
+        ("Deposit of price by buyer timeout".into(), 19898),
+        ("Deposit of collateral by buyer timeout".into(), 19898),
+        ("Collateral deposit by seller timeout".into(), 19898),
+        ("Very deep constant parameter for test".into(),99),
+        ("Deeply nested time param for test".into(),99),
+        ("Even deeper constant param for test".into(),99)
+    ];
     let _contract = Contract::from_dsl(serialized, inputs).unwrap();
    // printpush:?}",contract)
 }
@@ -150,7 +151,7 @@ fn can_reserialize_all_test_data_marlowe_files_using_json() {
 
         
         let deserialized_from_json = 
-            crate::deserialization::json::deserialize::<crate::types::marlowe::Contract>(&serialized_to_json)
+            crate::deserialization::json::deserialize::<crate::types::marlowe::Contract>(serialized_to_json.clone())
                 .expect("should be able to deserialize json");
         
         let re_serialized_to_json = 
@@ -175,7 +176,7 @@ fn can_reserialize_all_test_data_marlowe_files_using_json() {
 fn deserialize_json_basic_close_contract() {
     crate::deserialization::json::deserialize::
         <crate::types::marlowe::Contract>(
-            "\"close\""
+            "\"close\"".into()
         ).unwrap();
 }
 

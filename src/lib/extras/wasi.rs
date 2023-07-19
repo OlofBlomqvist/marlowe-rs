@@ -27,7 +27,7 @@ pub fn parse_contract_dsl_to_cborhex(dsl:&str) -> *mut std::ffi::c_char    {
 
 #[no_mangle]
 pub fn parse_contract_json_to_cborhex(json:&str) -> *mut std::ffi::c_char    {
-    let result = crate::deserialization::json::deserialize::<crate::types::marlowe::Contract>(json).unwrap();
+    let result = crate::deserialization::json::deserialize::<crate::types::marlowe::Contract>(json.into()).unwrap();
     let result_cbor = crate::serialization::cborhex::serialize(result).unwrap();
     let result_string = std::ffi::CString::new(String::from(result_cbor)).unwrap();
     result_string.into_raw()

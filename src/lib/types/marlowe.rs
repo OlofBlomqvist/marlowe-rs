@@ -313,12 +313,12 @@ pub enum PossiblyMerkleizedContract {
 }
 
 impl ToPlutusData for Party {
-    fn to_plutus_data(&self,attributes:&Vec<String>) -> Result<PlutusData,String> {
+    fn to_plutus_data(&self,attributes:&[String]) -> Result<PlutusData,String> {
         
         match self {
             Party::Address(a) => {
                 
-                match a.to_plutus_data(&vec![])? {
+                match a.to_plutus_data(&[])? {
                     PlutusData::Constr(pladdress) => {
                         
                         let pladdress = pladdress.fields;
@@ -356,7 +356,7 @@ impl ToPlutusData for Party {
 
 
 impl FromPlutusData<Party> for Party {
-    fn from_plutus_data(x:plutus_data::PlutusData,attributes:&Vec<String>) -> Result<Party,String> {
+    fn from_plutus_data(x:plutus_data::PlutusData,attributes:&[String]) -> Result<Party,String> {
         match &x {
             PlutusData::Constr(c) =>{
                 
@@ -414,7 +414,7 @@ impl FromPlutusData<Party> for Party {
 }
 
 impl ToPlutusData for PossiblyMerkleizedContract {
-    fn to_plutus_data(&self,attributes:&Vec<String>) -> Result<PlutusData,String> {
+    fn to_plutus_data(&self,attributes:&[String]) -> Result<PlutusData,String> {
         match self {
             PossiblyMerkleizedContract::Raw(contract) => {
                 contract.to_plutus_data(attributes)
@@ -429,7 +429,7 @@ impl ToPlutusData for PossiblyMerkleizedContract {
 }
 
 impl FromPlutusData<PossiblyMerkleizedContract> for PossiblyMerkleizedContract {
-    fn from_plutus_data(x:PlutusData,attributes:&Vec<String>) -> Result<PossiblyMerkleizedContract,String> {
+    fn from_plutus_data(x:PlutusData,attributes:&[String]) -> Result<PossiblyMerkleizedContract,String> {
         match &x {
             PlutusData::Constr(_c) => {
                 let inner_contract = Contract::from_plutus_data(x, attributes)?;
@@ -538,10 +538,8 @@ pub(crate) fn walk(
                     walk_any(c,func);
                 },
                 Contract::When { when, timeout:Some(b), timeout_continuation:Some(c) } => {
-                    for x in when {
-                        if let Some(case) = x {
-                            walk_any(case,func)
-                        }
+                    for x in when.iter().flatten() {
+                        walk_any(x,func)
                     }
                     walk_any(b,func);
                     walk_any(c,func);
@@ -578,10 +576,8 @@ pub(crate) fn walk(
                         walk_any(c,func);
                     },
                     Contract::When { when, timeout:Some(b), timeout_continuation:Some(c) } => {
-                        for x in when {
-                            if let Some(case) = x {
-                                walk_any(case,func)
-                            }
+                        for x in when.iter().flatten() {
+                            walk_any(x,func)
                         }
                         walk_any(b,func);
                         walk_any(c,func);
@@ -634,10 +630,8 @@ pub(crate) fn walk(
                     Some(o) => walk_any(o,func),
                     None => {},
                 }
-                for x in choose_between {
-                    if let Some(xx) = x {
-                        walk_any(xx,func)
-                    }
+                for x in choose_between.iter().flatten() {
+                    walk_any(x,func)
                 }
             },
             Action::Notify { notify_if:Some(a) } => walk_any(a,func),
@@ -871,7 +865,7 @@ impl Contract {
     }
 
     pub fn from_json(contract_marlowe_dsl:&str) -> Result<Contract,String> {
-        crate::deserialization::json::deserialize::<Contract>(contract_marlowe_dsl)
+        crate::deserialization::json::deserialize::<Contract>(contract_marlowe_dsl.into())
     }
 
 
@@ -879,11 +873,8 @@ impl Contract {
     pub fn parties(&self) -> Vec<Party> {
         let mut result = vec![];
         walk_any(self, &mut |node:&AstNode| {
-            match node {
-                AstNode::MarloweParty(p) => {
-                    result.push(p.clone());
-                }
-                _ => {}
+            if let AstNode::MarloweParty(p) = node {
+                result.push(p.clone());
             }
         });
         result.sort_by_key(|x|format!("{x:?}"));

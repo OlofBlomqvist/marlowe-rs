@@ -30,11 +30,7 @@ impl Address {
         };
 
 
-        let is_mainnet = if let Some(Network::Mainnet) = addr.network() {
-            true
-        } else {
-            false
-        };
+        let is_mainnet = matches!(addr.network(), Some(Network::Mainnet));
 
         let result = match addr {
             pallas::ledger::addresses::Address::Byron(_x) => return Err("byron?!?".into()),
