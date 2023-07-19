@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::ops::Deref;
+use hex::ToHex;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -9,7 +10,7 @@ use plutus_data::ToPlutusDataDerive;
 #[cfg(feature = "utils")]
 use plutus_data::FromPlutusDataDerive;
 
-use crate::extras::utils::datum_to_json;
+//use crate::extras::utils::datum_to_json;
 use crate::parsing::marlowe::ParseError;
 use crate::{
     Impl_From_For_Vec, 
@@ -238,7 +239,7 @@ impl Party {
 
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub enum InputAction {
     Deposit { // 0
         #[ignore_option_container]
@@ -260,7 +261,7 @@ pub enum InputAction {
 
 // aka redeemer
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug)]
+#[derive(Debug,Clone)]
 pub enum PossiblyMerkleizedInput {
     Action(InputAction),
     MerkleizedInput(InputAction, #[base_16] String)
@@ -313,75 +314,101 @@ pub enum PossiblyMerkleizedContract {
 
 impl ToPlutusData for Party {
     fn to_plutus_data(&self,attributes:&Vec<String>) -> Result<PlutusData,String> {
+        
         match self {
             Party::Address(a) => {
                 
-                let big_num = plutus_data::convert_to_big_num(&0);
-                let mut items = plutus_data::PlutusList::new();
-                match a.to_plutus_data(&vec![])?.as_constr_plutus_data() {
-                    Some(pladdress) => {
-                        let pladdress = pladdress.data();
+                match a.to_plutus_data(&vec![])? {
+                    PlutusData::Constr(pladdress) => {
+                        
+                        let pladdress = pladdress.fields;
                         if pladdress.len() != 2 {
                             return Err(String::from("Invalid number of items in address."))
                         }
-                        items.add(&pladdress.get(0));
-                        items.add(&pladdress.get(1));
-                        // this is an ugly hack for storing the contents of address directly inside of the constr data
-                        // of the party::address variant constr rather than as a single sub-item.
-                        let item = plutus_data::ConstrPlutusData::new(&big_num,&items);
-                        Ok(plutus_data::PlutusData::new_constr_plutus_data(&item))
+                        Ok(pallas_primitives::babbage::PlutusData::Constr(pallas_primitives::babbage::Constr { 
+                            tag: 121, 
+                            any_constructor:  Some(0), 
+                            fields: pladdress
+                        }))
+
                     },
-                    None => Err(String::from("failed to convert into plutus data. this is most likely a bug in the marlowe_lang crate.")),
+                    _ => Err(String::from("failed to convert into plutus data. this is most likely a bug in the marlowe_lang crate.")),
                 }
             },
             Party::Role { role_token } => {
                 //println!("TO PLUTUS FOR ROLE: {}",role_token);
-                let big_num = plutus_data::convert_to_big_num(&1);
-                let mut items = plutus_data::PlutusList::new();
-                items.add(&role_token.to_plutus_data(attributes)?);
-                let item = plutus_data::ConstrPlutusData::new(&big_num,&items);
-                Ok(plutus_data::PlutusData::new_constr_plutus_data(&item))
+                // let big_num = plutus_data::convert_to_big_num(&1);
+                // let mut items = plutus_data::PlutusList::new();
+                // items.add(&role_token.to_plutus_data(attributes)?);
+                // let item = plutus_data::ConstrPlutusData::new(&big_num,&items);
+                // Ok(plutus_data::PlutusData::new_constr_plutus_data(&item))
+
+                Ok(pallas_primitives::babbage::PlutusData::Constr(pallas_primitives::babbage::Constr { 
+                    tag: 122, 
+                    any_constructor:  Some(1), 
+                    fields: vec![role_token.to_plutus_data(attributes)?]
+                }))
+
             },
         }
     }
 }
 
+
 impl FromPlutusData<Party> for Party {
     fn from_plutus_data(x:plutus_data::PlutusData,attributes:&Vec<String>) -> Result<Party,String> {
-        
-        match x.as_constr_plutus_data() {
-            Some(c) => {
-                match from_bignum(&c.alternative()) {
-                    0 => { // ADDRESS
-                        let data = c.data(); // must have the two items here. network and address
-                        if data.len() != 2 {
-                            panic!("Invalid/missing address inside of party... {:?}",datum_to_json(&x))
+        match &x {
+            PlutusData::Constr(c) =>{
+                
+               
+                match c.constructor_value() {
+                    Some(0) => {
+                        if c.fields.len() != 2 {
+                            return Err(format!("Expected to decode a party address item.. found: {c:?}"))
                         }
-                        let item_zero = data.clone().get(0);
-                        let result = Ok(Party::Address(Address {
-                            is_mainnet: bool::from_plutus_data(item_zero.clone(),&vec![]).expect(&format!("expected bool item 0 from {:?}",datum_to_json(&item_zero))),
-                            addr: ScriptOrPubkeyCred::from_plutus_data(data.clone().get(1), &vec![])?,
-                        }));
+                        let is_mainnet = match &c.fields[0] {
+                            PlutusData::Constr(c) if Some(1) == c.constructor_value() && c.fields.len() == 0 => true,
+                            PlutusData::Constr(c) if Some(0) == c.constructor_value() && c.fields.len() == 0 => false,
+                            x => return Err(format!("Failed to decode is_mainnet for a party: {x:?}"))
+                        };
+                        let content_data = &c.fields[1];
 
-                        //println!("Successfully decoded an address");
-                        result
-
-                    },
-                    1 => { // ROLE
-                        let data = c.data(); // must have a single string item in here (bytes)
-                        if data.len() != 1 {
-                            return Err(String::from("missing the value in 'party::role(...)'"))
+                        match content_data {
+                            PlutusData::Constr(address_info) => {
+                                if address_info.fields.len() != 2 {
+                                    return Err(format!("Invalid/missing address inside of party... {:?}",&x))
+                                }
+                                let result = Ok(Party::Address(Address {
+                                    is_mainnet: is_mainnet,
+                                    addr: ScriptOrPubkeyCred::from_plutus_data(content_data.clone(), &attributes)?,
+                                }));
+                                result
+                            },
+                            _ => todo!()
                         }
-                        let role_name = data.get(0);
-                        Ok(Party::Role {
-                            role_token: String::from_plutus_data(role_name, attributes).expect(&format!("expected a role token string from {:?}",datum_to_json(&x))),
-                        })
-                    },
-                    _ => Err(String::from("Invalid constructor."))
+                        
+                    } ,
+                    Some(1)  => {
+                        if c.fields.len() != 1 {
+                            return Err(format!("Expected to decode a party role item with a single byte array (role token), found: {c:?}"))
+                        }
+                        let role_name_bytes = c.fields[0].clone();
+                        match &role_name_bytes {
+                            PlutusData::BoundedBytes(_) => {
+                                Ok(Party::Role {
+                                    role_token: String::from_plutus_data(role_name_bytes, attributes).expect(&format!("expected a role token string from {:?}",&x)),
+                                })
+                            },
+                            x => panic!("{:?}",x)
+                        }
+                        
+                    } ,
+                    x => Err(format!("Unknown party type tag: {x:?} (expected tag 1 or 0)"))
                 }
             },
-            None => Err(String::from("Expected constr data..")),
+            _ => Err(String::from("Expected constr data..")),
         }
+        
         
     }
 }
@@ -393,7 +420,9 @@ impl ToPlutusData for PossiblyMerkleizedContract {
                 contract.to_plutus_data(&attributes)
             },
             PossiblyMerkleizedContract::Merkleized(m) => {
-                Ok(PlutusData::new_bytes(hex::decode(m).unwrap()))
+                let bytes = hex::decode(m).unwrap(); // todo - dont unwrap
+                Ok(PlutusData::BoundedBytes(bytes.into()))
+                //Ok(PlutusData::new_bytes(hex::decode(m).unwrap()))
             },
         }
     }
@@ -401,14 +430,14 @@ impl ToPlutusData for PossiblyMerkleizedContract {
 
 impl FromPlutusData<PossiblyMerkleizedContract> for PossiblyMerkleizedContract {
     fn from_plutus_data(x:PlutusData,attributes:&Vec<String>) -> Result<PossiblyMerkleizedContract,String> {
-        if let Some(bytes) = x.as_bytes() {
-            return Ok(PossiblyMerkleizedContract::Merkleized(hex::encode(&bytes)))
+        match &x {
+            PlutusData::Constr(c) => {
+                let inner_contract = Contract::from_plutus_data(x, &attributes)?;
+                Ok(PossiblyMerkleizedContract::Raw(Box::new(inner_contract)))
+            },
+            PlutusData::BoundedBytes(b) =>  Ok(PossiblyMerkleizedContract::Merkleized(b.encode_hex())),
+            _ => Err(String::from("failed to deserialize possibly merkleized contract."))
         }
-        if let Some(_) = x.as_constr_plutus_data() {
-            let inner_contract = Contract::from_plutus_data(x, &attributes)?;
-            return Ok(PossiblyMerkleizedContract::Raw(Box::new(inner_contract)))
-        }
-        Err(String::from("failed to deserialize possibly merkleized contract."))
     }
 }
 

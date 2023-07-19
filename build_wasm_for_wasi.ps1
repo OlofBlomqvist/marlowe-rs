@@ -1,6 +1,5 @@
-throw "this script is disabled pending wasi support in cml"
 Remove-Item pkg_wasi/* -ea stop
-cargo build --features="wasi,utils" --target wasm32-wasi --release --out-dir pkg_wasi -Z unstable-options
+cargo build --features="wasi,utils,unstable,bin-features" --target wasm32-wasi --release --out-dir pkg_wasi -Z unstable-options
 remove-item pkg_wasi/*.rlib -ea stop
 if($null -eq (test-path .\pkg_wasi\marlowe_lang_cli.wasm)) {
     throw "marlowe_lang_cli.wasm was not correctly built"

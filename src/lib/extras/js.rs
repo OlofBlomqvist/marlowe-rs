@@ -51,13 +51,6 @@ pub fn i64_to_string(x:i64) -> String {
     x.to_string()
 }
 
-#[wasm_bindgen]
-pub fn decode_marlowe_input_json(redeemer_json:&str) -> String {
-    let s = super::utils::try_decode_redeemer_input_json(redeemer_json);
-    let s = serde_json::to_string_pretty(&s).unwrap();
-    s
-}
-
 #[wasm_bindgen(start)] 
 pub fn wasm_main() -> Result<(), JsValue> {
    console_error_panic_hook::set_once();
@@ -136,7 +129,7 @@ pub fn decode_cborhex_marlowe_plutus_datum(cbor_hex:&str) -> Result<String,JsErr
 
     let cbor = cbor.unwrap();
 
-    let datum = plutus_data::PlutusData::from_bytes(cbor);    
+    let datum = plutus_data::from_bytes(&cbor);    
     if datum.is_err() {
         return Err(JsError::new("cbor is not in plutus data format."))
     }
@@ -153,35 +146,6 @@ pub fn decode_cborhex_marlowe_plutus_datum(cbor_hex:&str) -> Result<String,JsErr
     }
 }
 
-
-#[wasm_bindgen]
-pub fn decode_json_encoded_marlowe_plutus_datum(plutus_encoded_datum:&str) -> Result<String,JsError> {
-    match try_decode_json_encoded_marlowe_plutus_datum(plutus_encoded_datum) {
-        Ok(v) => {
-            Ok(marlowe_datum_to_json_type(v))
-        }
-        Err(e) => Err(JsError::new(&e))
-    }
-}
-
-
-#[wasm_bindgen]
-pub fn cbor_hex_to_json_detailed_schema(bytes:Vec<u8>) -> Result<JsValue,JsError> {
-    let plutusdata = cardano_multiplatform_lib::plutus::PlutusData::from_bytes(bytes).unwrap();
-    match cardano_multiplatform_lib::plutus::decode_plutus_datum_to_json_str(&plutusdata, cardano_multiplatform_lib::plutus::PlutusDatumSchema::DetailedSchema) {
-        Ok(v) => Ok(JsValue::from_str(&v)),
-        Err(e) => Err(JsError::new(&format!("{:?}",e)))
-    }
-}
-
-#[wasm_bindgen]
-pub fn cbor_hex_to_json_basic_schema(bytes:Vec<u8>) -> Result<JsValue,JsError> {
-    let plutusdata = cardano_multiplatform_lib::plutus::PlutusData::from_bytes(bytes).unwrap();
-    match cardano_multiplatform_lib::plutus::decode_plutus_datum_to_json_str(&plutusdata, cardano_multiplatform_lib::plutus::PlutusDatumSchema::BasicConversions) {
-        Ok(v) => Ok(JsValue::from_str(&v)),
-        Err(e) => Err(JsError::new(&format!("{:?}",e)))
-    }
-}
 
 #[wasm_bindgen]
 pub fn get_input_params_for_contract(marlowe_dsl:&str) -> Result<Vec<JsValue>,ParseError> {

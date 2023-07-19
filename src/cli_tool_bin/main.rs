@@ -1,10 +1,14 @@
 mod args;
 use args::{DatumArgs, RedeemerArgs, StateArgs, ContractArgs, PlutusArgs};
-use marlowe_lang::{types::marlowe::{Contract, MarloweDatum, PossiblyMerkleizedInput, Token}};
+use marlowe_lang::{types::marlowe::{Contract, MarloweDatum, PossiblyMerkleizedInput, Token, Address}};
 use std::{collections::HashMap};
 use marlowe_lang::extras::utils::*;
 use plutus_data::{ToPlutusData, PlutusData, FromPlutusData};
+
+use pallas_primitives::{ToCanonicalJson};
+
 use crate::args::{ContractOutputInfoType, ContractInputEncoding, DatumInputEncoding, DatumOutputEncoding, RedeemerInputEncoding, RedeemerOutputEncoding};
+
 #[cfg(feature="unstable")]
 use marlowe_lang::semantics::{MachineState, ContractSemantics,ContractInstance};
 
@@ -13,9 +17,7 @@ fn datum_handler(args:DatumArgs) {
     fn decode(input:&str,e:DatumInputEncoding) -> MarloweDatum {
         match e {
             DatumInputEncoding::CborHex => 
-                try_decode_cborhex_marlowe_plutus_datum(&input).unwrap(),
-            DatumInputEncoding::PlutusDataDetailedJson => 
-                try_decode_json_encoded_marlowe_plutus_datum(input).unwrap()
+                try_decode_cborhex_marlowe_plutus_datum(&input).unwrap()
         }
     }
 
@@ -27,13 +29,9 @@ fn datum_handler(args:DatumArgs) {
             DatumOutputEncoding::JSON => {
                 serde_json::to_string_pretty(&x).unwrap()
             },
-            DatumOutputEncoding::PlutusDataDetailedJson => {
-                let pl = x.to_plutus_data(&vec![]).unwrap();
-                datum_to_json(&pl).unwrap()
-            },
             DatumOutputEncoding::CborHex => {
                 let pl = x.to_plutus_data(&vec![]).unwrap();
-                hex::encode(pl.to_bytes())
+                plutus_data::to_hex(&pl).unwrap()
             }
         }
     }
@@ -62,7 +60,6 @@ fn input_redeemer_handler(args:RedeemerArgs) {
 
     fn decode(s:&str,d:RedeemerInputEncoding) -> Vec<PossiblyMerkleizedInput> {
         match d {
-            RedeemerInputEncoding::PlutusDataDetailedJson => try_decode_redeemer_input_json(s).unwrap(),
             RedeemerInputEncoding::CborHex => try_decode_redeemer_input_cbor_hex(&s).unwrap()
         }
     }
@@ -76,9 +73,7 @@ fn input_redeemer_handler(args:RedeemerArgs) {
             RedeemerOutputEncoding::Json => 
                 serde_json::to_string_pretty(&s).unwrap(),
             RedeemerOutputEncoding::CborHex => 
-                hex::encode(&s.to_plutus_data(&vec![]).unwrap().to_bytes()),
-            RedeemerOutputEncoding::PlutusDataDetailedJson => 
-                datum_to_json(&s.to_plutus_data(&vec![]).unwrap()).unwrap()
+               plutus_data::to_hex(&s.to_plutus_data(&vec![]).unwrap()).unwrap()
         }
     }
 
@@ -109,10 +104,11 @@ fn state_handler(args:StateArgs) {
     match args {
         StateArgs::InitUsingRole { creator_role, initial_ada } => 
             create_state(initial_ada,&creator_role),
-        StateArgs::InitUsingAddr { creator_addr:_, initial_ada:_ } => 
-            todo!()
+        StateArgs::InitUsingAddr { creator_addr, initial_ada } => 
+            create_state_addr(initial_ada,&creator_addr)
     }
 }
+
 
 fn contract_handler(args:ContractArgs) {
 
@@ -148,16 +144,12 @@ fn contract_handler(args:ContractArgs) {
                 panic!("This feature is only available when using the marlowe_lang crate feature: 'unstable'.")
             }
             ContractOutputInfoType::CborHex => 
-                hex::encode(c.to_plutus_data(&vec![]).unwrap().to_bytes()),
+                plutus_data::to_hex(&c.to_plutus_data(&vec![]).unwrap()).unwrap(),
             ContractOutputInfoType::MarloweDSL => 
                 marlowe_lang::parsing::fmt::fmt(&
                     marlowe_lang::serialization::marlowe::serialize(c)),
             ContractOutputInfoType::JSON => 
-                marlowe_lang::serialization::json::serialize(c).unwrap(),
-            ContractOutputInfoType::PlutusDataDetailedJson => {
-                let pl = c.to_plutus_data(&vec![]).unwrap();
-                datum_to_json(&pl).unwrap()
-            },
+                marlowe_lang::serialization::json::serialize(c).unwrap()
         }
     }
 
@@ -189,10 +181,6 @@ fn contract_handler(args:ContractArgs) {
                     None => marlowe_lang::deserialization::marlowe::deserialize(&s).unwrap().contract
                 }
             }
-            ContractInputEncoding::PlutusDataDetailedJson => {
-                let pl = cardano_multiplatform_lib::plutus::encode_json_str_to_plutus_datum(&s, cardano_multiplatform_lib::plutus::PlutusDatumSchema::DetailedSchema).unwrap();
-                Contract::from_plutus_data(pl, &vec![]).unwrap()
-            },
         }
     }
 
@@ -224,24 +212,9 @@ fn contract_handler(args:ContractArgs) {
     }
 }
 
-fn plutus_data_handler(x:PlutusArgs) {
-    fn decode_and_print(s:&str) {
-        let hex = hex::decode(s).unwrap();
-        let item = PlutusData::from_bytes(hex).unwrap();
-        let json = marlowe_lang::extras::utils::datum_to_json(&item).unwrap();
-        println!("{}",json);
-    }
-    match x {
-        PlutusArgs::ConvertCborHexToJson { cborhex } => 
-        decode_and_print(&cborhex),
-        PlutusArgs::ConvertCborHexFileToJson { path } => 
-        decode_and_print(&std::fs::read_to_string(path).unwrap())
-    }
-}
 
 fn main() {
     match <args::Args as clap::Parser>::parse() {
-        args::Args::PlutusData(x) => plutus_data_handler(x),
         args::Args::Datum(x) => datum_handler(x),
         args::Args::State(x) => state_handler(x),
         args::Args::Redeemer(x) => input_redeemer_handler(x),
@@ -253,14 +226,12 @@ fn main() {
 #[cfg(feature="wasi")]
 fn cli_main_wasi(args:&str)  {
     match <args::Args as clap::Parser>::parse_from(args.split("|")) {
-        args::Args::PlutusData(x) => plutus_data_handler(x),
         args::Args::Datum(x) => datum_handler(x),
         args::Args::State(x) => state_handler(x),
         args::Args::Redeemer(x) => input_redeemer_handler(x),
         args::Args::Contract(x) => contract_handler(x),
     }
 }
-
 
 
 // probably should support Address as creator as well? "address": "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x"
@@ -274,6 +245,24 @@ fn create_state(initial_ada:i64,creator_role:&str) {
     };
 
     let creator = marlowe_lang::types::marlowe::Party::role(creator_role);
+
+    state.accounts.insert(
+        (creator,Token { currency_symbol:"".into(), token_name:"".into()}),
+        (initial_ada*1000) as u64);
+
+    println!("{}",serde_json::to_string_pretty(&state).unwrap());
+    
+}
+fn create_state_addr(initial_ada:i64,creator_addr:&str) {
+        
+    let mut state = marlowe_lang::types::marlowe::State {
+        accounts: HashMap::new(),
+        bound_values: HashMap::new(),
+        choices: HashMap::new(),
+        min_time: 1
+    };
+
+    let creator = marlowe_lang::types::marlowe::Party::Address(Address::from_bech32(creator_addr).unwrap());
 
     state.accounts.insert(
         (creator,Token { currency_symbol:"".into(), token_name:"".into()}),

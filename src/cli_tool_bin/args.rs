@@ -23,10 +23,6 @@ pub enum Args {
     #[clap(subcommand)]
     Contract(ContractArgs),
 
-    /// Tools for working with generic plutus data
-    #[clap(subcommand)]
-    PlutusData(PlutusArgs)
-    
 }
 
 
@@ -46,8 +42,6 @@ pub enum ContractOutputInfoType {
     CborHex, // plutus data
     MarloweDSL, // plain marlowe text
     JSON, // json format as used in marlowe-cli (haskell impl)
-    // PlutusData encoded using detailed schema
-    PlutusDataDetailedJson, // plutus data detailed json format
     /// WIP - Unstable feature
     ExpectedActions,
     /// List marlowe-extended parameters
@@ -61,37 +55,31 @@ pub enum ContractInputEncoding {
     /// Plain text marlowe contract
     MarloweDSL,
     /// JSON encoded contract
-    JSON,
-    /// Plutus data encoded with detailed json schema
-    PlutusDataDetailedJson 
+    JSON
 }
 
 #[derive(clap::ValueEnum, Clone)]
 pub enum RedeemerOutputEncoding {
     Json,
     CborHex,
-    PlutusDataDetailedJson,
     MarloweDSL
 }
 
 
 #[derive(clap::ValueEnum, Clone)]
 pub enum RedeemerInputEncoding {
-    CborHex,
-    PlutusDataDetailedJson
+    CborHex
 }
 
 
 #[derive(clap::ValueEnum, Clone)]
 pub enum DatumInputEncoding {
-    CborHex,
-    PlutusDataDetailedJson
+    CborHex
 }
 
 #[derive(clap::ValueEnum, Clone)]
 pub enum DatumOutputEncoding {
     CborHex,
-    PlutusDataDetailedJson,
     JSON,
     SimpleText
 }

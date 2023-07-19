@@ -132,7 +132,7 @@ impl ContractInstance {
     
     pub fn from_datum_cborhex(datum_cbor_hex:&str) -> Result<Self,String> {
         let bytes = hex::decode(datum_cbor_hex).map_err(|_|String::from("failed to decode datum from cbor-hex."))?;
-        let pl = PlutusData::from_bytes(bytes).map_err(|_|String::from("failed to convert bytes to plutus data."))?;
+        let pl = plutus_data::from_bytes(&bytes).map_err(|_|String::from("failed to convert bytes to plutus data."))?;
         let datum = MarloweDatum::from_plutus_data(pl,&vec![])?;
         Ok(Self::from_datum(&datum))
     }
