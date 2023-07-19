@@ -12,6 +12,8 @@ use crate::extras::utils::*;
 
 use plutus_data::FromPlutusData;
 
+
+#[cfg(feature="infinite-recursion")]
 pub fn basic_deserialize<'a,T : 'static>(json:&str) -> Result<T,serde_json::Error> 
 where T : serde::de::DeserializeOwned + std::marker::Send{
     let j = json.to_owned();
@@ -20,8 +22,14 @@ where T : serde::de::DeserializeOwned + std::marker::Send{
     let deserializer = serde_stacker::Deserializer::new(&mut deserializer);
     let value = T::deserialize(deserializer).unwrap();
     Ok(value)
-
 }
+
+#[cfg(not(feature="infinite-recursion"))]
+pub fn basic_deserialize<'a,T : 'static>(json:&str) -> Result<T,serde_json::Error> 
+where T : serde::de::DeserializeOwned + std::marker::Send{
+    serde_json::de::from_str(&json)
+}
+
 
 #[wasm_bindgen]
 pub fn decode_marlowe_dsl_from_json(dsl:&str) -> String {

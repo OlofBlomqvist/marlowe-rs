@@ -18,7 +18,7 @@ plutus_data = { version = "0.0.6", optional = true }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 serde_derive = { version = "1.0.171", optional = true }
 #uplc = { git = "https://github.com/txpipe/aiken", optional = true }
-hex = { version = "0.4.3", optional = true }
+hex = { version = "0.4.3" }
 minicbor = { version = "0.19.1", optional = true }
 
 getrandom = { version = "0.2.10", features = ["js"], optional = true}
@@ -49,7 +49,6 @@ wasi = []
 utils = [
     "dep:minicbor",
     "dep:plutus_data",
-    "dep:hex",
     "dep:serde_derive" ]
 js = [
     "utils",

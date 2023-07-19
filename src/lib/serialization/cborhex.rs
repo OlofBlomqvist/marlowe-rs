@@ -1,3 +1,4 @@
+#[cfg(feature="utils")]
 pub fn serialize<T>(contract:T) -> Result<String,String> where T:plutus_data::ToPlutusData{ 
     match plutus_data::to_hex(
         &(contract.to_plutus_data(&[])?)
@@ -7,6 +8,7 @@ pub fn serialize<T>(contract:T) -> Result<String,String> where T:plutus_data::To
     }
 }
 
+#[cfg(feature="utils")]
 pub fn to_bytes<T>(contract:T) -> Result<Vec<u8>,String> where T:plutus_data::ToPlutusData{ 
     match plutus_data::to_bytes(
         &(contract.to_plutus_data(&[])?)
