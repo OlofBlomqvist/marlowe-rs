@@ -39,7 +39,7 @@ const Home = () => {
         setData(e.error_message)
       } else {
         console.log(e)
-        setData("Something is broken, see console.")
+        setData("That did not work, see console.")
       }
       
     }
