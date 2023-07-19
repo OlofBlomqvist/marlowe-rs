@@ -15,12 +15,11 @@ use plutus_data::FromPlutusData;
 pub fn basic_deserialize<'a,T : 'static>(json:&str) -> Result<T,serde_json::Error> 
 where T : serde::de::DeserializeOwned + std::marker::Send{
     let j = json.to_owned();
-    
-        let mut deserializer = serde_json::Deserializer::from_str(&j);
-        deserializer.disable_recursion_limit();
-        let deserializer = serde_stacker::Deserializer::new(&mut deserializer);
-        let value = T::deserialize(deserializer).unwrap();
-        Ok(value)
+    let mut deserializer = serde_json::Deserializer::from_str(&j);
+    deserializer.disable_recursion_limit();
+    let deserializer = serde_stacker::Deserializer::new(&mut deserializer);
+    let value = T::deserialize(deserializer).unwrap();
+    Ok(value)
 
 }
 

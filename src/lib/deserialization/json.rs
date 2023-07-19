@@ -3,13 +3,13 @@ use std::collections::HashMap;
 use serde::Deserialize;
 use crate::types::marlowe::*;
 
-
+#[cfg(feature="infinite-recursion")]
 pub fn deserialize<T>(json:String) -> Result<T,String> 
 where T : serde::de::DeserializeOwned + std::marker::Send + 'static {
     let work = std::thread::Builder::new().stack_size(32 * 1024 * 1024).spawn(move ||{
         let mut deserializer = serde_json::Deserializer::from_str(&json);
-        deserializer.disable_recursion_limit();
-        let deserializer = serde_stacker::Deserializer::new(&mut deserializer);
+        deserializer.disable_recursion_limit();        
+        let deserializer = serde_stacker::Deserializer::new(&mut deserializer);        
         T::deserialize(deserializer)
     });
     match work {
@@ -25,6 +25,13 @@ where T : serde::de::DeserializeOwned + std::marker::Send + 'static {
         },
         Err(e) => Err(format!("exc: {:?}",e))
     }
+}
+
+
+#[cfg(not(feature="infinite-recursion"))]
+pub fn deserialize<T>(json:String) -> Result<T,String> 
+where T : serde::de::DeserializeOwned + std::marker::Send + 'static {
+    serde_json::de::from_str(&json).map_err(|e| format!("{e:?}"))
 }
 
 struct TimeoutVisitor;

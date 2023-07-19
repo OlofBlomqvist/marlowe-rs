@@ -29,7 +29,7 @@ time = "0.3.23"
 chrono = { version = "0.4.26", features = ["wasmbind"] }
 #aiken-lang = "*"
 js-sys = { version = "0.3.59", optional=true}
-serde_stacker = {version= "0.1.10"}
+serde_stacker = {version= "0.1.10",optional = true}
 proc-macro2 = "1.0.66"
 
 #pallas-primitives = { path = "c:/users/oblink/documents/github/pallas/pallas-primitives" }
@@ -42,7 +42,8 @@ pallas = "0.18.1"
 
 [features]
 bin-features = ["clap","utils","unstable"]
-default = ["utils"]
+infinite-recursion = ["serde_stacker"]
+default = ["utils","infinite-recursion"]
 unstable = []
 wasi = []
 utils = [
