@@ -15,7 +15,7 @@ fn json_can_deserialize_choice_id_with_owner_address() {
             }
         }
     "#;
-    let choice_id : crate::types::marlowe::ChoiceId =  serde_json::from_str(&serialized).expect("err unser");
+    let choice_id : crate::types::marlowe::ChoiceId =  serde_json::from_str(serialized).expect("err unser");
     assert!(choice_id.choice_name=="KALLES CHOICE");
     match choice_id.choice_owner {
         Some(crate::types::marlowe::Party::Address(a)) 
@@ -36,7 +36,7 @@ fn json_can_deserialize_choice_id_with_owner_role() {
             }
         }
     "#;
-    let choice_id : crate::types::marlowe::ChoiceId =  serde_json::from_str(&serialized).expect("err unser");
+    let choice_id : crate::types::marlowe::ChoiceId =  serde_json::from_str(serialized).expect("err unser");
     assert!(choice_id.choice_name=="KALLES CHOICE");
     match choice_id.choice_owner {
         Some(crate::types::marlowe::Party::Role { role_token:_ }) => {},
@@ -50,7 +50,7 @@ fn json_can_deserialize_choice_id_with_owner_role() {
 #[test]
 fn json_can_deserialize_when_contract() {
     let serialized = include_str!("../../../test_data/sample_when_contract.json");
-    let _ : crate::types::marlowe::Contract =  serde_json::from_str(&serialized).expect("err unser");
+    let _ : crate::types::marlowe::Contract =  serde_json::from_str(serialized).expect("err unser");
    // println!("{:?}",contract)
 }
 
@@ -110,7 +110,7 @@ fn can_reserialize_all_test_data_marlowe_files_using_json() {
     for path in paths {
 
         let mut inputs : HashMap<String,i64> = HashMap::new();
-        count = count + 1;
+        count += 1;
         let canonical_path = path.unwrap().path().canonicalize().unwrap();
         let path_string = canonical_path.display().to_string();
         
@@ -382,8 +382,8 @@ fn serialize_json_interval_error() {
     
     let serialized = serde_json::to_string_pretty(&deserialized).expect("should be able to serialize example");
 
-    let original = example.replace(" ","").replace("\t","").replace("\n","");    
-    let reserialized = serialized.replace(" ","").replace("\t","").replace("\n","");
+    let original = example.replace([' ', '\t', '\n'], "");    
+    let reserialized = serialized.replace([' ', '\t', '\n'], "");
     
     assert!(original==reserialized);
 

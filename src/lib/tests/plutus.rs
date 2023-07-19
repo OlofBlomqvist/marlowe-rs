@@ -49,10 +49,10 @@ fn encode_decode_contract_to_plutus_data_all_playground_samples() {
         let path_string = canonical_path.display().to_string();
         if !path_string.to_uppercase().ends_with(".MARLOWE") || path_string.contains("test_simple_addr") { continue; }
         let serialized_contract = read_to_string(&path_string).unwrap();
-        let deserialization_result = deserialize(&serialized_contract).expect(&format!("failed to deserialize marlowe dsl {}\n",path_string));
+        let deserialization_result = deserialize(&serialized_contract).unwrap_or_else(|_| panic!("failed to deserialize marlowe dsl {}\n",path_string));
         match deserialization_result.contract.to_plutus_data(&vec![]) {
             Ok(encoded) => {
-                let decoded = Contract::from_plutus_data(encoded,&vec![]).expect(&format!("could not deserialize contract from our own encoded bytes.. {}",path_string));
+                let decoded = Contract::from_plutus_data(encoded,&vec![]).unwrap_or_else(|_| panic!("could not deserialize contract from our own encoded bytes.. {}",path_string));
                 let pre = format!("{:#?}",deserialization_result.contract);
                 let post = format!("{:#?}",decoded);
                 if pre != post {
@@ -154,9 +154,9 @@ fn validate_decode_of_actual_on_chain_data_and_that_we_can_re_encode_with_identi
     let datumcbor = "d8799fd8799f40ffd8799fa1d8799fd8799fd87a80d8799fd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd87a80ffffd8799f4040ffff1a002dc6c0a0a01b00000183f1aa2ff0ffd87c9f9fd8799fd8799fd8799fd87a80d8799fd8799f581cfd37884bbd044c72e5f29de1b777a9c1c1d531773535cd5b55e2f6ffffd87a80ffffd8799fd87a80d8799fd8799f581cfd37884bbd044c72e5f29de1b777a9c1c1d531773535cd5b55e2f6ffffd87a80ffffd8799f4040ffd87a9f1a05f5e100ffffd87a9fd8799fd87a80d8799fd8799f581cfd37884bbd044c72e5f29de1b777a9c1c1d531773535cd5b55e2f6ffffd87a80ffffd87a9fd8799fd87a80d8799fd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd87a80ffffffd8799f4040ffd87a9f1a05f5e100ffd87980ffffff1b00000183f4975530d87980ffff";
     //println!("ATTEMPTING TO DESERIALIZE A THING");
     
-    let redeemer_result = try_decode_redeemer_input_cbor_hex(&redeemercbor).unwrap();
+    let redeemer_result = try_decode_redeemer_input_cbor_hex(redeemercbor).unwrap();
     
-    let datum_result = try_decode_cborhex_marlowe_plutus_datum(&datumcbor).unwrap();
+    let datum_result = try_decode_cborhex_marlowe_plutus_datum(datumcbor).unwrap();
     
     for _ in &redeemer_result {
         //println!("Decoded Redeemer: {:?}",x);
@@ -188,7 +188,7 @@ fn validate_decode_of_actual_on_chain_data_and_that_we_can_re_encode_with_identi
 #[test]
 fn mainnet_addresses_00() {
     let addr_type = "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x";
-    let a = Address::from_bech32(&addr_type).expect("Failed to parse address as bech32");
+    let a = Address::from_bech32(addr_type).expect("Failed to parse address as bech32");
     let b = a.as_bech32().expect("failed to convert address struct in to bech32");
     if addr_type != b {
         panic!("re-enc not eq:\n{}\n{}",addr_type,b)
@@ -198,7 +198,7 @@ fn mainnet_addresses_00() {
 #[test]
 fn mainnet_addresses_01() {
     let addr = "addr1z8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gten0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgs9yc0hh";
-    let a = Address::from_bech32(&addr).expect("Failed to parse address as bech32");
+    let a = Address::from_bech32(addr).expect("Failed to parse address as bech32");
     let b = a.as_bech32().expect("failed to convert address struct in to bech32");
     if addr != b {
         panic!("re-enc not eq:\n{}\n{}",addr,b)
@@ -209,7 +209,7 @@ fn mainnet_addresses_01() {
 #[test]
 fn mainnet_addresses_02() {
     let addr = "addr1yx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzerkr0vd4msrxnuwnccdxlhdjar77j6lg0wypcc9uar5d2shs2z78ve";
-    let a = Address::from_bech32(&addr).expect("Failed to parse address as bech32");
+    let a = Address::from_bech32(addr).expect("Failed to parse address as bech32");
     let b = a.as_bech32().expect("failed to convert address struct in to bech32");
     if addr != b {
         panic!("re-enc not eq:\n{}\n{}",addr,b)
@@ -220,7 +220,7 @@ fn mainnet_addresses_02() {
 #[test]
 fn mainnet_addresses_03() {
     let addr = "addr1x8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gt7r0vd4msrxnuwnccdxlhdjar77j6lg0wypcc9uar5d2shskhj42g";
-    let a = Address::from_bech32(&addr).expect("Failed to parse address as bech32");
+    let a = Address::from_bech32(addr).expect("Failed to parse address as bech32");
     let b = a.as_bech32().expect("failed to convert address struct in to bech32");
     if addr != b {
         panic!("re-enc not eq:\n{}\n{}",addr,b)
@@ -261,7 +261,7 @@ fn mainnet_addresses_03() {
 #[test]
 fn mainnet_addresses_06() {
     let addr = "addr1vx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzers66hrl8";
-    let a = Address::from_bech32(&addr).expect("Failed to parse address as bech32");
+    let a = Address::from_bech32(addr).expect("Failed to parse address as bech32");
     let b = a.as_bech32().expect("failed to convert address struct in to bech32");
     if addr != b {
         panic!("re-enc not eq:\n{}\n{}",addr,b)
@@ -272,7 +272,7 @@ fn mainnet_addresses_06() {
 #[test]
 fn mainnet_addresses_07() {
     let addr = "addr1w8phkx6acpnf78fuvxn0mkew3l0fd058hzquvz7w36x4gtcyjy7wx";
-    let a = Address::from_bech32(&addr).expect("Failed to parse address as bech32");
+    let a = Address::from_bech32(addr).expect("Failed to parse address as bech32");
     let b = a.as_bech32().expect("failed to convert address struct in to bech32");
     if addr != b {
         panic!("re-enc not eq:\n{}\n{}",addr,b)

@@ -26,7 +26,7 @@ impl TryFrom<Contract> for crate::types::marlowe::Contract {
                 crate::types::marlowe::Contract::Pay { 
                     from_account: Some(from_account.try_into()?), 
                     to: Some(to.try_into()?), 
-                    token: Some(token.into()), 
+                    token: Some(token), 
                     pay: Some(pay.try_into()?), 
                     then: Some(Box::new((*then).try_into()?))
                 },
@@ -195,13 +195,13 @@ impl TryFrom<Action> for crate::types::marlowe::Action {
                 crate::types::marlowe::Action::Deposit { 
                     into_account: Some(into_account.try_into()?), 
                     party: Some(party.try_into()?), 
-                    of_token:Some(of_token.into()), 
+                    of_token:Some(of_token), 
                     deposits: Some(deposits.try_into()?) 
                 },
             Action::Choice { for_choice, choose_between } => 
                 crate::types::marlowe::Action::Choice { 
                     for_choice: Some(for_choice.try_into()?), 
-                    choose_between: choose_between.iter().map(|x|Some(x.clone().into())).collect()
+                    choose_between: choose_between.iter().map(|x|Some(x.clone())).collect()
                 },
             Action::Notify { notify_if } => crate::types::marlowe::Action::Notify { notify_if: Some(notify_if.try_into()?) },
         })

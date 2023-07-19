@@ -18,19 +18,19 @@ pub fn fmt(text:&str) -> String {
             '[' if !is_inside_strlit => {
                 s.push('\n');
                 s.push_str("\t".repeat(depth).as_str());
-                depth = depth + 1;
+                depth += 1;
                 s.push(x);  
                 
             },
             '(' if !is_inside_strlit && let Some('[') = previous_non_space_char => {
                 s.push(x);
-                depth = depth + 1;
+                depth += 1;
             }
             '(' if !is_inside_strlit => {
                 s.push('\n');
                 s.push_str("\t".repeat(depth).as_str());
                 s.push(x);
-                depth = depth + 1;
+                depth += 1;
             },
             x if let Some(')') = previous_non_space_char && x != ')' && x != '(' && x != ']' && x != '[' && x != ' ' && x != '\t' => {
              
@@ -39,21 +39,21 @@ pub fn fmt(text:&str) -> String {
                 s.push(x);
             },
             ')' if !is_inside_strlit && let Some(')') = previous_non_space_char => {
-                depth = depth - 1;
+                depth -= 1;
                 s.push('\n');
                 s.push_str("\t".repeat(depth).as_str());
                 s.push(x);
                 
             },
             ')' if !is_inside_strlit => {
-                depth = depth - 1;
+                depth -= 1;
                 s.push(x)
             },
             ' ' if !is_inside_strlit && let Some(' ') = previous_char => { 
 
             },
             ']' if !is_inside_strlit => {
-                depth = depth - 1;
+                depth -= 1;
                 s.push(x);
             }
             _ => s.push(x)
@@ -65,7 +65,7 @@ pub fn fmt(text:&str) -> String {
         previous_char = Some(x);
     }
 
-    s.replace("\t", "    ")
+    s.replace('\t', "    ")
     
 }
 

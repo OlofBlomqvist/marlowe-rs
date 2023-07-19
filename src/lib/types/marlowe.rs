@@ -367,8 +367,8 @@ impl FromPlutusData<Party> for Party {
                             return Err(format!("Expected to decode a party address item.. found: {c:?}"))
                         }
                         let is_mainnet = match &c.fields[0] {
-                            PlutusData::Constr(c) if Some(1) == c.constructor_value() && c.fields.len() == 0 => true,
-                            PlutusData::Constr(c) if Some(0) == c.constructor_value() && c.fields.len() == 0 => false,
+                            PlutusData::Constr(c) if Some(1) == c.constructor_value() && c.fields.is_empty() => true,
+                            PlutusData::Constr(c) if Some(0) == c.constructor_value() && c.fields.is_empty() => false,
                             x => return Err(format!("Failed to decode is_mainnet for a party: {x:?}"))
                         };
                         let content_data = &c.fields[1];
@@ -378,11 +378,11 @@ impl FromPlutusData<Party> for Party {
                                 if address_info.fields.len() != 2 {
                                     return Err(format!("Invalid/missing address inside of party... {:?}",&x))
                                 }
-                                let result = Ok(Party::Address(Address {
-                                    is_mainnet: is_mainnet,
-                                    addr: ScriptOrPubkeyCred::from_plutus_data(content_data.clone(), &attributes)?,
-                                }));
-                                result
+                                
+                                Ok(Party::Address(Address {
+                                    is_mainnet,
+                                    addr: ScriptOrPubkeyCred::from_plutus_data(content_data.clone(), attributes)?,
+                                }))
                             },
                             _ => todo!()
                         }
@@ -396,7 +396,7 @@ impl FromPlutusData<Party> for Party {
                         match &role_name_bytes {
                             PlutusData::BoundedBytes(_) => {
                                 Ok(Party::Role {
-                                    role_token: String::from_plutus_data(role_name_bytes, attributes).expect(&format!("expected a role token string from {:?}",&x)),
+                                    role_token: String::from_plutus_data(role_name_bytes, attributes).unwrap_or_else(|_| panic!("expected a role token string from {:?}",&x)),
                                 })
                             },
                             x => panic!("{:?}",x)
@@ -417,7 +417,7 @@ impl ToPlutusData for PossiblyMerkleizedContract {
     fn to_plutus_data(&self,attributes:&Vec<String>) -> Result<PlutusData,String> {
         match self {
             PossiblyMerkleizedContract::Raw(contract) => {
-                contract.to_plutus_data(&attributes)
+                contract.to_plutus_data(attributes)
             },
             PossiblyMerkleizedContract::Merkleized(m) => {
                 let bytes = hex::decode(m).unwrap(); // todo - dont unwrap
@@ -431,8 +431,8 @@ impl ToPlutusData for PossiblyMerkleizedContract {
 impl FromPlutusData<PossiblyMerkleizedContract> for PossiblyMerkleizedContract {
     fn from_plutus_data(x:PlutusData,attributes:&Vec<String>) -> Result<PossiblyMerkleizedContract,String> {
         match &x {
-            PlutusData::Constr(c) => {
-                let inner_contract = Contract::from_plutus_data(x, &attributes)?;
+            PlutusData::Constr(_c) => {
+                let inner_contract = Contract::from_plutus_data(x, attributes)?;
                 Ok(PossiblyMerkleizedContract::Raw(Box::new(inner_contract)))
             },
             PlutusData::BoundedBytes(b) =>  Ok(PossiblyMerkleizedContract::Merkleized(b.encode_hex())),
@@ -503,12 +503,12 @@ Impl_From_For!(@PossiblyMerkleizedContract,MarlowePossiblyMerkleizedContract);
 
 
 
-pub(crate) fn walk_any<T>(x:T,f:&mut dyn FnMut(&AstNode)) -> () where crate::types::marlowe::AstNode: From<T> {
+pub(crate) fn walk_any<T>(x:T,f:&mut dyn FnMut(&AstNode)) where crate::types::marlowe::AstNode: From<T> {
     walk(&x.into(),f);
 }
 pub(crate) fn walk(
     node:&AstNode,
-    func: &mut dyn FnMut(&AstNode) -> () 
+    func: &mut dyn FnMut(&AstNode) 
 ) {
     func(node);
 
@@ -982,12 +982,12 @@ impl Contract {
         fn get_from_case(x:&Case) -> Vec<RequiredContractInputField> {
             let action_fields = 
                 if let Some(a) = &x.case { 
-                    get_from_action(&a)          
+                    get_from_action(a)          
                 } else {
                     vec![]
                 };
             match &x.then {
-                Some(PossiblyMerkleizedContract::Raw(c)) => get_from_contract(&c,action_fields),
+                Some(PossiblyMerkleizedContract::Raw(c)) => get_from_contract(c,action_fields),
                 _ => action_fields                
             }   
         }
@@ -1142,13 +1142,13 @@ impl TransactionError {
     pub fn teambiguous_time_interval_error(contents:Option<String>) -> Self {
         Self {
             tag: "TEAmbiguousTimeIntervalError".into(),
-            contents: if let Some(c) = contents { Some(TransactionErrorContent::Str(c)) } else {None}
+            contents: contents.map(TransactionErrorContent::Str)
         }
     }
     pub fn teapply_no_match_error(contents:Option<String>) -> Self {
         Self {
             tag: "TEApplyNoMatchError".into(),
-            contents: if let Some(c) = contents { Some(TransactionErrorContent::Str(c)) } else {None}
+            contents: contents.map(TransactionErrorContent::Str)
         }
     }
     pub fn teinterval_error(contents:IntervalError) -> Self {
@@ -1160,7 +1160,7 @@ impl TransactionError {
     pub fn teuseless_transaction(contents:Option<String>) -> Self {
         Self {
             tag: "TEUselessTransaction".into(),
-            contents: if let Some(c) = contents { Some(TransactionErrorContent::Str(c)) } else {None}
+            contents: contents.map(TransactionErrorContent::Str)
         }
     }
 }

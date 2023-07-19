@@ -24,7 +24,7 @@ where
 impl Address {
     pub fn from_bech32(bech32_addr: &str) -> Result<Address, String> {
         
-        let addr = match pallas::ledger::addresses::Address::from_bech32(&bech32_addr) {
+        let addr = match pallas::ledger::addresses::Address::from_bech32(bech32_addr) {
             Err(e) => return Err(format!("Address is not valid bech32! {e:?}")),
             Ok(v) => v,
         };
@@ -119,13 +119,13 @@ impl Address {
                     }
                 }
             },
-            pallas::ledger::addresses::Address::Stake(cs) => {
+            pallas::ledger::addresses::Address::Stake(_cs) => {
                 return Err(String::from("nah stake no work here"))
             }
         };
 
         Ok(Address {
-            is_mainnet: is_mainnet,
+            is_mainnet,
             addr: result,
         })
     }
@@ -152,7 +152,7 @@ impl Address {
                 if a.typeid() == 0b1110 {
                     return Err(String::from("staking cred is not supported"));
                 }
-                let prefix = if self.is_mainnet { "addr" } else { "addr_test" };
+                //let prefix = if self.is_mainnet { "addr" } else { "addr_test" };
 
                 Ok(sterr(a.to_bech32())?)
             }
@@ -179,7 +179,7 @@ impl Address {
                     return Err(String::from("staking cred is not supported"));
                 }
                 // the prefix here should depend on more than the network ?
-                let prefix = if self.is_mainnet { "addr" } else { "addr_test" };
+                //let prefix = if self.is_mainnet { "addr" } else { "addr_test" };
                 Ok(sterr(a.to_bech32())?)
             }
 
@@ -208,7 +208,7 @@ impl Address {
                     return Err(String::from("staking cred is not supported"));
                 }
                 // the prefix here should depend on more than the network ?
-                let prefix = if self.is_mainnet { "addr" } else { "addr_test" };
+                //let prefix = if self.is_mainnet { "addr" } else { "addr_test" };
                 Ok(sterr(a.to_bech32())?)
             }
 
@@ -233,7 +233,7 @@ impl Address {
                     return Err(String::from("staking cred is not supported"));
                 }
                 // the prefix here should depend on more than the network ?
-                let prefix = if self.is_mainnet { "addr" } else { "addr_test" };
+                //let prefix = if self.is_mainnet { "addr" } else { "addr_test" };
                 Ok(sterr(a.to_bech32())?)
             }
 
@@ -258,7 +258,7 @@ impl Address {
                     return Err(String::from("staking cred is not supported"));
                 }
                 // the prefix here should depend on more than the network ?
-                let prefix = if self.is_mainnet { "addr" } else { "addr_test" };
+                //let prefix = if self.is_mainnet { "addr" } else { "addr_test" };
                 Ok(sterr(a.to_bech32())?)
             }
 
@@ -284,7 +284,7 @@ impl Address {
                     return Err(String::from("staking cred is not supported"));
                 }
                 // the prefix here should depend on more than the network ?
-                let prefix = if self.is_mainnet { "addr" } else { "addr_test" };
+                //let prefix = if self.is_mainnet { "addr" } else { "addr_test" };
                 Ok(sterr(a.to_bech32())?)
             }
         }
