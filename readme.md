@@ -24,8 +24,7 @@ There is also no support for directly communicating with any Cardano or Marlowe 
 
 ### Consuming the library
 
-This crate can be used in Rust, React, Node, Deno etc., see the examples directory for more details. It will also be possible to compile to WASI soon™.
-Note that the wasm file is quite large (at 3MB~) right now. This is expected to change in the future to below 300kb, but it is not a priority right now.
+This crate can be used in Rust, React, Node, Deno, wasmtime/wasmer etc., see the examples directory for more details. 
 
 
 ### WIP & TODOs
@@ -33,10 +32,6 @@ Note that the wasm file is quite large (at 3MB~) right now. This is expected to 
 - Add [marlowe-spec-test](https://github.com/input-output-hk/marlowe/tree/master/marlowe-spec-test) to build pipeline when it has been properly packaged.
 
 - Rewrite parser logic to use Chumsky.
-
-- Replace CML with Pallas
-
-- Provide support for WASI compilation
 
 ## CLI Tool:
 
