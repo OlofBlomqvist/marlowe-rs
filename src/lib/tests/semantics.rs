@@ -1,6 +1,6 @@
 use std::num::TryFromIntError;
 
-use crate::{semantics::{ContractInstance, MachineState, ContractSemantics}, types::marlowe::*};
+use crate::{semantics::{ContractInstance, MachineState, ContractSemantics}, types::marlowe::{*, self}};
 
 
 #[test]
@@ -464,7 +464,7 @@ fn negative_deposits_are_treated_as_zero() {
                 who_is_expected_to_pay:_, 
                 expected_asset_type:_, 
                 expected_amount, 
-                expected_target_account:_, 
+                expected_payee:_, 
                 continuation :_
             } = expected.first().unwrap() { 
 
@@ -496,5 +496,138 @@ fn negative_deposits_are_treated_as_zero() {
         },
         _ => panic!("expected this contract to be waiting for input, but current state is: {state:?}")
     }
+
+}
+
+
+
+#[test]
+fn pay_to_external_payee() {
+    
+    let contract_dsl = r#"
+        When
+        [Case
+            (Deposit
+                (Role "the bank")
+                (Role "the bank")
+                (Token "" "")
+                (Constant 5000000)
+            )
+            (Pay
+                (Role "the bank")
+                (Party (Role "some external role token holder"))
+                (Token "" "")
+                (Constant 5000000)
+                Close 
+            )]
+        1753881840000 Close 
+    "#;
+
+    let deserialization_result = crate::deserialization::marlowe::deserialize(contract_dsl).expect("should be able to deserialize test contract");
+    
+    assert!(deserialization_result.parties.len() == 2);
+
+    let (instance,_state) = 
+        ContractInstance::new(&deserialization_result.contract, None)
+            .process()
+            .expect("should be able to process test contract prior to applying inputs");
+
+    let the_bank = marlowe::Party::role("the bank");
+    let the_payee = marlowe::Payee::Party(Some(Party::role("some external role token holder")));
+
+    // bank sends 5m ada to their internal contract account
+    let (instance,state) = 
+        instance.apply_input_deposit(the_bank.clone(), Token::ada(), 5_000_000, the_bank.clone()).expect("should be able to apply deposit")
+        .process()
+        .expect("should be able to process contract after applying deposit input");
+
+    match state {
+        MachineState::Closed => {},
+        _ => panic!("contract should have closed, but is actually in state: {state:?}")
+    }
+
+    // bank should have an empty acc
+    assert!(instance.state.accounts.len() == 1);
+    
+    // a single payment should have been made to the_payee from the_bank
+    assert!(instance.payments.len() == 1);
+    let payment = instance.payments.first().unwrap();
+    assert!(payment.amount == 5_000_000);
+    assert!(payment.token == Token::ada());
+    assert!(payment.to == the_payee);
+    assert!(payment.payment_from == the_bank);  
+
+    // the only acc in the contract should now have no tokens as it was sent to an external payee
+    let bank_acc = instance.state.accounts.get(&(the_bank,Token::ada())).expect("bank should have account with zero amount");
+    assert!(bank_acc == &0)
+
+
+}
+
+
+
+#[test]
+fn pay_to_internal_payee() {
+    
+    let contract_dsl = r#"
+        When
+            [Case
+                (Deposit
+                    (Role "the bank")
+                    (Role "the bank")
+                    (Token "" "")
+                    (Constant 5000000)
+                )
+                (Pay
+                    (Role "the bank")
+                    (Account (Role "some internal acc"))
+                    (Token "" "")
+                    (Constant 5000000)
+                    Close 
+                )]
+            1753881840000 Close 
+    "#;
+
+    let deserialization_result = crate::deserialization::marlowe::deserialize(contract_dsl).expect("should be able to deserialize test contract");
+    
+    assert!(deserialization_result.parties.len() == 2);
+
+    let (instance,_state) = 
+        ContractInstance::new(&deserialization_result.contract, None)
+            .process()
+            .expect("should be able to process test contract prior to applying inputs");
+
+    let the_bank = marlowe::Party::role("the bank");
+    let the_payee = marlowe::Payee::Account(Some(Party::role("some internal acc")));
+
+    // bank sends 5m ada to their internal contract account
+    let (instance,state) = 
+        instance.apply_input_deposit(the_bank.clone(), Token::ada(), 5_000_000, the_bank.clone()).expect("should be able to apply deposit")
+        .process()
+        .expect("should be able to process contract after applying deposit input");
+
+    match state {
+        MachineState::Closed => {},
+        _ => panic!("contract should have closed, but is actually in state: {state:?}")
+    }
+
+    // bank should have an empty acc
+    assert!(instance.state.accounts.len() == 2);
+    
+    // a single payment should have been made to the_payee from the_bank
+    assert!(instance.payments.len() == 1);
+    let payment = instance.payments.first().unwrap();
+    assert!(payment.amount == 5_000_000);
+    assert!(payment.token == Token::ada());
+    assert!(payment.to == the_payee);
+    assert!(payment.payment_from == the_bank);  
+
+    // the bank acc in the contract should now have no tokens as it was sent to another payee account
+    let bank_acc = instance.state.accounts.get(&(the_bank,Token::ada())).expect("bank should have account with zero amount");
+    assert!(bank_acc == &0);
+
+    let payee_acc = instance.state.accounts.get(&(Party::role("some internal acc"),Token::ada())).expect("payee should have ada in their account");
+    assert!(payee_acc == &5_000_000)
+
 
 }

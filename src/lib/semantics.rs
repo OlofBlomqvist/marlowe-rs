@@ -21,7 +21,7 @@ pub enum InputType {
         who_is_expected_to_pay:Party ,
         expected_asset_type: Token, 
         expected_amount: i64, 
-        expected_target_account:crate::types::marlowe::AccountId,
+        expected_payee:crate::types::marlowe::AccountId,
         continuation: Contract
     }, 
 
@@ -128,7 +128,18 @@ pub trait ContractSemantics<T> {
 
 }
 
-impl ContractInstance {
+impl<'a> ContractInstance {
+
+    pub fn is_closed(&self) -> bool {
+        match &self.process().unwrap().1 {
+            MachineState::Closed => true,
+            _ => false
+        }
+    }
+
+    pub fn locked_amounts(&'a self) -> Vec<(&'a Party, &'a Token, u64)> {
+        self.state.locked_amounts()
+    }
     
     pub fn from_datum_cborhex(datum_cbor_hex:&str) -> Result<Self,String> {
         let bytes = hex::decode(datum_cbor_hex).map_err(|_|String::from("failed to decode datum from cbor-hex."))?;
@@ -188,6 +199,7 @@ impl ContractInstance {
             contract: self.contract.clone(),
         }
     }
+
 
 }
 
@@ -507,7 +519,7 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
                             who_is_expected_to_pay, 
                             expected_asset_type, 
                             expected_amount, 
-                            expected_target_account, 
+                            expected_payee: expected_target_account, 
                             continuation 
                         } => {
 
@@ -595,7 +607,7 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
 
             Contract::Pay { 
                 from_account:Some(from), 
-                to:Some(to_acc), 
+                to:Some(payee), 
                 token:Some(tok), 
                 pay:Some(pay_amount), 
                 then:Some(continuation)
@@ -615,27 +627,52 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
                 
                 let reduced_amount = self.eval_num_value(pay_amount)?;
 
-                let reduced_known_positive_amount : u64 = match reduced_amount.try_into() {
+                let reduced_known_positive_amount_to_pay : u64 = match reduced_amount.try_into() {
                     Ok(v) => v,
                     Err(e) => return Err(format!("Unable to process payment due to the expected payment amount being negative! {:?}",e))
                 };
                 
                 if let Some(available_amount) = acc_val {
                     
-                    if *available_amount < reduced_known_positive_amount {
-                        return Err(format!("Unable to perform payment as the account ({from}) does not have enough tokens ({tok}). Contract attempted to send '{reduced_known_positive_amount}' when the account only contains '{available_amount}'."))
+                    if *available_amount < reduced_known_positive_amount_to_pay {
+                        return Err(format!("Unable to perform payment as the account ({from}) does not have enough tokens ({tok}). Contract attempted to send '{reduced_known_positive_amount_to_pay}' when the account only contains '{available_amount}'."))
                     } else {
-                        let new_amount: u64 = *available_amount - reduced_known_positive_amount;
+                        let new_amount: u64 = *available_amount - reduced_known_positive_amount_to_pay;
 
                         *available_amount =  new_amount;
                     }
 
-                    new_instance.logs.push(format!("A mayment was made! '{from}' sent '{reduced_known_positive_amount}' of '{tok}' from '{from}' to: '{to_acc}'"));
+                    // update payee account status
+                    match payee {
+                        Payee::Account(Some(internal_payee)) => {
+                            let internal_payee_acc_val_amount = new_instance.state.accounts.get_mut(&(internal_payee.clone(),tok.clone()));
+                            match internal_payee_acc_val_amount {
+                                Some(payee_acc_tok_val) => {
+                                    // this payment adds value to an internal account that already holds some amount of this token
+                                    // so we just increment the existing amount
+                                    *payee_acc_tok_val = *payee_acc_tok_val + reduced_known_positive_amount_to_pay;
+                                },
+                                None => {
+                                    // the payment goes to an internal account that does not have any amount of the token 
+                                    // so we will need to add it to the state
+                                    new_instance.state.accounts.insert((internal_payee.clone(),tok.clone()), reduced_known_positive_amount_to_pay);
+                                },
+                            }
+                        },
+                        Payee::Party(Some(_exteral_payee)) => {
+                            // the contract sends a payment to some external address or role token holder, 
+                            // so we dont need to update any internal account state for the target/payee here.
+                        },
+                        _ => return Err(format!("There is an issue with this contract. The payee is not specified."))
+                    };
+
+
+                    new_instance.logs.push(format!("A mayment was made! '{from}' sent '{reduced_known_positive_amount_to_pay}' of '{tok}' to: '{payee}'"));
                     new_instance.payments.push(Payment {
                         payment_from: from.clone(),
-                        to: to_acc.clone(),
+                        to: payee.clone(),
                         token: tok.clone(),
-                        amount: reduced_known_positive_amount,
+                        amount: reduced_known_positive_amount_to_pay,
                     });
                     Ok((new_instance,MachineState::ReadyForNextStep))
                 } else {
@@ -747,7 +784,7 @@ impl ContractSemantics<ContractInstance> for ContractInstance {
                                         who_is_expected_to_pay: from.clone(), 
                                         expected_asset_type: tok.clone(), 
                                         expected_amount: v, 
-                                        expected_target_account: to.clone(),
+                                        expected_payee: to.clone(),
                                         continuation: *(continuation.clone())
                                     })
                                 }   ,

@@ -6,7 +6,7 @@ use crate::parsing::{marlowe::{ParseError, ContractParseResult}, MarloweParser};
 
 /// Parses a string into an instance of a Marlowe contract
 pub fn deserialize(content:&str) -> Result<ContractParseResult,ParseError>  { 
-    deserialize_with_input(content,Default::default())
+    deserialize_with_input(content.trim_start().trim_end(),Default::default())
 }
 
 pub fn deserialize_with_input(content:&str,input:HashMap<String,i64>) -> Result<ContractParseResult,ParseError>  {

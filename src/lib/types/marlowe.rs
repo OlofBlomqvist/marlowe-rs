@@ -780,6 +780,16 @@ pub struct State {
     pub min_time : u64 , // POSIXTime  
 }
 
+impl<'a> State {
+    pub fn locked_amounts(&'a self) -> Vec<(&'a Party,&'a Token,u64)> {
+        let mut items : Vec<(&'a Party,&'a Token,u64)> = vec![];
+        for ((party,token),amount) in &self.accounts {
+            items.push((party,token,*amount));
+        }
+        items
+    }
+}
+
 
 
 impl TryFrom<Party> for crate::types::marlowe_strict::Party {

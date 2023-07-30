@@ -997,7 +997,7 @@ pub struct WasmInputDeposit {
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub who_is_expected_to_pay:WasmParty,
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub expected_asset_type: WasmToken,
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub expected_amount: i64,
-    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub expected_target_account:WasmPayee,
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub expected_payee:WasmPayee,
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub continuation_dsl: String
 }
 
@@ -1066,15 +1066,15 @@ impl TryFrom<crate::semantics::MachineState> for WasmMachineState {
                             who_is_expected_to_pay, 
                             expected_asset_type, 
                             expected_amount, 
-                            expected_target_account, 
+                            expected_payee, 
                             continuation 
                         } => {
                             let dep = WasmInputDeposit { 
                                 who_is_expected_to_pay: who_is_expected_to_pay.clone().try_into().unwrap(), 
                                 expected_asset_type: WasmToken { name: expected_asset_type.token_name.to_string(), pol: expected_asset_type.currency_symbol.to_string() }, 
                                 expected_amount: *expected_amount as i64, 
-                                expected_target_account: {
-                                    match expected_target_account {
+                                expected_payee: {
+                                    match expected_payee {
                                         AccountId::Address(a) => WasmPayee { typ: WasmPayeeType::AccountAddress, val: a.as_bech32().unwrap() },
                                         AccountId::Role { role_token } => WasmPayee { typ: WasmPayeeType::AccountRole, val: role_token.to_string() },
                                     }
