@@ -32,7 +32,7 @@ pub fn try_decode_cborhex_marlowe_plutus_contract(cbor_hex:&str) -> Result<Contr
             match plutus_data::from_bytes(&cbor) {
                 Ok(x) => Contract::from_plutus_data(x,&[]),
                 Err(e) => 
-                    Err(format!("Failed to decode plutus datum from input! Exception: {:?}",e))
+                    Err(format!("Failed to decode plutus contract from cbor_hex! Exception: {:?}",e))
                 
             }
         }

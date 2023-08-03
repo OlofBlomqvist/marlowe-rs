@@ -1,6 +1,17 @@
+use std::collections::HashMap;
 use std::fs::read_to_string;
+use crate::deserialization::json::deserialize;
 use crate::extras::utils::*;
+use crate::parsing::marlowe::ContractParseResult;
 use crate::types::marlowe::Address;
+use crate::types::marlowe::Contract;
+use crate::types::marlowe::MarloweDatum;
+use crate::types::marlowe::MarloweParams;
+use crate::types::marlowe::State;
+use crate::types::marlowe::Token;
+use hex::ToHex;
+use pallas_primitives::Fragment;
+use pallas_primitives::ToCanonicalJson;
 use plutus_data::ToPlutusData;
 use plutus_data::FromPlutusData;
 
@@ -306,5 +317,170 @@ fn mainnet_addresses_07() {
 
 
 
+
+
+#[test]
+fn datum_decoding_matches_prior_versions() {
+    let jcon = r#"{
+    "when": [
+        {
+          "then": {
+            "when": [
+              {
+                "then": "close",
+                "case": {
+                  "notify_if": true
+                }
+              }
+            ],
+            "timeout_continuation": "close",
+            "timeout": 1691053939415
+          },
+          "case": {
+            "party": {
+              "role_token": "Depositor"
+            },
+            "of_token": {
+              "token_name": "",
+              "currency_symbol": ""
+            },
+            "into_account": {
+              "role_token": "Depositor"
+            },
+            "deposits": 1000000
+          }
+        }
+      ],
+      "timeout_continuation": "close",
+      "timeout": 1691053939415
+    }
+    "#;
+    let contract : crate::types::marlowe::Contract = deserialize(jcon.into()).unwrap();
+    let original = "d8799fd8799f581c2393a2c7dcdd0e2d07ccd9b69ed1c4f90179e50863eecb139876cf09ffd8799fa1d8799fd8799fd87980d8799fd8799f581cd5b085a4aa0d42df98337bb9ab4ae77d46e579109c9f990c53762cfcffd87a80ffffd8799f4040ffff1a001e8480a0a001ffd87c9f9fd8799fd8799fd87a9f494465706f7369746f72ffd87a9f494465706f7369746f72ffd8799f4040ffd87a9f1a000f4240ffffd87c9f9fd8799fd87b9fd9050280ffd87980ffff1b00000189baab5ad7d87980ffffff1b00000189baab5ad7d87980ffff";
+    let mut accmap = HashMap::new();
+    accmap.insert((crate::types::marlowe::Party::Address(Address::from_bech32("addr_test1vr2mppdy4gx59hucxdamn262ua75detezzwflxgv2dmzelq9578t3").unwrap()),Token::ada()), 2000000);
+
+    let my_datum = MarloweDatum {
+        marlowe_params: MarloweParams("2393a2c7dcdd0e2d07ccd9b69ed1c4f90179e50863eecb139876cf09".into()),
+        state: State {
+            accounts: accmap,
+            choices: HashMap::new(),
+            bound_values: HashMap::new(),
+            min_time: 1,
+        },
+        contract: contract,
+    };
+    //println!("{my_datum:?}");
+    let cb = my_datum.to_plutus_data(&vec![]).unwrap();
+    let hex = plutus_data::to_hex(&cb).unwrap();
+    let reda = MarloweDatum::from_plutus_data(cb, &vec![]).unwrap();
+    //println!("hex: {}",hex);
+    let jsondatum = crate::serialization::json::serialize(reda).unwrap();
+    //println!("reda: {}",&jsondatum);
+    let fromj : MarloweDatum = crate::deserialization::json::deserialize(jsondatum).unwrap();
+    //println!("datum from json: {:?}",fromj);
+    assert!(hex == original);
+
+
+    let original_bytes = hex::decode(original).unwrap();
+    let original_decoded_as_pd = plutus_data::from_bytes(&original_bytes).unwrap();
+    let original_from_pd = MarloweDatum::from_plutus_data(original_decoded_as_pd, &vec![]).unwrap();
+    let original_to_hex = plutus_data::to_hex(&original_from_pd.to_plutus_data(&vec![]).unwrap()).unwrap();
+    assert!(&original_to_hex == original);
+
+}
+
+
+#[test]
+fn datum_encoding_matches_prior_versions() {
+    let j = r#"
+    {
+        "marlowe_params": "2393a2c7dcdd0e2d07ccd9b69ed1c4f90179e50863eecb139876cf09",
+        "state": {
+          "accounts": [
+            [
+              [
+                {
+                  "address": "addr_test1vr2mppdy4gx59hucxdamn262ua75detezzwflxgv2dmzelq9578t3"
+                },
+                {
+                  "token_name": "",
+                  "currency_symbol": ""
+                }
+              ],
+              2000000
+            ]
+          ],
+          "choices": [],
+          "boundValues": [],
+          "minTime": 1
+        },
+        "contract": {
+          "when": [
+            {
+              "then": {
+                "when": [
+                  {
+                    "then": "close",
+                    "case": {
+                      "notify_if": true
+                    }
+                  }
+                ],
+                "timeout_continuation": "close",
+                "timeout": 1691053939415
+              },
+              "case": {
+                "party": {
+                  "role_token": "Depositor"
+                },
+                "of_token": {
+                  "token_name": "",
+                  "currency_symbol": ""
+                },
+                "into_account": {
+                  "role_token": "Depositor"
+                },
+                "deposits": 1000000
+              }
+            }
+          ],
+          "timeout_continuation": "close",
+          "timeout": 1691053939415
+        }
+      }
+    "#;
+
+    let datum : MarloweDatum = crate::deserialization::json::deserialize(j.into()).unwrap();
+    let hexed = plutus_data::to_hex(&datum.to_plutus_data(&vec![]).unwrap()).unwrap();
+
+   // println!("{:?}",datum);
+    //println!("hex: {}",hexed);
+
+    let dehex = crate::plutus_data::from_bytes(&hex::decode(&hexed).unwrap()).unwrap();
+
+    //println!("DEHEX: {:?}",dehex);
+
+}
+
+
+#[test]
+fn reencode_Datum() {
+
+    let original = "d8799fd8799f581c2393a2c7dcdd0e2d07ccd9b69ed1c4f90179e50863eecb139876cf09ffd8799fa1d8799fd8799fd87980d8799fd8799f581cd5b085a4aa0d42df98337bb9ab4ae77d46e579109c9f990c53762cfcffd87a80ffffd8799f4040ffff1a001e8480a0a001ffd87c9f9fd8799fd8799fd87a9f494465706f7369746f72ffd87a9f494465706f7369746f72ffd8799f4040ffd87a9f1a000f4240ffffd87c9f9fd8799fd87b9fd9050280ffd87980ffff1b00000189baab5ad7d87980ffffff1b00000189baab5ad7d87980ffff";
+    
+    let pd = plutus_data::PlutusData::decode_fragment(&hex::decode(original).unwrap()).unwrap();
     
     
+    let rec1 = pd.encode_fragment().unwrap();
+    let reh : String = rec1.encode_hex();
+
+    assert!(original == reh);
+
+    //println!("{}",pd.to_json());
+
+    let marlowe_datum : MarloweDatum = MarloweDatum::from_plutus_data(pd,&vec![]).unwrap();
+
+   // println!("{:?}",marlowe_datum);
+
+}

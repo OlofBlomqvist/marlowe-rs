@@ -1,7 +1,7 @@
 [package]
 name = "marlowe_lang"
 description = "experimental parser lib for Cardano Marlowe DSL"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 authors = ["Olof Blomqvist <olof@twnet.se>"]
 repository = "https://github.com/OlofBlomqvist/marlowe_rust"
@@ -13,7 +13,7 @@ pest = { version = "2.7.1", features= ["pretty-print"] }
 serde = { version = "1.0.171", features = ["derive"] }
 serde_json = { version = "1.0.103" , features = ["unbounded_depth"] }
 clap = { version = "4.0.19", features = ["derive"] , optional = true}
-plutus_data = { version = "0.0.6", optional = true }
+plutus_data = { version = "0.0.7", optional = true }
 #plutus_data = { path = "../plutus_data/plutus_data", optional = true }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 serde_derive = { version = "1.0.171", optional = true }
