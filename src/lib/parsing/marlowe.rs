@@ -42,7 +42,7 @@ pub struct ContractParseResult {
     pub parties : Vec<Party>
 }
 
-pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Result<RawContractParseResult,String> {
+pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i128>) -> Result<RawContractParseResult,String> {
     
     let mut keys : Vec<String> = input.keys().map(|x|x.to_owned()).collect();
     keys.dedup();
@@ -125,7 +125,7 @@ pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Resu
             Rule::UseValue => fold_back!(AstNode::MarloweValue(Value::UseValue(get_next_into!()))),            
             Rule::ConstantParam => {
                 let parameter_name : String = get_next_into!();
-                let input_parameter_value : Option<&i64> = input.get(&parameter_name);
+                let input_parameter_value : Option<&i128> = input.get(&parameter_name);
                 match input_parameter_value {
                     Some(value_from_input) => {
                         fold_back!(AstNode::MarloweValue(Value::ConstantValue(*value_from_input)))
@@ -155,10 +155,21 @@ pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Resu
             },
             Rule::TimeParam => {
                 let parameter_name : String = get_next_into!();
-                let input_parameter_value : Option<&i64> = input.get(&parameter_name);
+                let input_parameter_value : Option<&i128> = input.get(&parameter_name);
                 match input_parameter_value {
                     Some(value_from_input) => {
-                        fold_back!(AstNode::MarloweTimeout(Timeout::TimeConstant(*value_from_input)))
+                        let tried : std::result::Result<i64, _> = (*value_from_input).try_into();
+                        match tried {
+                            Ok(vv) => {
+                                if vv < 0 {
+                                    return Err(String::from("Timeouts must be positive integers."))
+                                }
+                                fold_back!(AstNode::MarloweTimeout(Timeout::TimeConstant(vv)))
+                            },
+                            Err(e) => return Err(format!("timeouts are limited to 64 bits. {:?}",e)),
+                        }
+                        
+                        
                     },
                     None => {
                         uninitialized_time_params.push(parameter_name.clone());
@@ -176,15 +187,41 @@ pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Resu
             Rule::Notify => fold_back!(AstNode::MarloweAction(Action::Notify { 
                 notify_if: get_next_node(&mut current_operation)?.try_into()? })),            
             Rule::Case => {
+
                 let continuation_contract = get_next!();
                 let contract_node : Option<PossiblyMerkleizedContract> = continuation_contract.try_into()?;
                 let contract_node =
                     contract_node;
+
                 let action = get_next_into!();
-                fold_back!(AstNode::MarloweCase(crate::types::marlowe::Case {
-                    case: action,
-                    then: contract_node
-                }));
+
+                match contract_node {
+                    // only non-merkleized cases support holes for now
+                    None => fold_back!(AstNode::MarloweCase(PossiblyMerkleizedCase::Raw { case: action, then: None })),
+                    Some(c) => {
+                        match c {
+                            PossiblyMerkleizedContract::Raw(raw_contract) => {
+                                fold_back!(AstNode::MarloweCase(crate::types::marlowe::PossiblyMerkleizedCase::Raw  { 
+                                    case: action, 
+                                    then: Some(*raw_contract) 
+                                }))
+                            },
+                            PossiblyMerkleizedContract::Merkleized(merkle_hash) => {
+                                if let Some(a) = action {
+                                    fold_back!(AstNode::MarloweCase(crate::types::marlowe::PossiblyMerkleizedCase::Merkleized { 
+                                        case: a, 
+                                        then: merkle_hash 
+                                    }))
+                                } else {
+                                    return Err(String::from("Merkleized case is missing action"))
+                                }
+                                
+                            },
+                        }
+                    }
+                }
+
+                
             }
             Rule::When => {
                 let contract_node = get_next_into!();
@@ -249,7 +286,7 @@ pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Resu
             Rule::FalseObs => fold_back!(AstNode::MarloweObservation(Observation::False)),
             Rule::Number => {                
                 let n = option_to_result(current_operation.string_representation,"Failed to parse a number!")?;
-                let nn = match n.parse::<i64>() {
+                let nn = match n.parse::<i128>() {
                     Ok(nnn) => nnn,
                     Err(e) => return Err(format!("{}. Inner error: {:?}","Failed to parse a number",e))
                 };
@@ -397,7 +434,7 @@ pub(crate) fn parse_raw_inner(pair:Pair<Rule>,input:HashMap<String,i64>) -> Resu
             }
             Rule::Constant => {
                 let n = option_to_result(current_operation.extracted_child_ast_nodes.pop(),"failed to parse constant")?;
-                let nn : i64 = n.try_into()?;
+                let nn : i128 = n.try_into()?;
                 fold_back!(AstNode::MarloweValue(Value::ConstantValue(nn)))
 
             }

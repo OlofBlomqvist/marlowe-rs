@@ -156,15 +156,15 @@ pub enum ContractArgs {
 pub enum StateArgs {
     InitUsingRole {
         creator_role: String,
-        /// The amount of ada that will be sent to the contract in the initial utxo. (most likely the min amount of ada possible for a transaction)
-        initial_ada: i64
+        /// The amount of lovelace that will be sent to the contract in the initial utxo. (most likely the min amount of ada possible for a transaction)
+        initial_lovelace: i128
     },
     /// Not yet implemented
     InitUsingAddr {
         /// Bech32 Cardano address
         creator_addr: String,
-        /// The amount of ada that will be sent to the contract in the initial utxo. (most likely the min amount of ada possible for a transaction)
-        initial_ada: i64
+        /// The amount of lovelace that will be sent to the contract in the initial utxo. (most likely the min amount of ada possible for a transaction)
+        initial_lovelace: i128
     }
 }
 

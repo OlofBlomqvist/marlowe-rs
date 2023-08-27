@@ -278,20 +278,24 @@ impl std::fmt::Display for Timeout {
     }
 }
 
-impl std::fmt::Display for Case {
+impl std::fmt::Display for PossiblyMerkleizedCase {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "(Case {} {})",
-            match &self.case {None=>"?action".to_string(),Some(v)=>format!("{v}")},
-            match &self.then {
-                None=>"?contract".to_string(),
-                Some(v)=> {
-                    match &v {
-                        PossiblyMerkleizedContract::Raw(c) => format!("{c}"),
-                        PossiblyMerkleizedContract::Merkleized(hash) => format!("(MerkleizedThen \"{hash}\")"),
-                    }
-                }
+
+        let result = match self {
+            PossiblyMerkleizedCase::Raw { case, then} => {
+                let case_str = if let Some(action) = &case { action.to_string() } else { "?action".to_string() };
+                let cont_str = if let Some(contract) = &then { contract.to_string() } else { "?contract".to_string() };
+                format!("(Case {case_str} {cont_str})")
+
             },
-        )
+            PossiblyMerkleizedCase::Merkleized { case, then} => {
+                let case_str = case.to_string();
+                let hash = &then;
+                format!("(Case {case_str} \"{hash}\")")
+            },
+        };
+
+        write!(f, "{result}")
     }
 }
 

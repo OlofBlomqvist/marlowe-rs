@@ -1,5 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{HashMap};
 use console_error_panic_hook;
+
 use serde::{Serialize, Deserialize};
 use wasm_bindgen::{prelude::*};
 use crate::parsing::marlowe::ParseError;
@@ -86,7 +87,7 @@ pub fn marlowe_to_json_with_variables(contract:&str,params_str:&str) -> Result<S
     if params_str.contains("=") {
         for x in params_str.split(",") {
             let (name,value) = x.split_once("=").unwrap();
-            let value_num = value.trim().parse::<i64>().unwrap();                        
+            let value_num = value.trim().parse::<i128>().unwrap();                        
             h.insert(name.trim().to_string(),value_num);
         }
     }
@@ -104,7 +105,7 @@ pub fn parse_marlowe_with_variables(contract:&str,params_str:&str) -> Result<Str
     if params_str.contains("=") {
         for x in params_str.split(",") {
             let (name,value) = x.split_once("=").unwrap();
-            let value_num = value.trim().parse::<i64>().unwrap();                        
+            let value_num = value.trim().parse::<i128>().unwrap();                        
             h.insert(name.trim().to_string(),value_num);
         }
     }
@@ -193,13 +194,19 @@ pub struct WasmDatum {
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub contract_dsl : String
 }
 
+#[wasm_bindgen]
+pub struct ObservationWasmResult {
+    pub value: bool,
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub warnings: WasmTransactionWarnings
+}
+
 #[cfg(feature="unstable")]
 #[wasm_bindgen]
 impl WASMMarloweStateMachine {
 
     #[wasm_bindgen]
-    pub fn set_mintime(&mut self,mintime:u64) {
-        let new_instance = self.internal_instance.with_min_time(&mintime);
+    pub fn set_mintime(&mut self,mintime:&str) {
+        let new_instance = self.internal_instance.with_min_time(&mintime.parse::<u64>().unwrap());
         self.internal_instance = new_instance;
     }
 
@@ -299,7 +306,7 @@ impl WASMMarloweStateMachine {
                     AccountId::Role {role_token} => WasmPayee { typ: WasmPayeeType::AccountRole, val: role_token.to_string() },
                 };
                 WasmPayment {
-                    amount:x.amount as i64,
+                    amount_i128: x.amount.to_string(),
                     to: payee,
                     from:{
                         match &x.payment_from {
@@ -327,22 +334,22 @@ impl WASMMarloweStateMachine {
     }
 
     #[wasm_bindgen]
-    pub fn set_acc_of_addr(&mut self,bech32_addr:&str,token_name:&str,currency_symbol:&str,quantity:u64) {
+    pub fn set_acc_of_addr(&mut self,bech32_addr:&str,token_name:&str,currency_symbol:&str,quantity:&str) {
         let asset = Token {
             currency_symbol: currency_symbol.into(),
             token_name: token_name.into()
         };
-        let new_instance = self.internal_instance.with_account_addr(bech32_addr, &asset, quantity).unwrap();
+        let new_instance = self.internal_instance.with_account_addr(bech32_addr, &asset, quantity.parse::<u128>().unwrap()).unwrap();
         self.internal_instance = new_instance;
     }
 
     #[wasm_bindgen]
-    pub fn set_acc_of_role(&mut self,role:&str,token_name:&str,currency_symbol:&str,quantity:u64) {
+    pub fn set_acc_of_role(&mut self,role:&str,token_name:&str,currency_symbol:&str,quantity:&str) {
         let asset = Token {
             currency_symbol: currency_symbol.into(),
             token_name: token_name.into()
         };
-        let new_instance = self.internal_instance.with_account_role(role, &asset, quantity);
+        let new_instance = self.internal_instance.with_account_role(role, &asset, quantity.parse::<u128>().unwrap());
         self.internal_instance = new_instance;
     }
 
@@ -358,39 +365,39 @@ impl WASMMarloweStateMachine {
     }
 
     #[wasm_bindgen]
-    pub fn apply_input_deposit_for_role(&mut self,from_role:&str,to_role:&str,token_name:&str,currency_symbol:&str,quantity:i64) {
+    pub fn apply_input_deposit_for_role(&mut self,from_role:&str,to_role:&str,token_name:&str,currency_symbol:&str,quantity:&str) {
         let asset = Token {
             currency_symbol: currency_symbol.into(),
             token_name: token_name.into()
         };
         let from_role_party = AccountId::role(from_role);
         let to_role_party = AccountId::role(to_role);
-        let new_instance = self.internal_instance.apply_input_deposit(from_role_party, asset, quantity, to_role_party).unwrap();
+        let new_instance = self.internal_instance.apply_input_deposit(from_role_party, asset, quantity.parse::<i128>().unwrap(), to_role_party).unwrap();
         self.internal_instance = new_instance;
     }
 
     #[wasm_bindgen]
-    pub fn apply_input_deposit_for_addr(&mut self,from_bech32_addr:&str,to_bech32_addr:&str,token_name:&str,currency_symbol:&str,quantity:i64) {
+    pub fn apply_input_deposit_for_addr(&mut self,from_bech32_addr:&str,to_bech32_addr:&str,token_name:&str,currency_symbol:&str,quantity:&str) {
         let asset = Token {
             currency_symbol: currency_symbol.into(),
             token_name: token_name.into()
         };
         let from_addr_party = AccountId::Address(Address::from_bech32(from_bech32_addr).unwrap());
         let to_addr_party = AccountId::Address(Address::from_bech32(to_bech32_addr).unwrap());
-        let new_instance = self.internal_instance.apply_input_deposit(from_addr_party, asset, quantity,to_addr_party).unwrap();
+        let new_instance = self.internal_instance.apply_input_deposit(from_addr_party, asset, quantity.parse::<i128>().unwrap(),to_addr_party).unwrap();
         self.internal_instance = new_instance;
     }
 
     #[wasm_bindgen]
-    pub fn apply_input_choice_for_role(&mut self,choice_name:&str,role_name:&str,chosen_value:i64) {
+    pub fn apply_input_choice_for_role(&mut self,choice_name:&str,role_name:&str,chosen_value:&str) {
         let role_party = AccountId::role(role_name);
-        self.internal_instance = self.internal_instance.apply_input_choice(choice_name, role_party, chosen_value).unwrap();
+        self.internal_instance = self.internal_instance.apply_input_choice(choice_name, role_party, chosen_value.parse::<i128>().unwrap()).unwrap();
     }
 
     #[wasm_bindgen]
-    pub fn apply_input_choice_for_addr(&mut self,choice_name:&str,bech32_addr:&str,chosen_value:i64) {
+    pub fn apply_input_choice_for_addr(&mut self,choice_name:&str,bech32_addr:&str,chosen_value:&str) {
         let role_party = AccountId::Address(Address::from_bech32(bech32_addr).unwrap());
-        self.internal_instance = self.internal_instance.apply_input_choice(choice_name, role_party, chosen_value).unwrap()
+        self.internal_instance = self.internal_instance.apply_input_choice(choice_name, role_party, chosen_value.parse::<i128>().unwrap()).unwrap()
     }
 
     #[wasm_bindgen]
@@ -402,9 +409,10 @@ impl WASMMarloweStateMachine {
     }
 
     #[wasm_bindgen]
-    pub fn test_observation(&mut self,obs_json:&str) -> bool {
+    pub fn test_observation(&mut self,obs_json:&str) -> ObservationWasmResult {
         let obs : Observation = serde_json::from_str(obs_json).unwrap();
-        self.internal_instance.assert_observation(&obs).unwrap()
+        let (v,w) = self.internal_instance.assert_observation(&obs).unwrap();
+        ObservationWasmResult { value: v, warnings: WasmTransactionWarnings { items: w } }
     }
 
     #[wasm_bindgen]
@@ -453,7 +461,9 @@ pub struct WasmPayment {
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub from : WasmParty,
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub to : WasmPayee,
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub token : WasmToken,
-    pub amount : i64
+
+    /// BIG INTEGER (i128)
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub amount_i128 : String
 }
 
 #[wasm_bindgen::prelude::wasm_bindgen]
@@ -468,21 +478,27 @@ pub struct WasmToken {
 pub struct WasmAccount {
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub party : WasmParty,
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub token : WasmToken,
-    pub amount : i64
+
+    /// BIG INTEGER (i128)
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub amount_u128 : String
 }
+
 #[wasm_bindgen::prelude::wasm_bindgen]
 #[derive(Debug,Clone)] 
 pub struct WasmChoice {
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub choice_name : String,
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub choice_owner : WasmParty,
-    pub value : i64,
+    /// BIG INTEGER (i128)
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub value_i128 : String
 }
 
 #[wasm_bindgen::prelude::wasm_bindgen]
 #[derive(Debug,Clone)] 
 pub struct WasmBoundValue {
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub name : String,
-    pub value : i64,
+
+    /// BIG INTEGER (i128)
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub value_i128 : String
 }
 
 #[wasm_bindgen::prelude::wasm_bindgen]
@@ -543,15 +559,15 @@ pub struct WasmState {
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub accounts : WasmAccounts,
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub choices : WasmChoices,
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub bound_values : WasmBoundValues,
-    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub min_time : Option<i64> , // POSIXTime
+    pub min_time : Option<u64> , // POSIXTime
 }
 
 impl TryFrom<WasmState> for State {
     type Error = String;
 
     fn try_from(value: WasmState) -> Result<Self, Self::Error> {
-        let mut accounthash : HashMap<(AccountId, Token), u64> = HashMap::new();
-        let mut choicehash : HashMap<ChoiceId, i64> = HashMap::new();
+        let mut accounthash : AccMap<(AccountId, Token), u128> = AccMap::new();
+        let mut choicehash : AccMap<ChoiceId, i128> = AccMap::new();
 
         for x in value.accounts.items {
             if let WasmPartyType::Address = &x.party.typ() {
@@ -563,7 +579,7 @@ impl TryFrom<WasmState> for State {
                             token_name: x.token.name
                         }
                     ), 
-                    x.amount as u64
+                    x.amount_u128.to_string().parse::<u128>().unwrap()
                 );
                 continue;
             }
@@ -576,7 +592,7 @@ impl TryFrom<WasmState> for State {
                             token_name: x.token.name
                         }
                     ), 
-                    x.amount as u64
+                    x.amount_u128.to_string().parse::<u128>().unwrap()
                 );
                 continue;
             }
@@ -587,14 +603,14 @@ impl TryFrom<WasmState> for State {
             if let WasmPartyType::Address = &x.choice_owner.typ() {
                 choicehash.insert(
                     ChoiceId { choice_name: x.choice_name, choice_owner: Some(AccountId::Address(Address::from_bech32(&x.choice_owner.value()).unwrap())) }, 
-                    x.value as i64
+                    x.value_i128.to_string().parse::<i128>().unwrap()
                 );
                 continue;
             }
             if let WasmPartyType::Role = &x.choice_owner.typ() {
                 choicehash.insert(
                     ChoiceId { choice_name: x.choice_name, choice_owner: Some(AccountId::Role{role_token:x.choice_owner.value()}) }, 
-                    x.value as i64
+                    x.value_i128.to_string().parse::<i128>().unwrap()
                 );
                 continue;
             }
@@ -602,16 +618,16 @@ impl TryFrom<WasmState> for State {
             return Err(String::from("invalid state due to invalid choice owner."))
         }
 
-        let mut boundhash : HashMap<ValueId,i64> = HashMap::new();
+        let mut boundhash : AccMap<ValueId,i128> = AccMap::new();
         for x in value.bound_values.items {
-            boundhash.insert(ValueId::Name(x.name), x.value as i64);
+            boundhash.insert(ValueId::Name(x.name), x.value_i128.to_string().parse::<i128>().unwrap());
         } 
 
         Ok(State {
             accounts: accounthash,
             choices: choicehash,
             bound_values: boundhash,
-            min_time: if let Some(v) = value.min_time { v as u64 } else {0},
+            min_time: if let Some(v) = value.min_time { v.to_string().parse::<u64>().unwrap() } else {0},
         })
     }
     
@@ -633,34 +649,34 @@ impl TryFrom<State> for WasmState {
                     let tok_sym = &t.currency_symbol;
     
                     let party = match p {
-                        AccountId::Role { role_token } => WasmParty::new_role(role_token),
+                        AccountId::Role { role_token } => WasmParty::new_role(&role_token),
                         AccountId::Address(a) => WasmParty::new_addr(&a.as_bech32().unwrap())
                     };
-    
+                    
                     WasmAccount {
                         party,
                         token: WasmToken { 
                             name: tok_name.clone(), 
                             pol: tok_sym.clone() 
                         },
-                        amount: *x.1 as i64,
+                        amount_u128: (*x.1).to_string()
                     }
                 }).collect())
             },
             choices: WasmChoices {items:value.choices.iter().map(|a|WasmChoice{
                 choice_name: a.0.choice_name.clone(),
                 choice_owner: a.0.choice_owner.clone().unwrap().try_into().unwrap(),
-                value: *a.1
+                value_i128: (*a.1).to_string()
             }).collect()},
             bound_values: WasmBoundValues {items:value.bound_values.iter().map(|a|{
                 WasmBoundValue {
                     name: match a.0 {
                         ValueId::Name(n) => n.to_string(),
                     },
-                    value: *a.1,
+                    value_i128: (*a.1).to_string(),
                 }
             }).collect()},
-            min_time: Some(value.min_time as i64),
+            min_time: Some(value.min_time),
         })
     }
     
@@ -794,7 +810,7 @@ impl WasmTransactionWarnings {
                 WasmTransactionWarning {
                     typ: WasmTransactionWarningType::TransactionNonPositiveDeposit,
                     value: WasmTransactionWarningTransactionNonPositiveDeposit {
-                        asked_to_deposit: *asked_to_deposit,
+                        asked_to_deposit_i128: asked_to_deposit.to_string(),
                         in_account: match in_account {
                             AccountId::Address(a) => WasmParty::new_addr(&a.as_bech32().unwrap()),
                             AccountId::Role { role_token } => WasmParty::new_role(role_token),
@@ -810,7 +826,7 @@ impl WasmTransactionWarnings {
                 WasmTransactionWarning {
                     typ: WasmTransactionWarningType::TransactionNonPositivePay,
                     value: WasmTransactionWarningTransactionTransactionNonPositivePay {
-                        asked_to_pay: *asked_to_pay,
+                        asked_to_pay_i128: asked_to_pay.to_string(),
                         to_payee: payee_to_wasm(to_payee),
                         account: account_id_to_wasm_party(account),
                         of_token: WasmToken { name: of_token.token_name.to_string(), pol: of_token.currency_symbol.to_string() },
@@ -821,11 +837,11 @@ impl WasmTransactionWarnings {
                 WasmTransactionWarning {
                     typ: WasmTransactionWarningType::TransactionPartialPay,
                     value: WasmTransactionWarningTransactionPartialPay {
-                        asked_to_pay: *asked_to_pay,
+                        asked_to_pay_i128: asked_to_pay.to_string(),
                         to_payee: payee_to_wasm(to_payee),
                         account: account_id_to_wasm_party(account),
                         of_token: WasmToken { name: of_token.token_name.to_string(), pol: of_token.currency_symbol.to_string() },
-                        but_only_paid: *but_only_paid
+                        but_only_paid_i128: but_only_paid.to_string()
                     }.into()
                 }
             },
@@ -833,8 +849,8 @@ impl WasmTransactionWarnings {
                 WasmTransactionWarning {
                     typ: WasmTransactionWarningType::TransactionShadowing,
                     value: WasmTransactionWarningTransactionShadowing {
-                        had_value: *had_value,
-                        is_now_assigned: *is_now_assigned,
+                        had_value_i128: had_value.to_string(),
+                        is_now_assigned_i128: is_now_assigned.to_string(),
                         value_id: value_id.to_string()
                     }.into()
                 }
@@ -853,24 +869,28 @@ pub struct WasmTransactionWarningFailed {
 #[derive(serde::Serialize,Clone)]
 pub struct WasmTransactionWarningTransactionShadowing {
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub value_id : String,
-    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub had_value : i64,
-    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub is_now_assigned : i64
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub had_value_i128 : String,
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub is_now_assigned_i128 : String
 }
 
 #[wasm_bindgen::prelude::wasm_bindgen]
 #[derive(serde::Serialize,Clone)]
 pub struct WasmTransactionWarningTransactionPartialPay  {
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub account : WasmParty,
-    pub asked_to_pay : i64,
+    /// BigInt i128
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub asked_to_pay_i128 : String,
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub of_token : WasmToken,
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub to_payee : WasmPayee,
-    pub but_only_paid : i64
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)]pub but_only_paid_i128 : String
 }
 
 #[wasm_bindgen::prelude::wasm_bindgen]
 #[derive(serde::Serialize,Clone)]
 pub struct WasmTransactionWarningTransactionNonPositiveDeposit {
-    pub asked_to_deposit : i64,
+
+    /// BigInt i64
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub asked_to_deposit_i128 : String,
+    
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub in_account : WasmParty,
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub of_token : WasmToken,        
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub party : WasmParty
@@ -880,7 +900,8 @@ pub struct WasmTransactionWarningTransactionNonPositiveDeposit {
 #[derive(serde::Serialize,Clone)]
 pub struct WasmTransactionWarningTransactionTransactionNonPositivePay{
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)]  pub account : WasmParty,
-    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)]  pub asked_to_pay : i64,
+    /// BigInt i64
+    #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)] pub asked_to_pay_i128 : String,
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)]  pub of_token : WasmToken,
     #[wasm_bindgen::prelude::wasm_bindgen(getter_with_clone)]  pub to_payee : WasmPayee
 }
@@ -1062,7 +1083,7 @@ impl TryFrom<crate::semantics::MachineState> for WasmMachineState {
                 for x in &expected {
                     match x {
 
-                        crate::semantics::InputType::Deposit { 
+                        crate::semantics::ExpectedInput::Deposit { 
                             who_is_expected_to_pay, 
                             expected_asset_type, 
                             expected_amount, 
@@ -1079,18 +1100,24 @@ impl TryFrom<crate::semantics::MachineState> for WasmMachineState {
                                         AccountId::Role { role_token } => WasmPayee { typ: WasmPayeeType::AccountRole, val: role_token.to_string() },
                                     }
                                 }, 
-                                continuation_dsl: continuation.to_dsl()
+                                continuation_dsl: match continuation {
+                                    PossiblyMerkleizedContract::Raw(r) => r.to_dsl(),
+                                    PossiblyMerkleizedContract::Merkleized(m) => format!("expected continuation merkle hash: {}",m),
+                                }
                             };
                             expected_deposits.push(dep);
                         },
 
-                        crate::semantics::InputType::Choice { 
+                        crate::semantics::ExpectedInput::Choice { 
                             choice_name, 
                             who_is_allowed_to_make_the_choice, 
                             bounds, 
                             continuation
                         } => {
-                            let dslcon = continuation.to_dsl();
+                            let dslcon = match continuation {
+                                PossiblyMerkleizedContract::Raw(r) => r.to_dsl(),
+                                PossiblyMerkleizedContract::Merkleized(m) => format!("expected continuation merkle hash: {}",m),
+                            };
                             let strbounds = bounds.iter().map(|x|format!("{}-{}",x.0,x.1)).collect::<Vec<String>>().join(",");
                             let choice = WasmInputChoice { 
                                 choice_name: choice_name.to_string(), 
@@ -1101,7 +1128,7 @@ impl TryFrom<crate::semantics::MachineState> for WasmMachineState {
                             expected_choices.push(choice);
                         },
 
-                        crate::semantics::InputType::Notify{continuation,obs} => {
+                        crate::semantics::ExpectedInput::Notify{continuation,obs} => {
                             expects_notify = true;
                             expected_notifications.push(WasmInputNotification {
                                 observation: serde_json::to_string_pretty(obs).unwrap(), 
@@ -1139,21 +1166,6 @@ impl TryFrom<crate::semantics::MachineState> for WasmMachineState {
 }
 
 
-
-// todo: impl (try)into for those we actually need
-
-// fn party_to_wasm(x:&Party) -> WasmParty {
-//     match &x {
-//         Party::Address(a) => WasmParty { typ: WasmPartyType::Address, val: a.into() },
-//         Party::Role(role_token) => WasmParty { typ: WasmPartyType::Role, val: role_token.to_string() },
-//     }
-// }
-// fn party_to_wasm_payee_account(x:&Party) -> WasmPayee {
-//     match x {
-//         Party::Address(a) => WasmPayee { typ: WasmPayeeType::AccountAddress, val: a.into() },
-//         Party::Role(role_token) => WasmPayee { typ: WasmPayeeType::AccountRole, val: role_token.to_string() },
-//     }
-// }
 fn account_id_to_wasm_party(x:&AccountId) -> WasmParty {
     match x {
         AccountId::Address(a) => WasmParty { typ: WasmPartyType::Address, val: a.as_bech32().unwrap().into() },
@@ -1166,14 +1178,6 @@ fn account_id_to_wasm_payee(x:&AccountId) -> WasmPayee {
         AccountId::Role { role_token } => WasmPayee { typ: WasmPayeeType::AccountRole, val: role_token.to_string() },
     }
 }
-
-
-// fn party_to_wasm_payee_party(x:&Party) -> WasmPayee {
-//     match x {
-//         Party::Address(a) => WasmPayee { typ: WasmPayeeType::PartyAddress, val: a.into() },
-//         Party::Role(role_token) => WasmPayee { typ: WasmPayeeType::PartyRole, val: role_token.to_string() },
-//     }
-// }
 
 fn payee_to_wasm(x:&Payee) -> WasmPayee {
     let accid = match x {

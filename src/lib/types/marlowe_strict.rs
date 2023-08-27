@@ -6,7 +6,6 @@
 use crate::types::marlowe::Address;
 use crate::types::marlowe::Bound;
 use crate::types::marlowe::Token;
-use crate::types::marlowe::PossiblyMerkleizedContract;
 
 pub type Timeout = i64;
 
@@ -39,7 +38,7 @@ impl TryFrom<Contract> for crate::types::marlowe::Contract {
             Contract::When { when, timeout, timeout_continuation } => {
                 let mut whens = vec![];
                 for x in when {
-                    let y : crate::types::marlowe::Case = x.try_into()?; 
+                    let y : crate::types::marlowe::PossiblyMerkleizedCase = x.try_into()?; 
                     whens.push(Some(y))
                 }
                 crate::types::marlowe::Contract::When { 
@@ -114,7 +113,7 @@ impl TryFrom<Payee> for crate::types::marlowe::Payee {
 }
 
 
-impl TryFrom<&Case> for crate::types::marlowe::Case {
+impl TryFrom<&Case> for crate::types::marlowe::PossiblyMerkleizedCase {
     type Error = String;
     fn try_from(x: &Case) -> Result<Self,Self::Error> {
         let actual = x.clone();
@@ -122,13 +121,14 @@ impl TryFrom<&Case> for crate::types::marlowe::Case {
     }
 } 
 
-impl TryFrom<Case> for crate::types::marlowe::Case {
+impl TryFrom<Case> for crate::types::marlowe::PossiblyMerkleizedCase {
     type Error = String;
     fn try_from(x: Case) -> Result<Self,Self::Error> {
-        Ok(Self {
-            case: Some(x.case.try_into()?),
-            then: Some(PossiblyMerkleizedContract::Raw(Box::new(x.then.try_into()?))),
-        })
+        
+        let relaxed_action : crate::types::marlowe::Action = x.case.try_into()?;
+        let relaxed_contract : crate::types::marlowe::Contract = x.then.try_into()?;
+        
+        Ok(Self::Raw { case: Some(relaxed_action), then: Some(relaxed_contract) })
     }
 }
 
@@ -252,7 +252,7 @@ pub enum Payee {
 #[derive(Clone,Debug)]
 pub enum Value {
     AvailableMoney(Party,Token),
-    ConstantValue(i64),
+    ConstantValue(i128),
     NegValue(Box<Value>),
     AddValue(Box<Value>,Box<Value>),
     SubValue(Box<Value>,Box<Value>), 

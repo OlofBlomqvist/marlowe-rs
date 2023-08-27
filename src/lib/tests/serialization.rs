@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use crate::{types::marlowe::*};
+use plutus_data::FromPlutusData;
+
+use crate::types::marlowe::*;
 
 #[cfg(feature="js")]
 use crate::extras::js::*;
@@ -61,7 +63,7 @@ fn json_can_deserialize_when_contract() {
 #[test]
 fn deep_contract_does_not_overflow_stack() {
     let serialized = include_str!("../../../test_data/test_deeply_nested_contract.marlowe");
-    let inputs: Vec<(String,i64)> = vec![
+    let inputs: Vec<(String,i128)> = vec![
         ("Amount of dollars".into(), 1111),
         ("Timeout for dollar deposit".into(), 22222),
         ("Amount of Ada".into(), 33333),
@@ -110,7 +112,7 @@ fn can_reserialize_all_test_data_marlowe_files_using_json() {
         
     for path in paths {
 
-        let mut inputs : HashMap<String,i64> = HashMap::new();
+        let mut inputs : HashMap<String,i128> = HashMap::new();
         count += 1;
         let canonical_path = path.unwrap().path().canonicalize().unwrap();
         let path_string = canonical_path.display().to_string();
@@ -189,29 +191,29 @@ fn state_json_serialization() -> Result<(),String> {
     
     let kalle_role = crate::types::marlowe::Party::Role { role_token : "KALLE".into() };
 
-    let mut bound_values : HashMap<crate::types::marlowe::ValueId,i64> = HashMap::new();
+    let mut bound_values : AccMap<crate::types::marlowe::ValueId,i128> = AccMap::new();
     bound_values.insert(crate::types::marlowe::ValueId::Name("KALLES CHOICE".into()), 12);
 
-    let mut accounts: HashMap<(crate::types::marlowe::Party,crate::types::marlowe::Token),u64>  = HashMap::new();
+    let mut accounts: AccMap<(crate::types::marlowe::Party,crate::types::marlowe::Token),u128>  = AccMap::new();
     accounts.insert((kalle_role.clone(),crate::types::marlowe::Token::ada()), 42);
 
-    let mut choices: HashMap<crate::types::marlowe::ChoiceId,i64>  = HashMap::new();
+    let mut choices: AccMap<crate::types::marlowe::ChoiceId,i128>  = AccMap::new();
     choices.insert(crate::types::marlowe::ChoiceId {
         choice_name: "KALLES CHOICE".into(),
         choice_owner: Some(kalle_role),
     },42);
 
     let basic_state = crate::types::marlowe::State { 
-        accounts,
-        choices,
-        bound_values,
+        accounts:accounts,
+        choices:choices,
+        bound_values:bound_values,
         min_time: 99492
     };
 
     let basic_wasm_state = WasmState {
         accounts: WasmAccounts { items: vec![
             WasmAccount {
-                amount: 42,
+                amount_u128: 42.to_string(),
                 party: WasmParty::new_role("KALLE"),
                 token: WasmToken {
                     name : "kalle".into(),
@@ -223,7 +225,7 @@ fn state_json_serialization() -> Result<(),String> {
             WasmChoice { 
                 choice_name: String::from("choice name"), 
                 choice_owner: WasmParty::new_role("KALLE"), 
-                value: 42
+                value_i128: 42.to_string()
             }
         ]},
         bound_values: WasmBoundValues {items:vec![]},
@@ -459,5 +461,14 @@ fn serialize_input_deposit_with_negative_numbers() {
         that_deposits: -414
     };
     _ = crate::serialization::json::serialize(b).expect("should be able to serialize with negative deposits");
+}
+
+#[test]
+fn serialize_datum_json() {
+    //                                                                             d8799f1a001e84801b000000e8d4a51000ff
+    let original_datum_cbor_hex = "d8799fd8799f40ffd8799fa1d8799fd8799fd87980d8799fd8799f581c5dcf4edfb44e98ac3520fd42fe10ed90ebaf6408efdc9bec6c7b229affd87a80ffffd8799f4040ffff1a002dc6c0a0a000ffd87c9f9fd8799fd8799fd8799fd87980d8799fd8799f581c5dcf4edfb44e98ac3520fd42fe10ed90ebaf6408efdc9bec6c7b229affd87a80ffffd8799fd87980d8799fd8799f581c5dcf4edfb44e98ac3520fd42fe10ed90ebaf6408efdc9bec6c7b229affd87a80ffffd8799f4040ffd87b9fd87b9fd87a9f1a05f5e100ffffffffd87a9fd8799fd87980d8799fd8799f581c5dcf4edfb44e98ac3520fd42fe10ed90ebaf6408efdc9bec6c7b229affd87a80ffffd87a9fd8799fd87980d8799fd8799f581cc46512153c3567c534b81fbc559c7738602a12884e884ed5f095e034ffd87a80ffffffd8799f4040ffd87a9f1a05f5e100ffd87c9f9fd8799fd8799fd8799fd87980d8799fd8799f581cc46512153c3567c534b81fbc559c7738602a12884e884ed5f095e034ffd87a80ffffd8799fd87980d8799fd8799f581cc46512153c3567c534b81fbc559c7738602a12884e884ed5f095e034ffd87a80ffffd8799f4040ffd87a9f1a001e8480ffffd87a9fd8799fd87980d8799fd8799f581cc46512153c3567c534b81fbc559c7738602a12884e884ed5f095e034ffd87a80ffffd87a9fd8799fd87980d8799fd8799f581c5dcf4edfb44e98ac3520fd42fe10ed90ebaf6408efdc9bec6c7b229affd87a80ffffffd8799f4040ffd87a9f1a001e8480ffd87c9f9fd8799fd8799fd8799fd87980d8799fd8799f581cc46512153c3567c534b81fbc559c7738602a12884e884ed5f095e034ffd87a80ffffd8799fd87980d8799fd8799f581cc46512153c3567c534b81fbc559c7738602a12884e884ed5f095e034ffd87a80ffffd8799f4040ffd87a9f1a05f5e100ffffd87a9fd8799fd87980d8799fd8799f581cc46512153c3567c534b81fbc559c7738602a12884e884ed5f095e034ffd87a80ffffd87a9fd8799fd87980d8799fd8799f581c5dcf4edfb44e98ac3520fd42fe10ed90ebaf6408efdc9bec6c7b229affd87a80ffffffd8799f4040ffd87a9f1a05f5e100ffd87980ffffff1b0000018433b4d198d87980ffffffff1b0000018433b4d198d87980ffffffff1b0000018433efbba0d87980ffff";
+    let original_datum_plutus_data = plutus_data::from_bytes(&hex::decode(original_datum_cbor_hex).unwrap()).unwrap();
+    let original_datum_decoded = MarloweDatum::from_plutus_data(original_datum_plutus_data,&vec![]).unwrap();
+    crate::serialization::json::serialize(&original_datum_decoded).unwrap();
 }
 

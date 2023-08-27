@@ -1,0 +1,62 @@
+<Contract> ::= "Close"
+             | "Pay" <Party> <Payee> <Token> <Value> <Contract>
+             | "If" <Observation> <Contract> <Contract>
+             | "When" "[" {<Case> ","} "]" <Timeout> <Contract>
+             | "Let" <ValueId> <Value> <Contract>
+             | "Assert" <Observation> <Contract>
+             | "(" <Contract> ")"
+
+<Case> ::= "Case" <Action> <Contract>
+         | "MerkleizedCase" <Action> <String>
+
+<Action> ::= "Deposit" <Party> <Party> <Token> <Value>
+           | "Choice" <ChoiceId> "[" {<Bound> ","} "]"
+           | "Notify" <Observation>
+           | "(" <Action> ")"
+
+<Value> ::= "AvailableMoney" <Party> <Token>
+          | "Constant" <Integer>
+          | "NegValue" <Value>
+          | "AddValue" <Value> <Value>
+          | "SubValue" <Value> <Value>
+          | "MulValue" <Value> <Value>
+          | "DivValue" <Value> <Value>
+          | "ChoiceValue" <ChoiceId>
+          | "TimeIntervalStart"
+          | "TimeIntervalEnd"
+          | "UseValue" <ValueId>
+          | "Cond" <Observation> <Value> <Value>
+          | "(" <Value> ")"
+
+<Observation> ::= "AndObs" <Observation> <Observation>
+                | "OrObs" <Observation> <Observation>
+                | "NotObs" <Observation>
+                | "ChoseSomething" <ChoiceId>
+                | "ValueGE" <Value> <Value>
+                | "ValueGT" <Value> <Value>
+                | "ValueLT" <Value> <Value>
+                | "ValueLE" <Value> <Value>
+                | "ValueEQ" <Value> <Value>
+                | "TrueObs"
+                | "FalseObs"
+                | "(" <Observation> ")"
+
+<Token> ::= "Token" <String> <String>
+          | "(" <Token> ")"
+
+<Party> ::= "Address" <String>
+          | "Role" <String>
+          | "(" <Party> ")"
+
+<Payee> ::= "Account" <Party>
+          | "Party" <Party>
+          | "(" <Payee> ")"
+
+<ChoiceId> ::= "ChoiceId" <String> <Party>
+             | "(" <ChoiceId> ")"
+
+<ValueId> ::= <String>
+
+<Bound> ::= "Bound" <Integer> <Integer>
+
+<Timeout> ::= <Integer>

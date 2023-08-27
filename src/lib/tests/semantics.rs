@@ -56,7 +56,7 @@ fn basic_semantics_test() {
 
     let wait_for_choice_contract = Contract::When { 
         when: vec![
-            Some(Case {
+            Some(PossiblyMerkleizedCase::Raw  {
                 case:Some(Action::Choice { 
                     for_choice: Some(ChoiceId { 
                         choice_name: "nisses_choice".into(), 
@@ -64,8 +64,7 @@ fn basic_semantics_test() {
                     }), 
                     choose_between: vec![Some(Bound(1,5))]
                 }),
-                then: Some(PossiblyMerkleizedContract::Raw(
-                    Contract::If { 
+                then: Some(Contract::If { 
                         x_if: Some(
                             Observation::ValueEQ {
                                 value: Some(Box::new(Value::ChoiceValue(Some(ChoiceId { 
@@ -78,7 +77,7 @@ fn basic_semantics_test() {
                         then: Some(iffy.boxed()), 
                         x_else: Some(Contract::When { 
                             when: vec![
-                                Some(Case {
+                                Some(PossiblyMerkleizedCase::Raw  {
                                     case:Some(Action::Choice { 
                                         for_choice: Some(ChoiceId { 
                                             choice_name: "nisses_second_choice".into(), 
@@ -86,8 +85,7 @@ fn basic_semantics_test() {
                                         }), 
                                         choose_between: vec![Some(Bound(1,5))]
                                     }),
-                                    then: Some(PossiblyMerkleizedContract::Raw(
-                                        Contract::If { 
+                                    then: Some(Contract::If { 
                                             x_if: Some(
                                                 Observation::ChoseSomething(
                                                     Some(
@@ -102,21 +100,22 @@ fn basic_semantics_test() {
                                             ), 
                                             then: Some(Contract::When { 
                                                 when: vec![
-                                                    Some(Case { 
-                                                        case: Some(Action::Deposit { 
-                                                            into_account: Some(Party::Role { role_token: "NISSE".into() }), 
-                                                            party: Some(Party::Role { role_token: "NISSE".into() }), 
-                                                            of_token: Some(Token::ada()), 
-                                                            deposits: Some(Value::ConstantValue(42))
-                                                        }), 
-                                                        then: Some(PossiblyMerkleizedContract::Raw(Contract::Pay { 
-                                                            from_account: Some(Party::Role { role_token: "NISSE".into() }), 
-                                                            to: Some(Payee::Party(Some(Party::Role {role_token: "NISSE".into()}))), 
-                                                            token: Some(Token::ada()), 
-                                                            pay: Some(Value::ConstantValue(44)), 
-                                                            then: Some(Contract::Close.boxed()) 
-                                                        }.boxed()))
+
+                                                Some(PossiblyMerkleizedCase::Raw { 
+                                                    case: Some(Action::Deposit { 
+                                                        into_account: Some(Party::Role { role_token: "NISSE".into() }), 
+                                                        party: Some(Party::Role { role_token: "NISSE".into() }), 
+                                                        of_token: Some(Token::ada()), 
+                                                        deposits: Some(Value::ConstantValue(42))
+                                                    }), 
+                                                    then:  Some(Contract::Pay { 
+                                                        from_account: Some(Party::Role { role_token: "NISSE".into() }), 
+                                                        to: Some(Payee::Party(Some(Party::Role {role_token: "NISSE".into()}))), 
+                                                        token: Some(Token::ada()), 
+                                                        pay: Some(Value::ConstantValue(44)), 
+                                                        then: Some(Contract::Close.boxed()) 
                                                     })
+                                                })
                                                 ], 
                                                 timeout: Some(Timeout::TimeConstant(
                                                     (ContractInstance::get_current_time()+(2000*60*60)).try_into().unwrap()
@@ -124,15 +123,15 @@ fn basic_semantics_test() {
                                                 timeout_continuation: Some(Contract::Close.boxed()) 
                                             }.boxed()) , 
                                             x_else: Some(Contract::Close.boxed()) 
-                                        }.boxed()
-                                    ))
+                                        }
+                                    )
                                 })
                             ], 
                             timeout: Some(Timeout::TimeConstant((ContractInstance::get_current_time()+(1000*60*60)).try_into().unwrap())), 
                             timeout_continuation:  Some(Contract::Close.boxed())
                         }.boxed()) 
-                    }.boxed()
-                ))
+                    }
+                )
             })
         ], 
         
@@ -162,19 +161,25 @@ fn basic_semantics_test() {
     .expect("nisse should be able to apply his choice.")
     .process().expect("should be able to process after applying the choice");
 
+   // println!("{:?}",machine.0.state.accounts);
     let acc = machine.0.state.accounts.get_key_value(&(Party::Role { role_token: "NISSE".into()}, Token::ada())).expect("should find nisses ada acc");
-    assert!(acc.1 == &2);
+    assert_eq!(acc.1, &2);
+
     let machine_of_second_kind = 
         machine.0.apply_input_choice(
             "nisses_choice".into(),
             Party::Role { role_token: "NISSE".into() }, 
             3
             )
-            .expect("nisse should be able to apply nisses choice").process().expect("should be able to process").0.apply_input_choice(
+            .expect("nisse should be able to apply nisses choice").process();
+        
+    let machine_of_second_kind = machine_of_second_kind.expect("should be able to process").0.apply_input_choice(
             "nisses_second_choice".into(),
             Party::Role { role_token: "NISSE".into() }, 
             3
-        ).expect("nisse should be able to apply a second choice.").process().expect("should be able to process").0.apply_input_deposit(
+        );
+        
+    let machine_of_second_kind = machine_of_second_kind.expect("nisse should be able to apply a second choice.").process().expect("should be able to process").0.apply_input_deposit(
             Party::Role { role_token: "NISSE".into() },
             Token::ada(), 
             42, 
@@ -197,11 +202,9 @@ fn basic_semantics_test() {
     match machine_of_second_kind.1 {
         MachineState::Closed => {
             let accs = machine_of_second_kind.0.as_datum().state.accounts;
-            let v = accs.get_key_value(&(Party::Role { role_token: "NISSE".into()}, Token::ada())).expect("should find nisses ada acc");
-            // for x in machine_of_second_kind.0.logs {
-            //     println!("{}",x)
-            // }
-            assert!(v.1 == &0)
+            if accs.get_key_value(&(Party::Role { role_token: "NISSE".into()}, Token::ada())).is_some() {
+                panic!("should NOT find nisses ada acc here since it is supposed to NOT have any tokens.")
+            };
         },
         _ => panic!("The first machine was not closed even though we selected the number 3 and 3 again... This is bad.")
     }
@@ -262,7 +265,7 @@ fn basic_semantics_test_cannot_pay_more_than_available_funds() {
 
     let wait_for_choice_contract = Contract::When { 
         when: vec![
-            Some(Case {
+            Some(PossiblyMerkleizedCase::Raw  {
                 case:Some(Action::Choice { 
                     for_choice: Some(ChoiceId { 
                         choice_name: "nisses_choice".into(), 
@@ -270,7 +273,7 @@ fn basic_semantics_test_cannot_pay_more_than_available_funds() {
                     }), 
                     choose_between: vec![Some(Bound(1,5))]
                 }),
-                then: Some(PossiblyMerkleizedContract::Raw(
+                then: Some(
                     Contract::If { 
                         x_if: Some(
                             Observation::ValueEQ {
@@ -284,7 +287,7 @@ fn basic_semantics_test_cannot_pay_more_than_available_funds() {
                         then: Some(iffy.boxed()), 
                         x_else: Some(Contract::When { 
                             when: vec![
-                                Some(Case {
+                                Some(PossiblyMerkleizedCase::Raw  {
                                     case:Some(Action::Choice { 
                                         for_choice: Some(ChoiceId { 
                                             choice_name: "nisses_second_choice".into(), 
@@ -292,7 +295,7 @@ fn basic_semantics_test_cannot_pay_more_than_available_funds() {
                                         }), 
                                         choose_between: vec![Some(Bound(1,5))]
                                     }),
-                                    then: Some(PossiblyMerkleizedContract::Raw(
+                                    then: Some(
                                         Contract::If { 
                                             x_if: Some(
                                                 Observation::ChoseSomething(
@@ -308,20 +311,20 @@ fn basic_semantics_test_cannot_pay_more_than_available_funds() {
                                             ), 
                                             then: Some(Contract::When { 
                                                 when: vec![
-                                                    Some(Case { 
+                                                    Some(PossiblyMerkleizedCase::Raw  { 
                                                         case: Some(Action::Deposit { 
                                                             into_account: Some(Party::Role { role_token: "NISSE".into() }), 
                                                             party: Some(Party::Role { role_token: "NISSE".into() }), 
                                                             of_token: Some(Token::ada()), 
                                                             deposits: Some(Value::ConstantValue(42))
                                                         }), 
-                                                        then: Some(PossiblyMerkleizedContract::Raw(Contract::Pay { 
+                                                        then: Some(Contract::Pay { 
                                                             from_account: Some(Party::Role { role_token: "NISSE".into() }), 
                                                             to: Some(Payee::Party(Some(Party::Role {role_token: "NISSE".into()}))), 
                                                             token: Some(Token::ada()), 
                                                             pay: Some(Value::ConstantValue(45)), 
                                                             then: Some(Contract::Close.boxed()) 
-                                                        }.boxed()))
+                                                        })
                                                     })
                                                 ], 
                                                 timeout: Some(Timeout::TimeConstant(
@@ -330,15 +333,15 @@ fn basic_semantics_test_cannot_pay_more_than_available_funds() {
                                                 timeout_continuation: Some(Contract::Close.boxed()) 
                                             }.boxed()) , 
                                             x_else: Some(Contract::Close.boxed()) 
-                                        }.boxed()
-                                    ))
+                                        }
+                                    )
                                 })
                             ], 
                             timeout: Some(Timeout::TimeConstant((ContractInstance::get_current_time()+(1000*60*60)).try_into().unwrap())), 
                             timeout_continuation:  Some(Contract::Close.boxed())
                         }.boxed()) 
-                    }.boxed()
-                ))
+                    }
+                )
             })
         ], 
         
@@ -369,11 +372,17 @@ fn basic_semantics_test_cannot_pay_more_than_available_funds() {
             Party::Role { role_token: "NISSE".into() }, 
             3
             )
-            .expect("nisse should be able to apply nisses choice").process().expect("should be able to process").0.apply_input_choice(
+            .expect("nisse should be able to apply nisses choice").process();
+        
+    let machine_of_second_kind  = 
+        machine_of_second_kind.expect("should be able to process").0.apply_input_choice(
             "nisses_second_choice".into(),
             Party::Role { role_token: "NISSE".into() }, 
             3
-        ).expect("nisse should be able to apply a second choice.").process().expect("should be able to process").0.apply_input_deposit(
+        );
+            
+    
+    let machine_of_second_kind =  machine_of_second_kind.expect("nisse should be able to apply a second choice.").process().expect("should be able to process").0.apply_input_deposit(
             Party::Role { role_token: "NISSE".into() },
             Token::ada(), 
             42, 
@@ -381,9 +390,22 @@ fn basic_semantics_test_cannot_pay_more_than_available_funds() {
 
         ).expect("nisse should be able to apply input deposit").process();
 
-
     match machine_of_second_kind {
-        Ok(_) => panic!("It should not have been possible to make this payment because nisse does not have the funds for it"),
+        Ok((instance,_state)) => {
+            instance.warnings.iter().find(|w| {
+                //println!("FOUND W: {:?}",w);
+                match w {
+                    crate::types::marlowe::TransactionWarning::TransactionPartialPay { 
+                        account: crate::types::marlowe::Party::Role { role_token }, 
+                        asked_to_pay: 45, 
+                        of_token: crate::types::marlowe::Token { currency_symbol, token_name}, 
+                        to_payee: crate::types::marlowe::Payee::Party(Some(crate::types::marlowe::Party::Role { role_token: payee_rt })), 
+                        but_only_paid: 44 
+                    } if currency_symbol == "" && token_name == "" && role_token == "NISSE" && payee_rt == "NISSE" => true,
+                    _ => false
+                }
+            }).expect("there should be a TransactionPartialPay warning since nisse does not have enough funds for the payment.");
+        },
         Err(e) => match &e {
             crate::semantics::ProcessError::Generic(generic_error) => {
                 if !generic_error.contains("45") || !generic_error.contains("44") {
@@ -404,14 +426,14 @@ fn basic_semantics_test_cannot_pay_more_than_available_funds() {
 #[test]
 fn negative_deposits_are_treated_as_zero() {
     let test_account = Some(Party::role("test"));
-    let test_case = Case { 
+    let test_case = PossiblyMerkleizedCase::Raw { 
         case: Some(Action::Deposit { 
             into_account: test_account.clone(), 
             party: test_account.clone(), 
             of_token: Some(Token::ada()), 
             deposits: Some(Value::ConstantValue(-42)) 
         }), 
-        then: Some(PossiblyMerkleizedContract::Raw(Contract::Close.boxed()))  };
+        then: Some(Contract::Close)};
 
     let contract = Contract::When { 
         when: vec![
@@ -429,7 +451,7 @@ fn negative_deposits_are_treated_as_zero() {
 
 
     if let Contract::When { when, timeout:_, timeout_continuation:_ } = deserialized_from_json {
-        let action : Case = when.first().expect("no deposit action found (json)").clone().unwrap();
+        let action : PossiblyMerkleizedCase = when.first().expect("no deposit action found (json)").clone().unwrap();
         if !action.eq(&test_case) {
             panic!("test case does not equal original (json)")
         }
@@ -439,7 +461,7 @@ fn negative_deposits_are_treated_as_zero() {
     }
 
     if let Contract::When { when, timeout:_, timeout_continuation:_ } = deserialized_from_dsl {
-        let action : Case = when.first().expect("no deposit action found (dsl)").clone().unwrap();
+        let action : PossiblyMerkleizedCase = when.first().expect("no deposit action found (dsl)").clone().unwrap();
         if !action.eq(&test_case) {
             panic!("test case does not equal original (dsl)")
         }
@@ -460,7 +482,7 @@ fn negative_deposits_are_treated_as_zero() {
         crate::semantics::MachineState::WaitingForInput { expected, timeout } => {
             assert!(timeout == 9687697276039);
             assert!(expected.len() == 1);
-            if let crate::semantics::InputType::Deposit { 
+            if let crate::semantics::ExpectedInput::Deposit { 
                 who_is_expected_to_pay:_, 
                 expected_asset_type:_, 
                 expected_amount, 
@@ -546,20 +568,23 @@ fn pay_to_external_payee() {
         _ => panic!("contract should have closed, but is actually in state: {state:?}")
     }
 
-    // bank should have an empty acc
-    assert!(instance.state.accounts.len() == 1);
+    // for x in instance.logs {
+    //     println!("INFO --> {x}")
+    // }
+    // for x in instance.warnings {
+    //     println!("WARN --> {x:?}")
+    // }
+
+    // bank should have had the account removed from state since that acc has less than 1 token
+    assert_eq!(instance.state.accounts.len(),0);
     
     // a single payment should have been made to the_payee from the_bank
-    assert!(instance.payments.len() == 1);
+    assert_eq!(instance.payments.len(),1);
     let payment = instance.payments.first().unwrap();
-    assert!(payment.amount == 5_000_000);
-    assert!(payment.token == Token::ada());
-    assert!(payment.to == the_payee);
-    assert!(payment.payment_from == the_bank);  
-
-    // the only acc in the contract should now have no tokens as it was sent to an external payee
-    let bank_acc = instance.state.accounts.get(&(the_bank,Token::ada())).expect("bank should have account with zero amount");
-    assert!(bank_acc == &0)
+    assert_eq!(payment.amount,5_000_000);
+    assert_eq!(payment.token,Token::ada());
+    assert_eq!(payment.to,the_payee);
+    assert_eq!(payment.payment_from,the_bank);  
 
 
 }
@@ -611,23 +636,19 @@ fn pay_to_internal_payee() {
         _ => panic!("contract should have closed, but is actually in state: {state:?}")
     }
 
-    // bank should have an empty acc
-    assert!(instance.state.accounts.len() == 2);
+    // only the payee's account should exist because bank does not have any tokens
+    assert_eq!(instance.state.accounts.len(),1);
     
     // a single payment should have been made to the_payee from the_bank
     assert!(instance.payments.len() == 1);
     let payment = instance.payments.first().unwrap();
-    assert!(payment.amount == 5_000_000);
-    assert!(payment.token == Token::ada());
-    assert!(payment.to == the_payee);
-    assert!(payment.payment_from == the_bank);  
-
-    // the bank acc in the contract should now have no tokens as it was sent to another payee account
-    let bank_acc = instance.state.accounts.get(&(the_bank,Token::ada())).expect("bank should have account with zero amount");
-    assert!(bank_acc == &0);
+    assert_eq!(payment.amount , 5_000_000);
+    assert_eq!(payment.token , Token::ada());
+    assert_eq!(payment.to , the_payee);
+    assert_eq!(payment.payment_from , the_bank);  
 
     let payee_acc = instance.state.accounts.get(&(Party::role("some internal acc"),Token::ada())).expect("payee should have ada in their account");
-    assert!(payee_acc == &5_000_000)
+    assert_eq!(payee_acc , &5_000_000)
 
 
 }

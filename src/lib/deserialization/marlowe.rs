@@ -9,7 +9,7 @@ pub fn deserialize(content:&str) -> Result<ContractParseResult,ParseError>  {
     deserialize_with_input(content.trim_start().trim_end(),Default::default())
 }
 
-pub fn deserialize_with_input(content:&str,input:HashMap<String,i64>) -> Result<ContractParseResult,ParseError>  {
+pub fn deserialize_with_input(content:&str,input:HashMap<String,i128>) -> Result<ContractParseResult,ParseError>  {
     match <MarloweParser as pest::Parser::<Rule>>::parse(
         Rule::MainContract, 
         content

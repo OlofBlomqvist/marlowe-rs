@@ -1,6 +1,6 @@
 mod args;
 use args::{DatumArgs, RedeemerArgs, StateArgs, ContractArgs};
-use marlowe_lang::types::marlowe::{Contract, MarloweDatum, PossiblyMerkleizedInput, Token, Address};
+use marlowe_lang::types::marlowe::{Contract, MarloweDatum, PossiblyMerkleizedInput, Token, Address, AccMap};
 use std::collections::HashMap;
 use marlowe_lang::extras::utils::*;
 use plutus_data::ToPlutusData;
@@ -100,10 +100,10 @@ fn input_redeemer_handler(args:RedeemerArgs) {
 
 fn state_handler(args:StateArgs) {
     match args {
-        StateArgs::InitUsingRole { creator_role, initial_ada } => 
-            create_state(initial_ada,&creator_role),
-        StateArgs::InitUsingAddr { creator_addr, initial_ada } => 
-            create_state_addr(initial_ada,&creator_addr)
+        StateArgs::InitUsingRole { creator_role, initial_lovelace } => 
+            create_state(initial_lovelace,&creator_role),
+        StateArgs::InitUsingAddr { creator_addr, initial_lovelace } => 
+            create_state_addr(initial_lovelace,&creator_addr)
     }
 }
 
@@ -171,7 +171,7 @@ fn contract_handler(args:ContractArgs) {
                         let mut h = HashMap::new();
                         for x in v.split(",") {
                             let (name,value) = x.split_once("=").unwrap();
-                            let value_num = value.trim().parse::<i64>().unwrap();                        
+                            let value_num = value.trim().parse::<i128>().unwrap();                        
                             h.insert(name.trim().to_string(),value_num);
                         }
                         marlowe_lang::deserialization::marlowe::deserialize_with_input(&s,h).unwrap().contract
@@ -233,12 +233,12 @@ fn cli_main_wasi(args:&str)  {
 
 
 // probably should support Address as creator as well? "address": "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x"
-fn create_state(initial_ada:i64,creator_role:&str) {
+fn create_state(initial_lovelace:i128,creator_role:&str) {
         
     let mut state = marlowe_lang::types::marlowe::State {
-        accounts: HashMap::new(),
-        bound_values: HashMap::new(),
-        choices: HashMap::new(),
+        accounts: AccMap::new(),
+        bound_values: AccMap::new(),
+        choices: AccMap::new(),
         min_time: 1
     };
 
@@ -246,17 +246,17 @@ fn create_state(initial_ada:i64,creator_role:&str) {
 
     state.accounts.insert(
         (creator,Token { currency_symbol:"".into(), token_name:"".into()}),
-        (initial_ada*1000) as u64);
+        (initial_lovelace*1000) as u128);
 
     println!("{}",serde_json::to_string_pretty(&state).unwrap());
     
 }
-fn create_state_addr(initial_ada:i64,creator_addr:&str) {
+fn create_state_addr(initial_lovelace:i128,creator_addr:&str) {
         
     let mut state = marlowe_lang::types::marlowe::State {
-        accounts: HashMap::new(),
-        bound_values: HashMap::new(),
-        choices: HashMap::new(),
+        accounts: AccMap::new(),
+        bound_values: AccMap::new(),
+        choices: AccMap::new(),
         min_time: 1
     };
 
@@ -264,7 +264,7 @@ fn create_state_addr(initial_ada:i64,creator_addr:&str) {
 
     state.accounts.insert(
         (creator,Token { currency_symbol:"".into(), token_name:"".into()}),
-        (initial_ada*1000) as u64);
+        (initial_lovelace*1000) as u128);
 
     println!("{}",serde_json::to_string_pretty(&state).unwrap());
     

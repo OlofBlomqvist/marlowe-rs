@@ -14,7 +14,7 @@ pub fn decode_hex(s: &str) -> Result<Vec<u8>, String> {
         .collect()
 }
 
-pub fn try_marlowe_to_json(contract:&str,inputs:&HashMap::<String,i64>) -> Result<String,String> {
+pub fn try_marlowe_to_json(contract:&str,inputs:&HashMap::<String,i128>) -> Result<String,String> {
     match marlowe_lang::deserialization::marlowe::deserialize_with_input(contract,inputs.clone()) {
         Ok(c) => {
             match marlowe_lang::serialization::json::serialize(c.contract) {

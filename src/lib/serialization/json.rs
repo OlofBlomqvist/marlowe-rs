@@ -232,8 +232,8 @@ impl Serialize for State {
 where
     S: serde::Serializer {
         let mut s = serializer.serialize_struct("state", 4)?;
-        let bounds = &self.bound_values.iter().collect::<Vec<(&ValueId, &i64)>>();
-        let choices = &self.choices.iter().collect::<Vec<(&ChoiceId,&i64)>>();
+        let bounds = &self.bound_values.iter().collect::<Vec<(&ValueId, &i128)>>();
+        let choices = &self.choices.iter().collect::<Vec<(&ChoiceId,&i128)>>();
         let accounts = 
             &self.accounts.iter().map(|((party,token),value)|{
                 (( party,
@@ -241,7 +241,7 @@ where
                 ), value)
             }).collect::<Vec<(
                 (&crate::types::marlowe::AccountId, &crate::types::marlowe::Token), 
-                &u64
+                &u128
             )>>();
         s.serialize_field("accounts", accounts)?;
         s.serialize_field("choices", choices)?; 
@@ -252,26 +252,25 @@ where
 }
 
 
-impl Serialize for Case {
+impl Serialize for PossiblyMerkleizedCase {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer {
-        if self.then.is_none() || self.case.is_none() {
-            return Err(serde::ser::Error::custom("A case is not fully initialized. Missing action or continuation contract.".to_string()))
+        match self {
+            PossiblyMerkleizedCase::Raw  { case:Some(action), then:Some(continuation) } => {
+                let mut s = serializer.serialize_struct("case", 2)?;
+                s.serialize_field("then", continuation)?;
+                s.serialize_field("case", &action)?;            
+                s.end()
+            },
+            PossiblyMerkleizedCase::Merkleized { case,then} => {
+                let mut s = serializer.serialize_struct("case", 2)?;
+                s.serialize_field("merkleized_then", &then)?;
+                s.serialize_field("case", &case)?;            
+                s.end()
+            },
+            _ => return Err(serde::ser::Error::custom("A case is not fully initialized. Missing action or continuation contract.".to_string()))
         }
-        let mut s = serializer.serialize_struct("case", 2)?;
-        match &self.then {
-            Some(m) => 
-                match m {
-                    PossiblyMerkleizedContract::Raw(raw_contract) => s.serialize_field("then", raw_contract)?,
-                    PossiblyMerkleizedContract::Merkleized(hash) => s.serialize_field("merkleized_then", hash)?
-                }
-                
-            None => 
-            s.serialize_field("then", &self.then)?,
-        }
-        s.serialize_field("case", &self.case)?;            
-        s.end()
     }
 }
 
@@ -482,7 +481,7 @@ impl Serialize for Value {
                 s.serialize_field("amount_of_token", b)?;
                 s.end()
             },
-            Value::ConstantValue(v) => serializer.serialize_i64(*v),
+            Value::ConstantValue(v) => serializer.serialize_i128(*v),
             Value::ConstantParam(v) => {
                 Err(serde::ser::Error::custom(format!("Constant param not initialized: '{v}'")))
             },

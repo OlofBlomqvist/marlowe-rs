@@ -10,6 +10,7 @@ use crate::{
 
 #[cfg(test)]
 use pest::iterators::Pair;
+use plutus_data::ToPlutusData;
 
 #[test]
 fn deserialize_unwrapped_simple_observation_should_succeed() {
@@ -35,11 +36,11 @@ fn deserialize_wrapped_simple_observation_should_fail() {
 fn serialize_and_print() {
     let my_contract = Contract::When {
         when: vec![
-            Some(Case { 
+            Some(PossiblyMerkleizedCase::Raw  { 
                 case: Some(Action::Notify { 
                     notify_if: Some(Observation::True) 
                 }), 
-                then: Some(PossiblyMerkleizedContract::Raw(Contract::Close.boxed())) }
+                then: Some(Contract::Close) }
             )],
         timeout: Some(Timeout::TimeParam("test".into())),
         timeout_continuation: Some(Contract::Close.boxed()),
@@ -59,11 +60,11 @@ fn serialize_and_print() {
 fn can_generate_contract() {
     Contract::When {
         when: vec![
-            Some(Case {
+            Some(PossiblyMerkleizedCase::Raw  {
                 case: Some(Action::Notify { 
                     notify_if: Some(Observation::True)
                 }),
-                then: Some(PossiblyMerkleizedContract::Raw(Contract::Pay { 
+                then: Some(Contract::Pay { 
                     from_account: Some(Party::Role { role_token: "test".to_string() }), 
                     to: Some(Payee::Account(Some(Party::Address (
                         Address::from_bech32("addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgse35a3x")
@@ -72,13 +73,13 @@ fn can_generate_contract() {
                     token: Some(Token::ada()), 
                     pay: Some(Value::ConstantValue(42)), 
                     then: Some(Contract::Close.boxed())
-                }.boxed()))
+                })
             }),
-            Some(Case { 
+            Some(PossiblyMerkleizedCase::Raw  { 
                 case: Some(Action::Notify { 
                     notify_if: Some(Observation::True) 
                 }), 
-                then: Some(PossiblyMerkleizedContract::Raw(Contract::Close.boxed()))})
+                then: Some(Contract::Close)})
         ],
         timeout: Some(Timeout::TimeParam("test".to_owned())),
         timeout_continuation: Some( Contract::Close.boxed())
@@ -645,3 +646,12 @@ fn walk_for_roles() {
     }
 }
 
+
+
+#[test]
+pub fn big_plutus_i128() {
+    use plutus_data::FromPlutusData;
+    let big_number : i128 = 10000000000000000000;
+    let pl = big_number.to_plutus_data(&vec![]).unwrap();
+    i128::from_plutus_data(pl,&vec![]).unwrap();
+}

@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use serde::Deserialize;
 use crate::types::marlowe::*;
 
@@ -41,10 +39,16 @@ impl<'de> serde::de::Visitor<'de> for TimeoutVisitor {
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(formatter, "a valid timeout object")
     }
-    fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E> {
-        Ok(Timeout::TimeConstant(value))
+    fn visit_i128<E>(self, value: i128) -> Result<Self::Value, E> where E: serde::de::Error  {
+        Ok(Timeout::TimeConstant(value as i64))
     }
-    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E> {
+    fn visit_u128<E>(self, value: u128) -> Result<Self::Value, E> where E: serde::de::Error  {
+        Ok(Timeout::TimeConstant(value as i64))
+    }
+    fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E> where E: serde::de::Error  {
+        Ok(Timeout::TimeConstant(value as i64))
+    }
+    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E> where E: serde::de::Error  {
         Ok(Timeout::TimeConstant(value as i64))
     }
 }
@@ -299,8 +303,8 @@ impl<'de> serde::de::Visitor<'de> for BoundVisitor {
     where
         M: serde::de::MapAccess<'de>
     {
-        let mut from : Option<i64> = None;
-        let mut to : Option<i64> = None;
+        let mut from : Option<i128> = None;
+        let mut to : Option<i128> = None;
         
         while let Some(k) = map.next_key::<&str>()? {
             if k == "from" {
@@ -500,7 +504,7 @@ impl<'de> serde::de::Visitor<'de> for ContractVisitor {
         let mut r#else : Option<Contract> = None;
 
         // WHEN
-        let mut when : Option<Vec<Case>> = None;
+        let mut when : Option<Vec<PossiblyMerkleizedCase>> = None;
         let mut timeout : Option<i64> = None;
         let mut timeout_continuation : Option<Contract> = None;
 
@@ -565,7 +569,7 @@ impl<'de> serde::de::Visitor<'de> for ContractVisitor {
                 when: when.map_or_else(
                     || Err(serde::de::Error::custom(&format!("missing when contract continuation"))),
                     Ok
-                )?.iter().map(|x|Some(x.clone())).collect::<Vec<Option<Case>>>(), 
+                )?.iter().map(|x|Some(x.clone())).collect::<Vec<Option<PossiblyMerkleizedCase>>>(), 
                 timeout: Some(Timeout::TimeConstant(timeout.map_or_else(
                     || Err(serde::de::Error::custom(&format!("missing timeout"))),
                     Ok
@@ -648,7 +652,7 @@ impl<'de> serde::de::Visitor<'de> for ContractVisitor {
 
 struct CaseVisitor;
 impl<'de> serde::de::Visitor<'de> for CaseVisitor {
-    type Value = Case;
+    type Value = PossiblyMerkleizedCase;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(formatter, "a valid case object")
@@ -678,28 +682,10 @@ impl<'de> serde::de::Visitor<'de> for CaseVisitor {
             }
         }
 
-        if (then.is_none()&&merkleized_then.is_none()) && case.is_none() {
-            return Err(serde::de::Error::custom(&"Missing data in case!".to_string()));
-        }
-
-        if merkleized_then.is_some() {
-            Ok(Case { case:Some(case.map_or_else(
-                || Err(serde::de::Error::custom(&format!("missing CASE action"))),
-                Ok
-            )?), then:Some(
-                PossiblyMerkleizedContract::Merkleized(merkleized_then.map_or_else(
-                    || Err(serde::de::Error::custom(&format!("missing CASE continuation merkleized data (merkleized_then)"))),
-                    Ok
-                )?)) })
+        if let Some(merkle_hash_continuation) = merkleized_then {
+            Ok(PossiblyMerkleizedCase::Merkleized { case: case.unwrap(), then: merkle_hash_continuation })
         } else {
-            Ok(Case { case:Some(case.map_or_else(
-                || Err(serde::de::Error::custom(&format!("missing CASE action"))),
-                Ok
-            )?), then:Some(
-                PossiblyMerkleizedContract::Raw(Box::new(then.map_or_else(
-                    || Err(serde::de::Error::custom(&format!("missing CASE continuation (then)"))),
-                    Ok
-                )?))) })
+            Ok(PossiblyMerkleizedCase::Raw { case: case, then: then })
         }
         
 
@@ -709,11 +695,11 @@ impl<'de> serde::de::Visitor<'de> for CaseVisitor {
 
 
 
-// pub accounts : HashMap<(Party,Token),i64>, // Accounts: Map (AccountId, Token) Integer
+// pub accounts : HashMap<(Party,Token),i128>, // Accounts: Map (AccountId, Token) Integer
 // // 2 , choices
-// pub choices : HashMap<ChoiceId,i64> , // Map ChoiceId ChosenNum
+// pub choices : HashMap<ChoiceId,i128> , // Map ChoiceId ChosenNum
 // // 3 , bound vals
-// pub bound_values : HashMap<String,i64>, // Map ValueId Integer
+// pub bound_values : HashMap<String,i128>, // Map ValueId Integer
 
 
 
@@ -731,9 +717,9 @@ impl<'de> serde::de::Visitor<'de> for StateVisitor {
         M: serde::de::MapAccess<'de>
     {
         
-        let mut accounts : Option<Vec<((Party,Token),u64)>> = None;
-        let mut choices : Option<Vec<(ChoiceId,i64)>> = None;
-        let mut bound_values : Option<Vec<(ValueId,i64)>> = None;
+        let mut accounts : Option<Vec<((Party,Token),u128)>> = None;
+        let mut choices : Option<Vec<(ChoiceId,i128)>> = None;
+        let mut bound_values : Option<Vec<(ValueId,i128)>> = None;
         let mut min_time : Option<u64> = None;
         
         while let Some(k) = map.next_key::<&str>()? {
@@ -759,9 +745,9 @@ impl<'de> serde::de::Visitor<'de> for StateVisitor {
             let Some(boun) = bound_values &&
             let Some(min) = min_time {
             
-            let mut accs_hash = HashMap::new();
-            let mut choi_hash = HashMap::new();
-            let mut boun_hash = HashMap::new();
+            let mut accs_hash = AccMap::new();
+            let mut choi_hash = AccMap::new();
+            let mut boun_hash = AccMap::new();
 
             for x in accs {
                 accs_hash.insert(
@@ -958,15 +944,21 @@ impl<'de> serde::de::Visitor<'de> for ValueVisitor {
         write!(formatter, "a valid Value object")
     }
 
-
-    fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E> {
+    fn visit_i128<E>(self, value: i128) -> Result<Self::Value, E> {
         Ok(Value::ConstantValue(value))
     }
 
-    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E> {
-        Ok(Value::ConstantValue(value as i64))
+    fn visit_u128<E>(self, value: u128) -> Result<Self::Value, E> {
+        Ok(Value::ConstantValue(value as i128))
     }
     
+    fn visit_i64<E>(self, value: i64) -> Result<Self::Value, E> {
+        Ok(Value::ConstantValue(value as i128))
+    }
+
+    fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E> {
+        Ok(Value::ConstantValue(value as i128))
+    }
 
     fn visit_str<E>(self, value: &str) -> Result<Self::Value, E> 
     where E: serde::de::Error {
@@ -1159,7 +1151,7 @@ impl<'de> Deserialize<'de> for Party {
             deserializer.deserialize_map(PartyVisitor)
     }
 }
-impl<'de> Deserialize<'de> for Case {    
+impl<'de> Deserialize<'de> for PossiblyMerkleizedCase {    
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where D: serde::Deserializer<'de> { 
             deserializer.deserialize_map(CaseVisitor)

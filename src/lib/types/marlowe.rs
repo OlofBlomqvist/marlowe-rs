@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::ops::Deref;
-use hex::ToHex;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -9,6 +8,7 @@ use serde::Serialize;
 use plutus_data::ToPlutusDataDerive;
 #[cfg(feature = "utils")]
 use plutus_data::FromPlutusDataDerive;
+
 
 //use crate::extras::utils::datum_to_json;
 use crate::parsing::marlowe::ParseError;
@@ -29,13 +29,13 @@ pub  enum AstNode {
     MarloweCaseList(Vec<AstNode>),
     MarloweBoundList(Vec<AstNode>),
     MarloweBound(crate::types::marlowe::Bound),
-    MarloweCase(crate::types::marlowe::Case),
+    MarloweCase(crate::types::marlowe::PossiblyMerkleizedCase),
     MarloweAction(crate::types::marlowe::Action),
     MarloweValue(crate::types::marlowe::Value),
     MarloweObservation(crate::types::marlowe::Observation),
     MarlowePayee(crate::types::marlowe::Payee),
     MarloweChoiceId(crate::types::marlowe::ChoiceId),
-    MarloweNumber(i64),    
+    MarloweNumber(i128),    
     MarlowePossiblyMerkleizedContract(crate::types::marlowe::PossiblyMerkleizedContract),
     Null
 }
@@ -46,18 +46,17 @@ impl Display for AstNode {
     }
 }
 
-#[cfg_attr(feature="js",wasm_bindgen::prelude::wasm_bindgen)]
-#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[cfg_attr(feature = "utils", derive(FromPlutusDataDerive,ToPlutusDataDerive))]
 #[derive(Debug,Clone,PartialEq)]
-pub struct Bound(pub i64,pub i64);
+pub struct Bound(pub i128,pub i128);
 
-
-#[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
+#[cfg_attr(feature = "utils", derive(FromPlutusDataDerive,ToPlutusDataDerive))]
 #[derive(Debug,Hash,PartialEq,Eq,Clone)]
 pub struct ChoiceId { 
     pub choice_name : String, // 0
     #[ignore_option_container]pub choice_owner : Option<Party> //1
 }
+
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Clone,PartialEq)]
@@ -68,7 +67,7 @@ pub enum Payee { // Payee [('Account,0),('Party,1)]
 
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Debug,Clone,PartialEq,Ord,PartialOrd,Eq)]
 pub enum Observation { 
     AndObs { // 0
         #[ignore_option_container]
@@ -112,10 +111,10 @@ pub enum Observation {
 }
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Clone,PartialEq)]
+#[derive(Debug,Clone,Ord,PartialOrd,Eq,PartialEq)]
 pub enum Value {
     AvailableMoney(#[ignore_option_container]Option<Party>,#[ignore_option_container]Option<Token>), // 0
-    ConstantValue(i64), // 1
+    ConstantValue(i128), // 1
     NegValue(#[ignore_option_container]Option<Box<Value>>), // 2
     AddValue(#[ignore_option_container]Option<Box<Value>>,#[ignore_option_container]Option<Box<Value>>), // 3
     SubValue(#[ignore_option_container]Option<Box<Value>>,#[ignore_option_container]Option<Box<Value>>), // 4
@@ -142,7 +141,7 @@ pub enum BoolObs{
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Hash,PartialEq,Eq,Clone)]
 pub struct Token { //  ''Token [('Token,0)]
-#[cfg_attr(feature = "utils",base_16)]
+    #[cfg_attr(feature = "utils",base_16)]
     pub currency_symbol: String, // 0
     pub token_name: String // 1
 
@@ -218,12 +217,16 @@ pub enum ScriptOrPubkeyCred {
 
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Hash,PartialEq,Eq,Clone)]
+#[derive(Hash,PartialEq,Eq,Clone)]
 pub struct Address { 
     pub is_mainnet : bool,
     pub addr : ScriptOrPubkeyCred,
 }
-
+impl std::fmt::Debug for Address {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.as_bech32().unwrap_or_else(|e|e))
+    }
+}
 
 #[derive(Debug,Hash,PartialEq,Eq,Clone)]
 pub enum Party { // ''Party [('Address,0),('Role,1)]
@@ -248,12 +251,12 @@ pub enum InputAction {
         input_from_party: Option<Party>, // 1
         #[ignore_option_container]
         of_tokens: Option<Token>, // 2
-        that_deposits: i64 // 3
+        that_deposits: i128 // 3
     },
     Choice { // 1
         #[ignore_option_container]
         for_choice_id: Option<ChoiceId>, // 0
-        input_that_chooses_num: i64 // 1 
+        input_that_chooses_num: i128 // 1 
     },
     Notify // 2
      
@@ -285,17 +288,20 @@ pub enum Action {
         #[ignore_option_container]notify_if: Option<Observation> // 0
     }
 }
-
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Clone,PartialEq)]
-pub struct Case { 
-    #[ignore_option_container]
-    pub case: Option<Action>, // 0
-    #[ignore_option_container]
-    pub then: Option<PossiblyMerkleizedContract> // 1
+pub enum PossiblyMerkleizedCase { 
+    Raw {
+        #[ignore_option_container]
+        case: Option<Action>, // 0
+        #[ignore_option_container]
+        then: Option<Contract> // 1
+    },
+    Merkleized {
+        case: Action, // 0
+        #[base_16]then: String // 1
+    }
 }
-
-
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Clone,PartialEq)]
@@ -306,7 +312,7 @@ pub enum Timeout {
 }
 
 
-#[derive(Debug,Clone,PartialEq,Deserialize)]
+#[derive(Debug,Clone,PartialEq,Deserialize,ToPlutusDataDerive,FromPlutusDataDerive)]
 pub enum PossiblyMerkleizedContract {
     Raw(Box<Contract>),
     Merkleized(String)
@@ -327,7 +333,7 @@ impl ToPlutusData for Party {
                         }
                         Ok(pallas_primitives::babbage::PlutusData::Constr(pallas_primitives::babbage::Constr { 
                             tag: 121, 
-                            any_constructor:  Some(0), 
+                            any_constructor:  None, 
                             fields: pladdress
                         }))
 
@@ -345,7 +351,7 @@ impl ToPlutusData for Party {
 
                 Ok(pallas_primitives::babbage::PlutusData::Constr(pallas_primitives::babbage::Constr { 
                     tag: 122, 
-                    any_constructor:  Some(1), 
+                    any_constructor:  None, // Some(1), 
                     fields: vec![role_token.to_plutus_data(attributes)?]
                 }))
 
@@ -384,7 +390,7 @@ impl FromPlutusData<Party> for Party {
                                     addr: ScriptOrPubkeyCred::from_plutus_data(content_data.clone(), attributes)?,
                                 }))
                             },
-                            _ => todo!()
+                            _ => return Err(format!("Invalid party item {:?}",&x))
                         }
                         
                     } ,
@@ -413,33 +419,7 @@ impl FromPlutusData<Party> for Party {
     }
 }
 
-impl ToPlutusData for PossiblyMerkleizedContract {
-    fn to_plutus_data(&self,attributes:&[String]) -> Result<PlutusData,String> {
-        match self {
-            PossiblyMerkleizedContract::Raw(contract) => {
-                contract.to_plutus_data(attributes)
-            },
-            PossiblyMerkleizedContract::Merkleized(m) => {
-                let bytes = hex::decode(m).unwrap(); // todo - dont unwrap
-                Ok(PlutusData::BoundedBytes(bytes.into()))
-                //Ok(PlutusData::new_bytes(hex::decode(m).unwrap()))
-            },
-        }
-    }
-}
 
-impl FromPlutusData<PossiblyMerkleizedContract> for PossiblyMerkleizedContract {
-    fn from_plutus_data(x:PlutusData,attributes:&[String]) -> Result<PossiblyMerkleizedContract,String> {
-        match &x {
-            PlutusData::Constr(_c) => {
-                let inner_contract = Contract::from_plutus_data(x, attributes)?;
-                Ok(PossiblyMerkleizedContract::Raw(Box::new(inner_contract)))
-            },
-            PlutusData::BoundedBytes(b) =>  Ok(PossiblyMerkleizedContract::Merkleized(b.encode_hex())),
-            _ => Err(String::from("failed to deserialize possibly merkleized contract."))
-        }
-    }
-}
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
 #[derive(Debug,Clone,PartialEq)]
@@ -468,7 +448,7 @@ pub enum Contract {
         #[ignore_option_container]x_else: Option<Box<Contract>> 
     },
     When  {  // 3
-        #[ignore_option_container]when: Vec<Option<Case>>, 
+        #[ignore_option_container]when: Vec<Option<PossiblyMerkleizedCase>>, 
         #[ignore_option_container]timeout: Option<Timeout>,
         #[ignore_option_container]timeout_continuation: Option<Box<Contract>>
     },
@@ -483,7 +463,7 @@ pub enum Contract {
     }
 }
 
-Impl_From_For_Vec!(@MarloweCaseList,@MarloweCase,@Case);
+Impl_From_For_Vec!(@MarloweCaseList,@MarloweCase,@PossiblyMerkleizedCase);
 Impl_From_For_Vec!(@MarloweBoundList,@MarloweBound,@Bound);
 Impl_From_For!(@Payee,MarlowePayee);
 Impl_From_For!(@String,StringValue);
@@ -491,12 +471,12 @@ Impl_From_For!(@Action,MarloweAction);
 Impl_From_For!(@ChoiceId,MarloweChoiceId);
 Impl_From_For!(@Value,MarloweValue);
 Impl_From_For!(@Bound,MarloweBound);
-Impl_From_For!(@Case,MarloweCase);
+Impl_From_For!(@PossiblyMerkleizedCase,MarloweCase);
 Impl_From_For!(@Token,MarloweToken);
 Impl_From_For!(@Party,MarloweParty);
 Impl_From_For!(@Timeout,MarloweTimeout);
 Impl_From_For!(@Contract,MarloweContract);
-Impl_From_For!(@i64,MarloweNumber);
+Impl_From_For!(@i128,MarloweNumber);
 Impl_From_For!(@Observation,MarloweObservation);
 Impl_From_For!(@ValueId,MarloweValueId);
 Impl_From_For!(@PossiblyMerkleizedContract,MarlowePossiblyMerkleizedContract);
@@ -611,12 +591,20 @@ pub(crate) fn walk(
             }
         },
         AstNode::MarloweCase(x) => {
-            if let Some(case) = &x.case {
-                walk_any(case,func);
+            match &x {
+                PossiblyMerkleizedCase::Raw { case,then }=> {
+                    if let Some(case) = &case {
+                        walk_any(case,func)
+                    }
+                    if let Some(then) = &then {
+                        walk_any(then,func)
+                    }
+                },
+                PossiblyMerkleizedCase::Merkleized { case, then:_ }=> {
+                    walk_any(case,func)
+                },
             }
-            if let Some(PossiblyMerkleizedContract::Raw(c)) = &x.then {
-                walk_any(c,func);
-            }
+            
         },
         AstNode::MarloweAction(x) => match x {
             Action::Deposit { into_account:Some(a), party:Some(b), of_token:Some(c), deposits:Some(d) } => {
@@ -751,11 +739,93 @@ impl Boxer for Contract {
 
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
-#[derive(Debug,Clone,PartialEq,Eq,Hash)]
+#[derive(Debug,Clone,PartialEq,Eq,Hash,Ord,PartialOrd)]
 pub enum ValueId {
     Name(String)
 }
 
+
+#[derive(Debug,Clone)]
+pub struct AccMap<
+    K: Eq + plutus_data::FromPlutusData<K> + plutus_data::ToPlutusData,
+    V: Eq + plutus_data::FromPlutusData<V> + plutus_data::ToPlutusData
+>(indexmap::IndexMap<K, V>);
+
+impl<
+    K: Eq + plutus_data::FromPlutusData<K> + plutus_data::ToPlutusData,
+    V: Eq + plutus_data::FromPlutusData<V> + plutus_data::ToPlutusData
+> AccMap<K,V> {
+    pub fn new() -> Self {
+        AccMap(indexmap::IndexMap::new())
+    }
+}
+impl<
+    K: std::hash::Hash + Eq + plutus_data::FromPlutusData<K> + plutus_data::ToPlutusData,
+    V: Eq + plutus_data::FromPlutusData<V> + plutus_data::ToPlutusData
+> FromPlutusData<AccMap<K,V>> for AccMap<K,V> {
+    
+    fn from_plutus_data(x:PlutusData,attributes:&[String]) -> Result<AccMap<K,V>,String> {
+        match &x {
+            PlutusData::Map(m) => {
+                let mut imap = AccMap::<K,V>::new();
+                for (k,v) in m.iter() {
+                    let decoded_key = K::from_plutus_data(k.clone(), attributes)?;
+                    let decoded_val = V::from_plutus_data(v.clone(), attributes)?;
+                    imap.insert(decoded_key,decoded_val);
+
+                }
+                Ok(imap)
+            },
+            _ => Err(String::from("could not decoded AccMap because input was not a map."))
+        }
+       
+    }
+
+}
+
+impl<
+    K: Eq + plutus_data::FromPlutusData<K> + plutus_data::ToPlutusData,
+    V: Eq + plutus_data::FromPlutusData<V> + plutus_data::ToPlutusData
+> Deref for AccMap<K,V> {
+
+    type Target = indexmap::IndexMap<K, V>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+
+}
+
+impl<
+    K: Eq + plutus_data::FromPlutusData<K> + plutus_data::ToPlutusData,
+    V: Eq + plutus_data::FromPlutusData<V> + plutus_data::ToPlutusData
+> std::ops::DerefMut for AccMap<K,V> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl<
+    K: Eq + plutus_data::FromPlutusData<K> + plutus_data::ToPlutusData,
+    V: Eq + plutus_data::FromPlutusData<V> + plutus_data::ToPlutusData
+> ToPlutusData for AccMap<K,V> {
+    fn to_plutus_data(&self, attributes: &[String]) -> Result<PlutusData, String> {
+
+        let mut result = vec![];
+
+        for (k, v) in self.0.iter() {
+            let encoded_k = k.to_plutus_data(attributes)?;
+            let encoded_v = v.to_plutus_data(attributes)?;
+            result.push((encoded_k, encoded_v));
+        }
+
+        Ok(PlutusData::Map(
+            pallas_codec::utils::KeyValuePairs::Def(
+                result
+            )
+        ))
+    }
+}
 
 
 #[cfg_attr(feature = "utils", derive(ToPlutusDataDerive,FromPlutusDataDerive))]
@@ -765,15 +835,15 @@ pub struct State {
     // Current quanties of token per token and participant 
     // 1
     // type Accounts = Map (AccountId, Token) Integer
-    pub accounts : HashMap<(Party,Token),u64>, // Accounts: Map (AccountId, Token) Integer
+    pub accounts : AccMap<(Party,Token),u128>, // Accounts: Map (AccountId, Token) Integer
     
     // Choices made by contract participants are stored here
     // 2 , choices
-    pub choices : HashMap<ChoiceId,i64> , // Map ChoiceId ChosenNum
+    pub choices : AccMap<ChoiceId,i128> , // Map ChoiceId ChosenNum
     
     // Bounds values are where the results of Let contracts get stored
     // 3 , bound vals ((ValueId × int) list)
-    pub bound_values : HashMap<ValueId,i64>, // Map ValueId Integer
+    pub bound_values : AccMap<ValueId,i128>, // Map ValueId Integer
 
     // Minimum time for contract validity. Updated on each tx to prevent backwards time-travel.
     // 4, min time
@@ -781,9 +851,9 @@ pub struct State {
 }
 
 impl<'a> State {
-    pub fn locked_amounts(&'a self) -> Vec<(&'a Party,&'a Token,u64)> {
-        let mut items : Vec<(&'a Party,&'a Token,u64)> = vec![];
-        for ((party,token),amount) in &self.accounts {
+    pub fn locked_amounts(&'a self) -> Vec<(&'a Party,&'a Token,u128)> {
+        let mut items : Vec<(&'a Party,&'a Token,u128)> = vec![];
+        for ((party,token),amount) in &self.accounts.0 {
             items.push((party,token,*amount));
         }
         items
@@ -863,7 +933,7 @@ impl Contract {
         crate::serialization::marlowe::serialize(self.clone())
     }
 
-    pub fn from_dsl(contract_marlowe_dsl:&str,inputs:Vec<(String,i64)>) -> Result<Contract,ParseError> {
+    pub fn from_dsl(contract_marlowe_dsl:&str,inputs:Vec<(String,i128)>) -> Result<Contract,ParseError> {
         let mut inp = HashMap::new();
         for (a,b) in inputs {
             inp.insert(a,b);
@@ -980,15 +1050,26 @@ impl Contract {
                 }
             } else {vec![]}
         }
-        fn get_from_case(x:&Case) -> Vec<RequiredContractInputField> {
+        fn get_from_case(x:&PossiblyMerkleizedCase) -> Vec<RequiredContractInputField> {
+            
+            let (case,continuation) = match &x {
+                PossiblyMerkleizedCase::Raw  { case, then }  => {
+                    (case.clone(),then.clone())
+                },
+                PossiblyMerkleizedCase::Merkleized  { case, then:_ } => {
+                    (Some(case.clone()),None)
+                },
+            };
+
             let action_fields = 
-                if let Some(a) = &x.case { 
+                if let Some(a) = &case { 
                     get_from_action(a)          
                 } else {
                     vec![]
                 };
-            match &x.then {
-                Some(PossiblyMerkleizedContract::Raw(c)) => get_from_contract(c,action_fields),
+
+            match &continuation{
+                Some(c) => get_from_contract(c,action_fields),
                 _ => action_fields                
             }   
         }
@@ -1129,7 +1210,7 @@ pub struct Payment {
    pub payment_from : Party,
    pub to : Payee,
    pub token : Token,
-   pub amount : u64
+   pub amount : u128
 }
 
 /// Note: Do not manually construct this struct.
@@ -1169,7 +1250,8 @@ impl TransactionError {
 #[derive(Serialize,Deserialize,Debug,Clone)]
 #[serde(untagged)]
 pub enum TransactionErrorContent {
-    Obj(IntervalError), Str(String)
+    Obj(IntervalError), 
+    Str(String)
 }
 
 #[derive(Serialize,Deserialize,Debug)]
@@ -1216,36 +1298,130 @@ pub struct IntervalError {
 
 pub type AccountId = Party;
 
-#[derive(Serialize,Deserialize,Debug,Clone)]
+
+pub fn from_i128_str<'de, D>(deserializer: D) -> Result<i128, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s: String = Deserialize::deserialize(deserializer)?;
+    Ok(i128::from_str_radix(&s, 36).unwrap())
+}
+pub fn from_u128_str<'de, D>(deserializer: D) -> Result<u128, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let s: String = Deserialize::deserialize(deserializer)?;
+    Ok(u128::from_str_radix(&s, 36).unwrap())
+}
+
+#[derive(Serialize,Debug,Clone)]
 #[serde(untagged)]
 pub enum TransactionWarning {
     TransactionNonPositiveDeposit {
-        asked_to_deposit : i64,
+        asked_to_deposit : i128,
         in_account : AccountId,
         of_token : Token,        
         party : Party
     },
     TransactionPartialPay  {
         account : AccountId,
-        asked_to_pay : i64,
+        asked_to_pay : u128,
         of_token : Token,
         to_payee : Payee,
-        but_only_paid : i64
+        but_only_paid : u128
     },
     TransactionNonPositivePay {
         account : AccountId,
-        asked_to_pay : i64,
+        asked_to_pay : i128,
         of_token : Token,
         to_payee : Payee
     },
     TransactionShadowing {
         value_id : String,
-        had_value : i64,
-        is_now_assigned : i64
+        had_value : i128,
+        is_now_assigned : i128
     },
     /// Do not use this directly.
     /// Instead call transaction_assertion_failed()!
     TransactionAssertionFailed(String)
+}
+
+
+struct TransactionWarningVisitor;
+
+// NOTE: This visitor exists due to this bug: https://github.com/serde-rs/json/issues/740
+// So because we need to use untagged enums for this, we handle it manually for now. 
+impl<'de> serde::de::Visitor<'de> for TransactionWarningVisitor {
+    type Value = TransactionWarning;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("a valid TransactionWarning enum")
+    }
+    fn visit_map<M>(self, mut access: M) -> Result<Self::Value, M::Error>
+    where
+        M: serde::de::MapAccess<'de>
+    {
+        let mut fields = HashMap::new();
+        while let Some((key, value)) = access.next_entry::<String, serde_json::Value>()? {
+            fields.insert(key, value);
+        }
+
+        let has_asked_to_deposit = fields.contains_key("asked_to_deposit");
+        let has_in_account = fields.contains_key("in_account");
+        let has_account = fields.contains_key("account");
+        let has_of_token = fields.contains_key("of_token");        
+        let has_party = fields.contains_key("party");
+        let has_asked_to_pay = fields.contains_key("asked_to_pay");
+        let has_to_payee = fields.contains_key("to_payee");
+        let has_but_only_paid = fields.contains_key("but_only_paid");
+        let has_value_id = fields.contains_key("value_id");
+        let has_had_value = fields.contains_key("had_value");
+        let has_is_now_assigned = fields.contains_key("is_now_assigned");
+
+        if has_asked_to_deposit && has_in_account && has_of_token && has_party {
+            
+            return Ok(TransactionWarning::TransactionNonPositiveDeposit {
+                asked_to_deposit: i128::from_str_radix(&fields["asked_to_deposit"].to_string(), 10).map_err(serde::de::Error::custom)?,
+                in_account: AccountId::deserialize(&fields["in_account"]).map_err(serde::de::Error::custom)?,
+                of_token: Token::deserialize(&fields["of_token".into()]).map_err(serde::de::Error::custom)?,
+                party: Party::deserialize(&fields["party"]).map_err(serde::de::Error::custom)?
+            });
+
+        } else if has_value_id && has_had_value && has_is_now_assigned {
+            return Ok(TransactionWarning::TransactionShadowing {
+                value_id: fields["value_id"].as_str().ok_or_else(||serde::de::Error::custom("could not read value_id"))?.to_string(),
+                had_value: i128::from_str_radix(&fields["had_value"].to_string(), 10).map_err(serde::de::Error::custom)?,
+                is_now_assigned: i128::from_str_radix(&fields["is_now_assigned"].to_string(), 10).map_err(serde::de::Error::custom)?
+            });
+        } else if has_account && has_asked_to_pay && has_of_token && has_to_payee && has_but_only_paid {
+            return Ok(TransactionWarning::TransactionPartialPay {
+                account: Party::deserialize(&fields["account"]).map_err(serde::de::Error::custom)?,
+                asked_to_pay: fields["asked_to_pay"].as_u64().unwrap() as u128,
+                of_token: Token::deserialize(&fields["of_token".into()]).map_err(serde::de::Error::custom)?,
+                to_payee: Payee::deserialize(&fields["to_payee"]).map_err(serde::de::Error::custom)?,
+                but_only_paid: fields["but_only_paid"].as_u64().unwrap() as u128,
+            });
+        } else if has_account && has_asked_to_pay && has_of_token && has_to_payee {
+            return Ok(TransactionWarning::TransactionNonPositivePay {
+                account: Party::deserialize(&fields["account"]).map_err(serde::de::Error::custom)?,
+                asked_to_pay: fields["asked_to_pay"].as_i64().unwrap() as i128,
+                of_token: Token::deserialize(&fields["of_token".into()]).map_err(serde::de::Error::custom)?,
+                to_payee: Payee::deserialize(&fields["to_payee"]).map_err(serde::de::Error::custom)?,
+            });
+        }
+        else {
+            return Err(serde::de::Error::custom("Unable to identify TransactionWarning variant"));
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for TransactionWarning {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::de::Deserializer<'de>,
+    {
+        deserializer.deserialize_map(TransactionWarningVisitor)
+    }
 }
 
 impl TransactionWarning {

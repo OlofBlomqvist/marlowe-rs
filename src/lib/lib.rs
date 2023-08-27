@@ -32,11 +32,11 @@
 //! 
 //! let my_contract = Contract::When {
 //!     when: vec![
-//!         Some(Case { 
+//!         Some(PossiblyMerkleizedCase::Raw { 
 //!             case: Some(Action::Notify { 
 //!                 notify_if: Some(Observation::True)
 //!             }), 
-//!             then: Some(marlowe_lang::types::marlowe::PossiblyMerkleizedContract::Raw(Contract::Close.boxed())) })
+//!             then: Some(Contract::Close) })
 //!     ],
 //!     timeout: Some(Timeout::TimeParam("test".into())),
 //!     timeout_continuation: Some(Contract::Close.boxed()),
