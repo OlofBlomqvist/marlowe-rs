@@ -3,140 +3,119 @@
 [![crates.io](https://img.shields.io/crates/v/marlowe_lang.svg)](https://crates.io/crates/marlowe_lang)
 [![Documentation](https://docs.rs/marlowe_lang/badge.svg)](https://docs.rs/marlowe_lang)
 [![BuildAndTest](https://github.com/OlofBlomqvist/marlowe_rust/actions/workflows/rust.yml/badge.svg?branch=master)](https://github.com/OlofBlomqvist/marlowe_rust/actions/workflows/rust.yml)
+[![npm version](https://badge.fury.io/js/marlowe_lang.svg)](https://www.npmjs.com/package/marlowe_lang)
+[![PyPI version](https://badge.fury.io/py/marlowe.svg)](https://pypi.org/project/marlowe/)
 
-An experimental Rust implementation of the Marlowe DSL for Cardano smart (financial) contracts. 
-It allows you to create Marlowe contracts from Rust rather than using Marlowe directly.
+An **experimental** Rust implementation of  Marlowe for Cardano smart (financial) contracts. See the examples dir for use with node/deno/react etc.
 
-It is used by the MarloweLSP VSCode Extention (Syntax highlighting for Marlowe in VSCode).
+Note that while there is support for encoding and decoding on-chain data, this crate focuses on the off-chain parts, making it as easy as possible to create, manage and understand contracts in Rust; there will not be any support for creating actual transactions.
+
+There is also no support for directly communicating with any Cardano or Marlowe infrastructure - this is purely an implementation of the datatypes, semantics and serialization for Marlowe.
 
 ### Main Features
+- Encode/Decode Marlowe types between: MarloweDSL/Rust/Json/CborHex
+- List contract parameters used in a contract (extended marlowe)
+- Initialization of contract parameters (extended-marlowe).
 
-- Deserialize Marlowe contracts in to Rust types.
-- Serialize the Rust types back in to Marlowe.
-- Tokenization of Marlowe contracts.
-- Experimental support for initializing contract variables.
-- Experimental support for serializing to marlowe core (json) for use with the marlowe-cli tool etc.
+### Unstable features
+* enabled via the 'unstable' feature.
+- Contract simulation (semantics::ContractInstance)
+- List expected input actions (semantics::ContractInstance)
 
-### Disclaimers
+### Consuming the library
 
-- This crate was created as a learning exercise and should not be trusted anywhere near a production environment at this time.
-
-- It is a side-project and might be dropped completely at any time (it may already be dead!)
-
-- The pest.rs grammar file is just an initial attempt to make sense of the language from a high level. 
-  It will likely have to be rebuilt from the ground up when Marlowe v3 is official.
+This crate can be used in Rust, React, Node, Deno, wasmtime/wasmer etc., see the examples directory for more details. 
 
 
-### Example usage
+### WIP & TODOs
 
-```rust
-use marlowe_lang::types::marlowe::*;
-use marlowe_lang::parsing::{
- deserialization::deserialize,
- serialization::serialize,
-};
+- Add [marlowe-spec-test](https://github.com/input-output-hk/marlowe/tree/master/marlowe-spec-test) to build pipeline when it has been properly packaged.
 
-let my_contract = Contract::When {
-    cases: vec![
-        Some(Case { 
-            action: Some(Action::Notify { 
-                notify_if: Some(Observation::TrueObs) 
-            }), 
-            contract: Some(Contract::Close.boxed()) } )
-    ],
-    timeout: Some(imeout::TimeParam("test".into())),
-    timeout_continuation: Some(Contract::Close.boxed()),
-};
+- Rewrite parser logic to use Chumsky.
 
-let serialized = serialize(my_contract);
-let deserialized : Contract = deserialize(&serialized).unwrap();
-println!("{serialized}");
-```
+## CLI Tool:
 
-#### Where 'println!("{serialized}")' would output this:
-```text
-When [ Case (Notify (TrueObs)) Close ] (TimeParam "test") Close
-```
-
-Using the library directly, or by installing the cli_tool, 
-you can also serialize to json, or print a pest.rs token tree:
-
-// install marlowe_lang_cli
+### Installation:
 ```bash
 rustup default nightly
 cargo install marlowe_lang
 ```
 
-Serialize into marlowe json (experimental support):
-```bash
-marlowe_lang_cli -i "TEST_PARAM_NAME=123123,MY_TIMEOUT=1233335553" -j from-file my_file.marlowe
+### Examples 
+
+#### marlowe_lang_cli -h
+```text
+Usage: marlowe_lang_cli <COMMAND>
+
+Commands:
+  datum        Tools for working with datums
+  state        Tools for working with state
+  redeemer     Tools for working with inputs/redeemers (marlowe actions)
+  contract     Tools for working with contracts
+  plutus-data  Tools for working with unknown plutus data
+  help         Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help     Print help information
+  -V, --version  Print version information
 ```
 
-which would return json similar to below:
+#### marlowe_lang_cli decoding a datum
+```text
+./marlowe_lang datum from-string d8799fd8799f40ffd8799fa1d8799fd8799fd87a80d8799fd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd87a80ffffd8799f4040ffff1a002dc6c0a0a001ffd87c9f9fd8799fd8799fd8799fd87a80d8799fd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd87a80ffffd8799fd87a80d8799fd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd87a80ffffd8799f581ca7f7e57db27c9e2f80c205ccb30f73e57f0ee8fc21aff7b86b5daf7845476c6f6265ffd87a9f19012cffffd87c9f9fd8799fd8799fd8799fd87a80d8799fd8799f581cfd37884bbd044c72e5f29de1b777a9c1c1d531773535cd5b55e2f6ffffd87a80ffffd8799fd87a80d8799fd8799f581cfd37884bbd044c72e5f29de1b777a9c1c1d531773535cd5b55e2f6ffffd87a80ffffd8799f581cecc8ad61b973946ee1cc666b259acabb3edf38a73f1b8779d93ba28a445377616effd87a9f1901f4ffffd87a9fd8799fd87a80d8799fd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd87a80ffffd87a9fd8799fd87a80d8799fd8799f581cfd37884bbd044c72e5f29de1b777a9c1c1d531773535cd5b55e2f6ffffd87a80ffffffd8799f581ca7f7e57db27c9e2f80c205ccb30f73e57f0ee8fc21aff7b86b5daf7845476c6f6265ffd87a9f19012cffd87a9fd8799fd87a80d8799fd8799f581cfd37884bbd044c72e5f29de1b777a9c1c1d531773535cd5b55e2f6ffffd87a80ffffd87a9fd8799fd87a80d8799fd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd87a80ffffffd8799f581cecc8ad61b973946ee1cc666b259acabb3edf38a73f1b8779d93ba28a445377616effd87a9f1901f4ffd87980ffffffff1b0000018386dd2358d87980ffffff1b000001838449f558d87980ffff cbor-hex detailed-text`
 
+State: (MarloweDatumState Accounts([{ (Address "addr1vywt2xlr4d8yk4qws675exlqy6pdhq2s76wrehkjggkvr0czta9gx"),(Token "" ""),3000000 },]) Bound_Values({}) Choices({}) MinTime(1))    
+
+Continuation: Contract (Marlowe-DSL): When [ (Case (Deposit (Address "addr1vywt2xlr4d8yk4qws675exlqy6pdhq2s76wrehkjggkvr0czta9gx") (Address "addr1vywt2xlr4d8yk4qws675exlqy6pdhq2s76wrehkjggkvr0czta9gx") (Token "a7f7e57db27c9e2f80c205ccb30f73e57f0ee8fc21aff7b86b5daf78" "Globe") (Constant 300)) (When [ (Case (Deposit (Address "addr1v87n0zzth5zycuh972w7rdmh48qur4f3wu6ntn2m2h30dlchhlqt3") (Address "addr1v87n0zzth5zycuh972w7rdmh48qur4f3wu6ntn2m2h30dlchhlqt3") (Token "ecc8ad61b973946ee1cc666b259acabb3edf38a73f1b8779d93ba28a" "Swan") (Constant 500)) (Pay (Address "addr1vywt2xlr4d8yk4qws675exlqy6pdhq2s76wrehkjggkvr0czta9gx") (Party (Address "addr1v87n0zzth5zycuh972w7rdmh48qur4f3wu6ntn2m2h30dlchhlqt3")) (Token "a7f7e57db27c9e2f80c205ccb30f73e57f0ee8fc21aff7b86b5daf78" "Globe") (Constant 300) (Pay (Address "addr1v87n0zzth5zycuh972w7rdmh48qur4f3wu6ntn2m2h30dlchhlqt3") (Party (Address "addr1vywt2xlr4d8yk4qws675exlqy6pdhq2s76wrehkjggkvr0czta9gx")) (Token "ecc8ad61b973946ee1cc666b259acabb3edf38a73f1b8779d93ba28a" "Swan") (Constant 500) Close))) ] 1664414983000 Close)) ] 1664371783000 Close
+```
+#### marlowe_lang_cli decoding redeemer / input actions
+```text 
+./marlowe_lang redeemer from-string 9fd8799fd8799fd8799fd87a80d8799fd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd87a80ffffd8799fd87a80d8799fd8799f581c1cb51be3ab4e4b540e86bd4c9be02682db8150f69c3cded2422cc1bfffd87a80ffffd8799f581ca7f7e57db27c9e2f80c205ccb30f73e57f0ee8fc21aff7b86b5daf7845476c6f6265ff19012cffffff cbor-hex marlowe-dsl
+
+RESULT:
+ (Deposit (Address "addr1vywt2xlr4d8yk4qws675exlqy6pdhq2s76wrehkjggkvr0czta9gx") (Address "addr1vywt2xlr4d8yk4qws675exlqy6pdhq2s76wrehkjggkvr0czta9gx") (Token "a7f7e57db27c9e2f80c205ccb30f73e57f0ee8fc21aff7b86b5daf78" "Globe") 300)
+```
+
+#### marlowe_lang_cli query contract for expected inputs
+```
+marlowe_lang_clicontract from-file .\test_data\swap.marlowe marlowe-dsl expected-actions -i "Timeout for Ada deposit=9999999999,Amount of Ada=4994,Amount of dollars=99,Timeout for dollar deposit=994"`
+```
+
+    Log output:
+    --> INITIALIZED BY MARLOWE LANG STATE MACHINE AT 1672581873
+    --> Processing When contract
+
+**Result (current contract state):**
 ```json
 {
-  "when": [
+  "WaitingForInput": [
     {
-      "then": {
-        "when": [
-          {
-            "then": {
-              "when": [
-                {
-                  "then": {
-                    "when": [
-                      {
-                        "then": "close",
-                        "case": {
-                          "for_choice": {
-                            "choice_owner": {
-                              "role_token": "Buyer".....
+      "Deposit": {
+        "who_is_expected_to_pay": {
+          "role_token": "Ada provider"
+        },
+        "expected_asset_type": {
+          "token_name": "",
+          "currency_symbol": ""
+        },
+        "expected_amount": {
+          "and": 4994,
+          "add": 1000000
+        },
+        "expected_target_account": {
+          "account": {
+            "role_token": "Ada provider"
+          }
+        },
+        "continuation": {
+          "when": [
+            ... // removed from example output for brevity 
+          ],
+          "timeout_continuation": "close",
+          "timeout": 994
+        }
+      }
+    }
+  ]
+}
 ```
-
-You can also parse contracts in to a token tree if you wish to inspect it yourself,
-either in rust or using the cli like in the example below:
-
-```bash
-marlowe_lang_cli -r from-file your_contract.marlowe
-```
-
-Which would return something similar to this:
-```json
-{
-  "pos": [
-    0,
-    3468
-  ],
-  "pairs": [
-    {
-      "pos": [
-        0,
-        3468
-      ],
-      "rule": "Contract",
-      "inner": {
-        "pos": [
-          0,
-          3468
-        ],
-        "pairs": [
-          {
-            "pos": [
-              0,
-              3468
-            ],
-            "rule": "When",
-            "inner": {
-              "pos": [
-                5,
-                3468
-              ],
-              "pairs": [ .........
-```
-
-Or if the input is invalid such as in the below example, you will receive an error:
-
-```
-$ marlowe_lang_cli -r from-standard-input 'Assert xTrueObs Close'
-Error { variant: ParsingError { positives: [ValueEQ, ValueLE, ValueLT, ValueGT, ValueGE, TrueObs, FalseObs, ChoseSomething, NotObs, OrObs, AndObs, ObservationHole], negatives: [] }, location: Pos(7), line_col: Pos((1, 8)), path: None, line: "Assert xTrueObs Close", continued_line: None }
