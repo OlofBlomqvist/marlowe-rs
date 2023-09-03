@@ -97,12 +97,12 @@ if($skipBuild -ne $true) {
 }
 
 if($publish) {
-    # write-host -ForegroundColor Green "Publishing web... $web_dir $webv"
-    # wasm-pack publish -t web --tag web $web_dir
-    # write-host -ForegroundColor Green "Publishing nodejs... $nodejs_dir $njsv"
-    # wasm-pack publish -t nodejs --tag nodejs   $nodejs_dir
-    # write-host -ForegroundColor Green "Publishing bundle... $bundle_dir $bundlev"
-    # wasm-pack publish -t bundler --tag bundle $bundle_dir
+    write-host -ForegroundColor Green "Publishing web... $web_dir $webv"
+    wasm-pack publish -t web --tag web $web_dir
+    write-host -ForegroundColor Green "Publishing nodejs... $nodejs_dir $njsv"
+    wasm-pack publish -t nodejs --tag nodejs   $nodejs_dir
+    write-host -ForegroundColor Green "Publishing bundle... $bundle_dir $bundlev"
+    wasm-pack publish -t bundler --tag bundle $bundle_dir
     if($publishLatestTag) {
         write-host -ForegroundColor Green "Publishing latest... $latest_dir $latestlev"
         wasm-pack publish -t nodejs --tag latest $latest_dir
