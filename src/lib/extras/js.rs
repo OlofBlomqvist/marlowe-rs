@@ -682,7 +682,19 @@ impl TryFrom<State> for WasmState {
     
 }
 
-
+#[wasm_bindgen::prelude::wasm_bindgen]
+impl WasmDatum {
+    #[wasm_bindgen]
+    pub fn to_cbor_hex(self) -> String {
+        let s : State = State::try_from(self.state).unwrap();
+        let d = MarloweDatum {
+            contract: Contract::from_dsl(&self.contract_dsl,vec![]).unwrap(),
+            marlowe_params: MarloweParams(self.payout_validator_hash),
+            state: s
+        };
+        crate::serialization::cborhex::serialize(d).unwrap()
+    }
+}
 
 #[wasm_bindgen::prelude::wasm_bindgen]
 #[derive(Debug,Clone,Serialize,Deserialize)] 

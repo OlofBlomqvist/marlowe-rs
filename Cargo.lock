@@ -420,7 +420,7 @@ checksum = "b06a4cde4c0f271a446782e3eff8de789548ce57dbc8eca9292c27f4a42004b4"
 
 [[package]]
 name = "marlowe_lang"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "assert-json-diff",
  "bech32",
@@ -431,7 +431,7 @@ dependencies = [
  "hex",
  "indexmap",
  "js-sys",
- "minicbor",
+ "minicbor 0.20.0",
  "pallas",
  "pallas-codec",
  "pallas-primitives",
@@ -457,6 +457,12 @@ dependencies = [
  "half",
  "minicbor-derive",
 ]
+
+[[package]]
+name = "minicbor"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d15f4203d71fdf90903c2696e55426ac97a363c67b218488a73b534ce7aca10"
 
 [[package]]
 name = "minicbor-derive"
@@ -520,7 +526,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7194c1ee4fa15ba9f40955ee2599449ac648234337af53de7a7322d4d49fce73"
 dependencies = [
  "hex",
- "minicbor",
+ "minicbor 0.19.1",
  "serde",
 ]
 
