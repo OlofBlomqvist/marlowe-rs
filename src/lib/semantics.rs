@@ -251,10 +251,6 @@ impl<'a> ContractInstance {
 }
 
 
-// TODO : empty list of inputs are used to step a timed out contract
-// TODO : when accounts go to zero, they should be removed from the account list
-// TODO : in general, order of things - check on marlowe indexer.
-// TODO : plutus_data should publish new version
 impl ContractSemantics<ContractInstance> for ContractInstance {
 
     /// Lists all known parties in the contract.
