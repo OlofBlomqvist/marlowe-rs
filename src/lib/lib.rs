@@ -1,5 +1,4 @@
-#![feature(generator_trait)]
-#![feature(generators)]
+#![feature(coroutines)]
 #![feature(if_let_guard)]
 #![feature(let_chains)]
 #![feature(extern_types)]
