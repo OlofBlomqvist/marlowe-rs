@@ -6,6 +6,9 @@
 [![npm version](https://badge.fury.io/js/marlowe_lang.svg)](https://www.npmjs.com/package/marlowe_lang)
 [![PyPI version](https://badge.fury.io/py/marlowe.svg)](https://pypi.org/project/marlowe/)
 
+> If you just want to decode some marlowe datum from cborHex to json, [go here](https://olofblomqvist.github.io/marlowe-rs)
+
+
 An **experimental** Rust implementation of  Marlowe for Cardano smart (financial) contracts. See the examples dir for use with node/deno/react etc.
 
 Note that while there is support for encoding and decoding on-chain data, this crate focuses on the off-chain parts, making it as easy as possible to create, manage and understand contracts in Rust; there will not be any support for creating actual transactions.
