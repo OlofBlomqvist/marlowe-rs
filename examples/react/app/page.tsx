@@ -20,9 +20,17 @@ const Home = () => {
     'marlowe_core_to_json': (input: string) => marlowe?.marlowe_to_json(input) ?? "failed to initialize",
     'cbor_datum_decoder': (input: string) => marlowe?.decode_cborhex_marlowe_plutus_datum(input) ?? "failed to initialize",
     'cbor_redeemer_decoder': (input: string) => marlowe?.decode_marlowe_input_cbor_hex(input) ?? "failed to initialize",
-    'json_to_marlowe': (input: string) => marlowe?.decode_marlowe_dsl_from_json(input) ?? "failed to initialize",    
+    'json_contract_to_marlowe': (input: string) => marlowe?.decode_marlowe_dsl_from_json(input) ?? "failed to initialize",    
+    'decode_marlowe_datum_or_redeemer': (input: string) => marlowe?.decode_marlowe_data_or_redeemer(input) ?? "failed to initialize",    
+    'json_datum_to_cbor': (input: string) => datum_json_to_cbor(input),    
+    
   }
 
+  const datum_json_to_cbor = (input:string)  => {
+    var machine = marlowe!.WASMMarloweStateMachine.from_datum_json(input);
+    let datum = machine.as_datum();
+    return datum.to_cbor_hex();
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedMethod(e.target.value)
@@ -67,7 +75,7 @@ const Home = () => {
     <div id="main">
       
       <header style={{textAlign:"center"}}>
-        <h1 style={{fontSize:"xx-large"}}>Basic example app</h1>
+        <h1 style={{fontSize:"xx-large"}}>marlowe-rs example app</h1>
         <select onChange={handleChange} value={selectedMethod}>
           {Object.keys(marloweMethods).map(methodName => (
             <option key={methodName} value={methodName}>
@@ -88,6 +96,15 @@ const Home = () => {
           value={data != null ? data : "nothing yet"}
         />
       </div>
+      <br/>
+      <div style={{display:"grid",placeContent:"center",gridAutoFlow:"row",gap:25}}>
+        <p style={{padding:5,maxWidth:900}}>
+          This is a simple react example application for marlowe-rs. The library can be compiled to wasm and is usable from rust,python,js,ts and more.
+          Many more features are provided by the library than those showcased here, for more information see the <a style={{textAlign:"center",color:"lightblue"}} href="https://github.com/OlofBlomqvist/marlowe-rs">Github Repository</a>.
+        </p>
+        
+      </div>
+      
     </div>
   )
 }

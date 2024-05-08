@@ -1,4 +1,5 @@
 module.exports = {
+  output: "export",
   reactStrictMode:false,
     webpack(config, { isServer, dev }) {
       config.experiments = {
