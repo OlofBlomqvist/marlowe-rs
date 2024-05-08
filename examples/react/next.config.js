@@ -1,5 +1,6 @@
 module.exports = {
   output: "export",
+  basePath: '/marlowe-rs',
   reactStrictMode:false,
     webpack(config, { isServer, dev }) {
       config.experiments = {
