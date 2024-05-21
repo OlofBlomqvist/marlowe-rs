@@ -1199,3 +1199,11 @@ fn payee_to_wasm(x:&Payee) -> WasmPayee {
     };
     account_id_to_wasm_payee(accid)
 }
+
+
+#[wasm_bindgen()] 
+pub fn redeemer_json_to_cbor(list_of_inputs_json:&str) {
+    let deserialized : Vec<crate::types::marlowe::InputAction> = crate::deserialization::json::deserialize(list_of_inputs_json.into()).unwrap();
+    let action = deserialized.into_iter().map(PossiblyMerkleizedInput::Action).collect::<Vec<PossiblyMerkleizedInput>>();
+    crate::serialization::cborhex::serialize(action).unwrap();
+} 

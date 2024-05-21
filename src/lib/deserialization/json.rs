@@ -186,12 +186,12 @@ impl<'de> serde::de::Visitor<'de> for InputActionVisitor {
             })
         }
 
-        if  let Some(a) = input_that_chooses_num &&
-            let Some(b) = for_choice_id 
+        if  let Some(chosen_number) = input_that_chooses_num &&
+            let Some(choice_id) = for_choice_id 
         {
             return Ok(InputAction::Choice { 
-                for_choice_id: Some(a), 
-                input_that_chooses_num: b 
+                for_choice_id: Some(choice_id), 
+                input_that_chooses_num: chosen_number 
             })
         }
 

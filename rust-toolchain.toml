@@ -1,0 +1,3 @@
+[toolchain]
+channel = "nightly"
+cargo-features = ["edition2021"]

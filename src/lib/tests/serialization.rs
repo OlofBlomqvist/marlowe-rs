@@ -15,7 +15,7 @@ fn json_can_deserialize_choice_id_with_owner_address() {
             "choice_owner": { 
                 "address" : "addr_test1qz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgs68faae" 
             }
-        }
+        }   
     "#;
     let choice_id : crate::types::marlowe::ChoiceId =  serde_json::from_str(serialized).expect("err unser");
     assert!(choice_id.choice_name=="KALLES CHOICE");
@@ -472,3 +472,47 @@ fn serialize_datum_json() {
     crate::serialization::json::serialize(&original_datum_decoded).unwrap();
 }
 
+
+
+#[test]
+fn deserialize_input_action() {
+
+    let j = r##"
+        {
+            "for_choice_id": {
+            "choice_owner": {
+                "address": "addr1qxfturx55xqdm3pu3vwsrvvz26syajjlmpz0whxvll7cw27r7cz4mu6gh005gdck67p7y9d8s8zsfgjkcdy75mrjh6jqjy687a"
+            },
+            "choice_name": "Amount"
+            },
+            "input_that_chooses_num": 1257743
+        }
+    "##;
+
+    let deserialized : crate::types::marlowe::InputAction = crate::deserialization::json::deserialize(j.into()).unwrap();
+
+}
+
+#[test]
+fn input_actions_to_cbor() {
+    let j = r##"
+        [{
+            "for_choice_id": {
+            "choice_owner": {
+                "address": "addr1qxfturx55xqdm3pu3vwsrvvz26syajjlmpz0whxvll7cw27r7cz4mu6gh005gdck67p7y9d8s8zsfgjkcdy75mrjh6jqjy687a"
+            },
+            "choice_name": "Amount"
+            },
+            "input_that_chooses_num": 1257743
+        }]
+    "##;
+    let deserialized : Vec<crate::types::marlowe::InputAction> = crate::deserialization::json::deserialize(j.into()).unwrap();
+    let action = deserialized.into_iter().map(PossiblyMerkleizedInput::Action).collect::<Vec<PossiblyMerkleizedInput>>();
+    let cbor = crate::serialization::cborhex::serialize(action).unwrap();
+
+    assert!(
+        &cbor == 
+        "9fd8799fd87a9fd8799f46416d6f756e74d8799fd87a80d8799fd8799f581c92be0cd4a180ddc43c8b1d01b18256a04eca5fd844f75cccfffd872bffd8799fd8799fd8799f581cc3f6055df348bbdf443716d783e215a781c504a256c349ea6c72bea4ffffffffffff1a0013310fffffff"
+    )
+    
+}
