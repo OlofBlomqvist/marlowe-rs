@@ -29,7 +29,7 @@ if($skipBuild -ne $true) {
         Remove-Item $latest_dir/ -Recurse -Force -ErrorAction Stop
     }
     # Build for NodeJS
-    /home/olof/.cargo/bin/wasm-pack build --all-features --release --target nodejs --out-dir $nodejs_dir/pkg
+    wasm-pack build --all-features --release --target nodejs --out-dir $nodejs_dir/pkg
     $j = Get-Content $nodejs_dir/pkg/package.json |convertfrom-json
     if($null -ne $version -and $version.Length -gt 1) {
         $j.version = $version + "-nodejs"
@@ -42,7 +42,7 @@ if($skipBuild -ne $true) {
 
 
     # Build for Web
-    /home/olof/.cargo/bin/wasm-pack build --all-features --release --target web --out-dir $web_dir/pkg
+    wasm-pack build --all-features --release --target web --out-dir $web_dir/pkg
     $j = Get-Content $web_dir/pkg/package.json |convertfrom-json
     if($null -ne $version -and $version.Length -gt 0) {
         $j.version = $version + "-web"
@@ -62,7 +62,7 @@ if($skipBuild -ne $true) {
     #wasm-pack pack $web_dir
 
     # Build bundle
-    /home/olof/.cargo/bin/wasm-pack build --all-features --release --target bundler --out-dir $bundle_dir/pkg
+    wasm-pack build --all-features --release --target bundler --out-dir $bundle_dir/pkg
     $j = Get-Content $bundle_dir/pkg/package.json |convertfrom-json
     if($null -ne $version -and $version.Length -gt 0) {
         $j.version = $version + "-bundle"
@@ -75,7 +75,7 @@ if($skipBuild -ne $true) {
     #wasm-pack pack $bundle_dir
 
     # Build latest
-    /home/olof/.cargo/bin/wasm-pack build --all-features --release --target nodejs --out-dir $latest_dir/pkg
+    wasm-pack build --all-features --release --target nodejs --out-dir $latest_dir/pkg
     $j = Get-Content $latest_dir/pkg/package.json |convertfrom-json
     if($null -ne $version -and $version.Length -gt 0) {
         $j.version = $version
@@ -98,14 +98,14 @@ if($skipBuild -ne $true) {
 
 if($publish) {
     write-host -ForegroundColor Green "Publishing web... $web_dir $webv"
-    /home/olof/.cargo/bin/wasm-pack publish -t web --tag web $web_dir
+    wasm-pack publish -t web --tag web $web_dir
     write-host -ForegroundColor Green "Publishing nodejs... $nodejs_dir $njsv"
-    /home/olof/.cargo/bin/wasm-pack publish -t nodejs --tag nodejs   $nodejs_dir
+    wasm-pack publish -t nodejs --tag nodejs   $nodejs_dir
     write-host -ForegroundColor Green "Publishing bundle... $bundle_dir $bundlev"
-    /home/olof/.cargo/bin/wasm-pack publish -t bundler --tag bundle $bundle_dir
+    wasm-pack publish -t bundler --tag bundle $bundle_dir
     if($publishLatestTag) {
         write-host -ForegroundColor Green "Publishing latest... $latest_dir $latestlev"
-        /home/olof/.cargo/bin/wasm-pack publish -t nodejs --tag latest $latest_dir
+        wasm-pack publish -t nodejs --tag latest $latest_dir
         
     }
 }
