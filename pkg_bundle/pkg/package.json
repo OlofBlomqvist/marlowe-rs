@@ -1,0 +1,25 @@
+{
+  "name": "marlowe_lang",
+  "collaborators": [
+    "Olof Blomqvist <olof@twnet.se>"
+  ],
+  "description": "experimental parser lib for Cardano Marlowe DSL",
+  "version": "0.3.2-bundle",
+  "license": "SEE LICENSE IN licence",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OlofBlomqvist/marlowe_rust"
+  },
+  "files": [
+    "marlowe_lang_bg.wasm",
+    "marlowe_lang.js",
+    "marlowe_lang_bg.js",
+    "marlowe_lang.d.ts"
+  ],
+  "module": "marlowe_lang.js",
+  "types": "marlowe_lang.d.ts",
+  "sideEffects": [
+    "./marlowe_lang.js",
+    "./snippets/*"
+  ]
+}
