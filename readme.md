@@ -6,7 +6,7 @@
 [![npm version](https://badge.fury.io/js/marlowe_lang.svg)](https://www.npmjs.com/package/marlowe_lang)
 [![PyPI version](https://badge.fury.io/py/marlowe.svg)](https://pypi.org/project/marlowe/)
 
-> If you just want to decode some marlowe datum from cborHex to json, [go here](https://olofblomqvist.github.io/marlowe-rs)
+> If you just want to decode some marlowe datum from cborHex to json, [go here](https://marlowe-rs.cruma.io/)
 
 
 An **experimental** Rust implementation of  Marlowe for Cardano smart (financial) contracts. See the examples dir for use with node/deno/react etc.
